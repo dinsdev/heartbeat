@@ -54,3 +54,20 @@
 **Out:** visitor uploads and live device input; rhythm-level diagnosis and multi-lead models; large hyperparameter sweeps, ensembles, LLM explanations.
 
 **PRD fix for F1:** the dins-projects PRD's "what visitors do" describes the saliency overlay, which is stretch. The Heartbeat PRD's visitor section describes the core demo only.
+
+## 2026-10-22: A3 decided, pre-registration instead of targets
+
+**Decision (Din):** no numeric results targets. Reason: a number to hit invites tuning toward it, which is the behavior this project calls out. Instead, a pre-registered evaluation plan is committed before any test-set run.
+
+**Pre-registered plan (exact class set and calibration metric come from C4):**
+1. Headline metrics: per-class recall and precision for S and V on unseen patients, and macro F1.
+2. Uncertainty: 95% intervals from a bootstrap that resamples whole patients, not beats, because beats from one person are correlated and beat-level resampling gives falsely tight intervals.
+3. Comparison: CNN minus baseline on each headline metric, with its own interval. "Better" means the interval sits above zero; otherwise the page reports no clear difference.
+4. Context, not targets: de Chazal et al. (2004) results. Claude recalls about 76% S recall at about 38% precision and about 78% V recall; verify against the paper before any public use.
+
+**Test discipline:**
+- All iteration on DS1 with cross-validation by patient groups. DS2 stays sealed.
+- Before the single DS2 run, a freeze record is committed: commit hash, config, model checksum.
+- A bug found after the DS2 run is fixed and rerun, and both runs are logged here. No silent reruns.
+
+**If the CNN loses or ties:** it ships as is and the demo still runs the CNN. The page says plainly that a simple baseline matched or beat it on unseen patients, and why that is plausible (RR intervals carry much of the S-class signal). DS2 is never used for tuning.

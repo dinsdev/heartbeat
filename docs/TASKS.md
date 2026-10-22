@@ -15,13 +15,13 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 |---|---|---|---|
 | A1 | Purpose and success: what a reader should come away believing, and what a win looks like | decided | done |
 | A2 | Scope cut: core, stretch and out | decided | done |
-| A3 | Results targets set before any test numbers exist, and what ships if the CNN loses to the baseline | open | doing |
+| A3 | Results targets set before any test numbers exist, and what ships if the CNN loses to the baseline. Decided: a pre-registered evaluation plan instead of numeric targets | decided | done |
 
 ### B. Data
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| B1 | Records and exclusions (the four paced records), lead choice | draft | todo |
+| B1 | Records and exclusions (the four paced records), lead choice | draft | doing |
 | B2 | Beat locations: reference annotations or our own QRS detector, and how the page states it | open | todo |
 | B3 | Preprocessing: filtering, window size, normalization, RR features | open | todo |
 | B4 | Class mapping to AAMI, and what to do with the tiny Q class | draft | todo |
