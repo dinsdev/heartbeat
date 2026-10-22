@@ -14,8 +14,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | ID | Item | State | Status |
 |---|---|---|---|
 | A1 | Purpose and success: what a reader should come away believing, and what a win looks like | decided | done |
-| A2 | Scope cut: core, stretch and out | draft | doing |
-| A3 | Results targets set before any test numbers exist, and what ships if the CNN loses to the baseline | open | todo |
+| A2 | Scope cut: core, stretch and out | decided | done |
+| A3 | Results targets set before any test numbers exist, and what ships if the CNN loses to the baseline | open | doing |
 
 ### B. Data
 
@@ -35,10 +35,10 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | C2 | Baseline: RR-interval features with logistic regression | draft | todo |
 | C3 | CNN design: inputs, size, class imbalance handling | draft | todo |
 | C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method | draft | todo |
-| C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number | open | todo |
+| C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number. In core (A2); design details still open | decided (in core) | todo |
 | C6 | Experiment tracking, seeds, determinism | open | todo |
 | C7 | Compute: Mac (MPS) or rented GPU | open | todo |
-| C8 | Stretch: saliency overlay, INCART generalization test | draft | todo |
+| C8 | Stretch, in order: INCART external test, then saliency overlay, then our own QRS detector (A2) | decided (order) | todo |
 
 ### D. Browser demo
 

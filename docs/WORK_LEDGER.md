@@ -35,3 +35,22 @@
 **Not goals:** state-of-the-art numbers, clinical usefulness, more than one dataset in core.
 
 **Finding:** PhysioNet's MIT-BIH page states the database has 48 records from 47 subjects and that "Records 201 and 202 originate from the same subject" (checked 2026-10-22). Claude recalls that de Chazal et al. (2004) put 201 in DS1 and 202 in DS2, which would leak one subject across the standard inter-patient split. Not yet verified against the paper; tracked under C1. Until C1 settles it, no page or doc states a count of unseen patients.
+
+## 2026-10-22: A2 decided, scope cut
+
+**Rule:** rigor leads (A1), so anything that proves honesty moves up and anything purely visual moves down.
+
+**Core (the project does not publish without these):**
+- MIT-BIH pipeline with the inter-patient split (corrected for 201/202 if C1 confirms the leak) and a CI leakage test.
+- Baseline (RR features with logistic regression) and a small 1D CNN, on the same split.
+- C5 honesty exhibit, promoted from open: the same CNN trained on a patient-mixed split, both numbers side by side. Reason: it is the project's punchline and costs only a second split through the same code.
+- Model card: per-class precision and recall, confusion matrix, calibration, limits.
+- ONNX export with parity tests from PyTorch to ONNX to the browser.
+- Demo: scrolling ECG with live beat labels, patient switch, speed control, a stage mode for the iframe, a reduced-motion version.
+- Case study, written last with real numbers.
+
+**Stretch, in order:** (1) INCART external test, because a second hospital's data is a rigor claim; (2) saliency overlay; (3) our own QRS detector, if B2 uses reference annotations in core.
+
+**Out:** visitor uploads and live device input; rhythm-level diagnosis and multi-lead models; large hyperparameter sweeps, ensembles, LLM explanations.
+
+**PRD fix for F1:** the dins-projects PRD's "what visitors do" describes the saliency overlay, which is stretch. The Heartbeat PRD's visitor section describes the core demo only.
