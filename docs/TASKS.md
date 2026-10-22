@@ -13,8 +13,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| A1 | Purpose and success: what a reader should come away believing, and what a win looks like | draft | doing |
-| A2 | Scope cut: core, stretch and out | draft | todo |
+| A1 | Purpose and success: what a reader should come away believing, and what a win looks like | decided | done |
+| A2 | Scope cut: core, stretch and out | draft | doing |
 | A3 | Results targets set before any test numbers exist, and what ships if the CNN loses to the baseline | open | todo |
 
 ### B. Data
@@ -31,7 +31,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| C1 | Split discipline: DS1 and DS2, validation by patient groups within DS1, test set touched once | draft | todo |
+| C1 | Split discipline: DS1 and DS2, validation by patient groups within DS1, test set touched once. Known issue: records 201 and 202 come from the same subject (PhysioNet, checked 2026-10-22); confirm whether de Chazal puts them on opposite sides and decide the fix | draft | todo |
 | C2 | Baseline: RR-interval features with logistic regression | draft | todo |
 | C3 | CNN design: inputs, size, class imbalance handling | draft | todo |
 | C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method | draft | todo |
