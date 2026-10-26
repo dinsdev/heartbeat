@@ -24,8 +24,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | B1 | Records and exclusions: 44 records (four paced out), MLII picked by signal name, 202 dropped from DS2 to fix the 201/202 leak | decided | done |
 | B2 | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace | decided | done |
 | B3 | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, per-window z-score, causal RR features plus post-RR | decided | done |
-| B4 | Class mapping to AAMI, and what to do with the tiny Q class | draft | doing |
-| B5 | Download, caching, checksums, ODC-By attribution and citations | draft | todo |
+| B4 | Class mapping: AAMI symbols, strict; four scored classes N, S, V, F; Q out of training and scoring, kept for RR; F caveat; A3 addendum (S without 232, per-patient table) | decided | done |
+| B5 | Download, caching, checksums, ODC-By attribution and citations | draft | doing |
 
 ### C. Modeling and evaluation
 
@@ -34,7 +34,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | C1 | Split discipline: DS1 and DS2, validation by patient groups within DS1, test set touched once. Leak confirmed (201 in DS1, 202 in DS2, same subject) and fixed under B1: 202 leaves DS2, so DS1 is 22 subjects and DS2 is 21. Still open: the patient-group folds and test-once mechanics | draft | todo |
 | C2 | Baseline: RR-interval features with logistic regression | draft | todo |
 | C3 | CNN design: inputs, size, class imbalance handling | draft | todo |
-| C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method | draft | todo |
+| C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method. From B4: macro F1 over N, S, V, F or only N, S, V; how per-patient rows show patients with under 10 beats of a class; final wording of the A3 addendum | draft | todo |
 | C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number. In core (A2); design details still open | decided (in core) | todo |
 | C6 | Experiment tracking, seeds, determinism | open | todo |
 | C7 | Compute: Mac (MPS) or rented GPU | open | todo |

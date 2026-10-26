@@ -118,3 +118,27 @@
 - Post-RR delays each label by one beat in the demo. The case study says so in one line.
 - Suggestion carried to C3: the CNN takes the beat window plus the same RR features as the baseline, so the comparison reads "RR alone against RR plus learned beat shape".
 - The feature set loosely follows de Chazal et al. (2004) from Claude's memory; verify under B5 before the page says so.
+
+## 2026-10-26: B4 decided, class mapping, and an A3 addendum
+
+**Finding (PhysioNet beat table, entire records, DS2 without 202):**
+
+| Class | DS1 | DS2 |
+|---|---|---|
+| N | 45866, spread across 22 records | 42198, spread across 21 records |
+| S | 944; record 209 holds 41% | 1782; record 232 holds 78% |
+| V | 3788; largest record (208) holds 26% | 3202; 233 and 200 hold 26% each |
+| F | 415; record 208 holds 90% | 387; record 213 holds 94% |
+| Q | 8 | 7 |
+
+Pooled S recall on DS2 is mostly patient 232's recall, and F is one patient on each side.
+
+**Decisions (Din):**
+- Mapping (AAMI EC57): N = N, L, R, e, j; S = A, a, J, S; V = V, E; F = F; Q = /, f, Q. Any unrecognized annotation symbol makes the pipeline fail loudly; a test covers it. These symbols are the beats used for RR (B3). Not beats: flutter waves `!` (472, all in 207), non-conducted P waves `x`, and noise and rhythm markers.
+- Four scored classes: N, S, V, F. Q beats are out of training and scoring (8 in DS1 cannot teach anything) but count for RR. The demo marks them grey as "not scored"; the data card gives the count (15).
+- F stays a class but is never a headline. The limits section says F is one patient on each side. Dropping F would push those beats into wrong classes.
+
+**A3 addendum (pre-registered now, before any DS2 run):**
+1. Secondary line beside the headline: S recall and precision on DS2 with record 232 left out, with the same patient bootstrap.
+2. Model card table: S and V recall per DS2 patient.
+Reason: one patient carries the pooled S number. Added after results, this would read as an excuse; added before, it is what pre-registration is for. Final wording under C4.
