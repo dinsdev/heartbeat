@@ -86,3 +86,17 @@
 - Record 201: N 1635, S 128, V 198, F 2. That is 13.6% of DS1's S beats and 5.2% of its V beats. Record 202: N 2061, S 55, V 19, F 1, which is 3.0% of DS2's S beats.
 
 **Open (Din):** the proposed fix was to drop 201 from DS1, conditional on its beat counts. The counts show it costs 13.6% of the scarcest training class, so the choice went back to Din: drop 201 from DS1 (published test set kept exactly), or drop 202 from DS2 (training kept whole, test set one record off the published one).
+
+## 2026-10-26: B1 leak fix and B2 decided
+
+**Decision (Din), 201/202 leak:** drop 202 from DS2; 201 stays in DS1. Reason: 201 holds 13.6% of DS1's S beats and 97 of the 100 aberrated APC (`a`) beats in DS1, so dropping it would leave training almost blind to that S morphology. 202 is mostly normal beats (3.0% of DS2's S beats). The cost is a test set one record off the published DS2, which matters less since A3 made de Chazal context rather than a target.
+
+**Resulting split:** DS1 has 22 records from 22 subjects; DS2 has 21 records from 21 subjects; no subject on both sides. The page may now say "tested on 21 patients it never saw". Published numbers quoted for context were measured on all 22 DS2 records, and the page says so.
+
+**Implementation note for E5:** the leakage test works on subject IDs, not record IDs, with a subject map in which 201 and 202 share one subject. A record-level test would have missed this leak.
+
+**Decision (Din), B2 beat locations:** core uses the database's expert beat annotations for training, evaluation and the demo. Reason: it isolates the classifier, matches common inter-patient practice, and A2 already places our own QRS detector at stretch 3.
+- The limits section and model card say: "Beat locations come from the database's expert annotations, so these numbers assume every beat has already been found. A real device would also have to find them." The stage line stays short.
+- The browser receives beat positions with the trace and only classifies.
+- Annotations sit on the QRS's main peak, which is not always the R wave. Windows center on the annotation as given; B3 decides any realignment.
+- No standalone detector score in core: it measures a different component and invites readers to multiply it into an end-to-end number that does not exist. Stretch 3 does the end-to-end version.

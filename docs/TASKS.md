@@ -21,9 +21,9 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| B1 | Records and exclusions: 44 records (four paced out), MLII picked by signal name. Still open: which record goes to fix the 201/202 leak (see C1) | decided (leak fix open) | doing |
-| B2 | Beat locations: reference annotations or our own QRS detector, and how the page states it | draft | doing |
-| B3 | Preprocessing: filtering, window size, normalization, RR features | open | todo |
+| B1 | Records and exclusions: 44 records (four paced out), MLII picked by signal name, 202 dropped from DS2 to fix the 201/202 leak | decided | done |
+| B2 | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace | decided | done |
+| B3 | Preprocessing: filtering, window size, normalization, RR features | draft | doing |
 | B4 | Class mapping to AAMI, and what to do with the tiny Q class | draft | todo |
 | B5 | Download, caching, checksums, ODC-By attribution and citations | draft | todo |
 
@@ -31,7 +31,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| C1 | Split discipline: DS1 and DS2, validation by patient groups within DS1, test set touched once. Leak confirmed: 201 is in DS1 and 202 in DS2, same subject (2026-10-26). Fix chosen under B1 | draft | todo |
+| C1 | Split discipline: DS1 and DS2, validation by patient groups within DS1, test set touched once. Leak confirmed (201 in DS1, 202 in DS2, same subject) and fixed under B1: 202 leaves DS2, so DS1 is 22 subjects and DS2 is 21. Still open: the patient-group folds and test-once mechanics | draft | todo |
 | C2 | Baseline: RR-interval features with logistic regression | draft | todo |
 | C3 | CNN design: inputs, size, class imbalance handling | draft | todo |
 | C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method | draft | todo |
