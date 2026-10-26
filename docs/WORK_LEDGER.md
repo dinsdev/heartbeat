@@ -100,3 +100,21 @@
 - The browser receives beat positions with the trace and only classifies.
 - Annotations sit on the QRS's main peak, which is not always the R wave. Windows center on the annotation as given; B3 decides any realignment.
 - No standalone detector score in core: it measures a different component and invites readers to multiply it into an end-to-end number that does not exist. Stretch 3 does the end-to-end version.
+
+## 2026-10-26: B3 decided, preprocessing
+
+**Rule:** anything the browser must repeat stays tiny, so the Python to browser parity test stays simple.
+
+**Decisions (Din):**
+- Signal: MLII in millivolts at the native 360 Hz, no resampling.
+- Filter: 0.5 to 40 Hz Butterworth bandpass, zero-phase (forward and backward), applied once per record in Python. The browser receives the filtered trace, so the filter is never reimplemented in TypeScript and the demo shows the signal the model saw. The data card says the trace is filtered.
+- Window: 256 samples per beat, 96 before the annotation (about 0.27 s) and 160 after (about 0.44 s). No R-peak realignment.
+- Amplitude: per-window z-score (subtract the window mean, divide by its standard deviation). Tradeoff accepted: absolute amplitude is lost, but amplitude also varies between patients with electrode placement.
+- RR features: pre-RR; post-RR; local average RR over the previous 10 beats; long average RR over the previous 5 minutes (both averages use only the past, expanding near a record's start); pre-RR divided by the local average; post-RR divided by pre-RR. Only post-RR looks ahead, by one beat.
+- RR is computed over every annotated beat, including classes that are not scored, so a skipped beat never creates a false long interval. Which annotation symbols count as beats is set in B4.
+- The first and last beat of each record are dropped (no full window or RR). No exclusion of noisy segments.
+
+**Consequences:**
+- Post-RR delays each label by one beat in the demo. The case study says so in one line.
+- Suggestion carried to C3: the CNN takes the beat window plus the same RR features as the baseline, so the comparison reads "RR alone against RR plus learned beat shape".
+- The feature set loosely follows de Chazal et al. (2004) from Claude's memory; verify under B5 before the page says so.

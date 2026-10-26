@@ -23,8 +23,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 |---|---|---|---|
 | B1 | Records and exclusions: 44 records (four paced out), MLII picked by signal name, 202 dropped from DS2 to fix the 201/202 leak | decided | done |
 | B2 | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace | decided | done |
-| B3 | Preprocessing: filtering, window size, normalization, RR features | draft | doing |
-| B4 | Class mapping to AAMI, and what to do with the tiny Q class | draft | todo |
+| B3 | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, per-window z-score, causal RR features plus post-RR | decided | done |
+| B4 | Class mapping to AAMI, and what to do with the tiny Q class | draft | doing |
 | B5 | Download, caching, checksums, ODC-By attribution and citations | draft | todo |
 
 ### C. Modeling and evaluation
