@@ -71,3 +71,18 @@
 - A bug found after the DS2 run is fixed and rerun, and both runs are logged here. No silent reruns.
 
 **If the CNN loses or ties:** it ships as is and the demo still runs the CNN. The page says plainly that a simple baseline matched or beat it on unseen patients, and why that is plausible (RR intervals carry much of the S-class signal). DS2 is never used for tuning.
+
+## 2026-10-26: B1 decided (except the leak fix), records and lead
+
+**Decisions (Din):**
+- Exclude the four paced records (102, 104, 107, 217), as AAMI practice does. 44 records remain.
+- Single lead, MLII, picked by signal name, never by channel index. Reason: one lead fits A2 (multi-lead is out) and a one-trace demo. PhysioNet's directory says 102 and 104 use V5 for the upper signal (both paced, so already out) and record 114 has its signals reversed, so MLII is the second channel there. A unit test covers 114.
+- The leak fix is content: the case study says the standard split leaks one subject and that this project removed it.
+
+**Verified (2026-10-26):**
+- PhysioNet MIT-BIH directory (intro page): MLII upper signal in most records; V5 upper in 102 and 104; 114 reversed; paced records are 102, 104, 107, 217.
+- de Chazal split, from secondary transcriptions (a 2025 systematic review, arXiv 2503.07276, and others; some papers print the lists with typos): DS1 = 101, 106, 108, 109, 112, 114, 115, 116, 118, 119, 122, 124, 201, 203, 205, 207, 208, 209, 215, 220, 223, 230. DS2 = 100, 103, 105, 111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234. So 201 (DS1) and 202 (DS2) do leak one subject. Check against the original paper under B5.
+- AAMI class counts from PhysioNet's beat table (entire records; N = . L R e j, S = A a J S, V = V E, F = F, Q = / f Q). DS1: N 45866, S 944, V 3788, F 415, Q 8. DS2: N 44259, S 1837, V 3221, F 388, Q 7. These match the totals usually quoted for de Chazal's split, which also checks the mapping for B4.
+- Record 201: N 1635, S 128, V 198, F 2. That is 13.6% of DS1's S beats and 5.2% of its V beats. Record 202: N 2061, S 55, V 19, F 1, which is 3.0% of DS2's S beats.
+
+**Open (Din):** the proposed fix was to drop 201 from DS1, conditional on its beat counts. The counts show it costs 13.6% of the scarcest training class, so the choice went back to Din: drop 201 from DS1 (published test set kept exactly), or drop 202 from DS2 (training kept whole, test set one record off the published one).
