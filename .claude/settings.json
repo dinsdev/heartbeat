@@ -22,8 +22,7 @@
       "Bash(pnpm -C web run *)",
       "Bash(pnpm -C web build *)",
       "Bash(pnpm -C web test *)",
-      "Bash(pnpm -C web exec *)",
-      "Bash(python3 -m unittest discover -s .claude/hooks)"
+      "Bash(pnpm -C web exec *)"
     ],
     "ask": [
       "Bash(gh api *)",

@@ -656,3 +656,18 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 - Setting up the scratch repo, the guard blocked my own `git remote add` (it applies to any repo, by design); the scratch remote was set by cloning the empty bare repo instead. The scratch folder was deleted after the runs.
 
 **Carried:** unchanged from the draft entry (hook tests in `scripts/check.sh` and CI at task 1.3; DS2 Read denies and `manifests/` to deny in Phase 2; the desktop ask-rule check).
+
+## 2026-10-27: F5 follow-up, the hook code made ruff-clean
+
+**Why:** Din found ruff errors in the hook code; leaving them would mean an ignore in the before-push check.
+
+**Checked:** pinned ruff 0.17.0 (E2, run with `uvx`) with the CONVENTIONS section 1 rule set and Google docstrings found 87 findings and 2 unformatted files: long lines (34), unittest-style asserts (13), missing docstrings (25), `os.path` and `os.getcwd` (6), `print` (2), two duplicate `if` arms, mutable class defaults, the exception name, an unused `noqa`.
+
+**Done (no behaviour change):**
+- `guard.py`: Google docstrings, pathlib in place of `os.path.basename`, `expanduser` and `getcwd`, `sys.stderr.write` in place of `print` (no `T20` ignore needed), `Blocked` renamed `BlockedError`, the write-target branches folded into `write_targets()`, formatted with `ruff format`.
+- `test_guard.py`: moved from unittest to pytest with parametrized cases (pytest is the project's runner; `D` is off for tests per CONVENTIONS), so Phase 1's `uv run pytest` can run it with no special case. Same cases as before, now 90 test items. Run: `uv run pytest .claude/hooks` (until Phase 1: `uvx --python 3.14 pytest@9.1.1 .claude/hooks`).
+- `settings.json`: the allow rule for the old unittest command removed; `Bash(uv run pytest *)` covers the new one.
+
+**Verified:** `ruff check` passes with `target-version` py39 and py314; `ruff format --check` passes; pytest 9.1.1: 90 passed with the guard run by Python 3.14.7, and 90 passed with `GUARD_PYTHON=/usr/bin/python3` (3.9.6).
+
+**Carried to task 1.6:** the root ruff config targets py314 and the hook files must keep running on 3.9, so if a future rule needs 3.10 syntax the hook directory gets a nested config with `extend` and `target-version = "py39"`. Today both targets pass, so no nested config was added. Task 1.3 runs `.claude/hooks` in `scripts/check.sh` (carried from the F5 draft).
