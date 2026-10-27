@@ -58,8 +58,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 |---|---|---|---|
 | E1 | Research current stable versions: done 2026-10-27; policy adopted (newest stable at least 14 days old; ONNX Runtime 1.30.0 in Python and browser; Python 3.14; Node 24) | decided | done |
 | E2 | Stack locked with pins and reasons (2026-10-27): compatibility checked hands-on; policy enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`; TypeScript 6.0.3; single-file ONNX | decided | done |
-| E3 | Repo layout: Python package, front end, artifacts, docs | draft | doing |
-| E4 | One-command rebuild | open | todo |
+| E3 | Repo layout: one repo, Python package at the root (`src/heartbeat`), front end in `web/`; `manifests/` for pinned inputs, `config/` for settings; frozen model and small results committed; data, runs and demo data gitignored; MIT for code, ODC-By for data | decided | done |
+| E4 | One-command rebuild | draft | doing |
 | E5 | Test strategy: patient leakage test, metric tests, PyTorch and ONNX output match, Python and browser output match | open | todo |
 | E6 | CI and remote: GitHub Actions needs a remote; the case study needs a public repo link | open | todo |
 
