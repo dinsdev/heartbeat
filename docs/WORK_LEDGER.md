@@ -142,3 +142,19 @@ Pooled S recall on DS2 is mostly patient 232's recall, and F is one patient on e
 1. Secondary line beside the headline: S recall and precision on DS2 with record 232 left out, with the same patient bootstrap.
 2. Model card table: S and V recall per DS2 patient.
 Reason: one patient carries the pooled S number. Added after results, this would read as an excuse; added before, it is what pre-registration is for. Final wording under C4.
+
+## 2026-10-26: B5 decided, data download and attribution
+
+**Decisions (Din):**
+- Download only the 132 files the project uses (`.hea`, `.dat`, `.atr` for the 44 records) over HTTPS from `https://physionet.org/files/mitdb/1.0.0/`, with a small downloader of our own. wfdb only reads; it does not check file checksums.
+- A pinned manifest of the 132 SHA256 values, copied once from PhysioNet's `SHA256SUMS.txt`, is committed. Every run checks the cache against it and stops on a mismatch.
+- Cache in `data/raw/mitdb/1.0.0/`, gitignored. Downloads skip files whose checksums already match, so rebuilds work offline after the first run.
+- Attribution under ODC-By 1.0: `DATA_LICENSE.md` in the repo; a short line on the demo (in the stage iframe if it fits, otherwise in its about text); a credits block in the case study and data card; an attribution note shipped beside the demo's data files, which are derived from the database.
+- Citations: Moody GB, Mark RG, "The impact of the MIT-BIH Arrhythmia Database", IEEE Eng in Med and Biol 20(3):45-50 (2001); PhysioNet's standard citation, now Pollard et al. (2026), "PhysioNet as a global platform for biomedical research", Nature Health, https://doi.org/10.1038/s44360-026-00096-z; dataset DOI 10.13026/C2F305; de Chazal P, O'Dwyer M, Reilly RB, "Automatic classification of heartbeats using ECG morphology and heartbeat interval features", IEEE Trans Biomed Eng 51(7):1196-1206 (2004); AAMI EC57. Recheck PhysioNet's requested citation at G1, since it changed recently.
+
+**Verified (2026-10-26):**
+- PhysioNet page: version 1.0.0 (2005), ODC-By 1.0, 104.3 MB uncompressed, per-file SHA256 in `SHA256SUMS.txt`.
+- de Chazal abstract (indexed by TARA and eDeposit Ireland): 44 non-paced records, two sets of 22 records and about 50,000 beats each; on the second set, S sensitivity 75.9% and positive predictivity 38.5%, V sensitivity 77.7% and positive predictivity 81.9%. This confirms the figures recalled in A3.
+- New from the abstract: de Chazal's feature sets come from two ECG leads. Any context comparison on the page says their numbers come from a two-lead classifier tested on all 22 DS2 records; ours is one lead on 21.
+
+**Not verified:** the full text. TARA serves the PDF behind a Cloudflare bot check, and Claude does not get past those; eDeposit Ireland exposes no direct file link. The DS1 and DS2 record lists still rest on secondary transcriptions plus our matching class totals, and the RR feature details on memory. Din can download the PDF in a browser and hand it over; until then the page states only what the abstract supports.
