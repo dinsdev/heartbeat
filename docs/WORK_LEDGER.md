@@ -216,3 +216,18 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - Stated limit: calibration depends on class prevalence, which varies widely between patients, so calibrated probabilities are fragile across patients.
 
 **Model card also has:** a four-by-four confusion matrix with the 7 Q test beats noted as not scored; N and F recall and precision with the F caveat.
+
+## 2026-10-26: C5 decided, the honesty exhibit
+
+**Rule:** a skeptical reader should find exactly one difference between the two numbers: whether a patient's beats can land on both sides.
+
+**Rejected design:** pooling all 43 records and splitting beats at random. It trains on DS2 patients (breaking the seal) and compares different patient sets.
+
+**Decisions (Din):**
+- The exhibit runs inside DS1 only. Honest side: the C1 patient-grouped folds. Leaky side: beat-level random 5-fold (`StratifiedKFold` on beats). Same 22 patients, beats, code and seeds.
+- Same configuration on both sides: the width and epoch count chosen on the honest folds, with no retuning on the leaky side. A real leaky project would also tune on leaky validation, so the gap shown is if anything conservative; the case study says so.
+- Kept on purpose: neighboring beats' windows overlap in time, so random beat splits put overlapping signal on both sides. That is what random beat splitting does in the work being critiqued; the case study names it in one line.
+- Both the CNN and the baseline get the exhibit (a small widening of A2's "the same CNN"). Expectation: leakage inflates the CNN far more, because it can memorize each patient's beat shapes.
+- Metrics: the usual headline metrics with patient-bootstrap intervals on both sides, plus accuracy, shown only in the exhibit and labeled as the number papers often lead with.
+- Timing: DS1 only, so it can run during development. Its design is pre-registered here.
+- Case study wording sketch: "Same model, same 22 patients, same code. The only change: whether beats from one person can land in both training and testing." Then the two rows, then the DS2 headline as the real answer.

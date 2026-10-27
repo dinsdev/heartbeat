@@ -35,8 +35,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | C2 | Baseline: multinomial logistic regression on the six B3 RR features (log ratios, standardized in fold), balanced class weights, C from five values on the C1 folds | decided | done |
 | C3 | CNN design: beat window plus the six RR features, four conv blocks (about 52k parameters at width 1), width from 0.5/1/2 plus epoch count on the C1 folds, balanced weighted cross-entropy, fixed light augmentation, AdamW at a constant rate | decided | done |
 | C4 | Metrics and calibration: headline macro F1 over N, S, V with four-class beside it, S and V FPR, paired 10,000-draw patient bootstrap, per-patient count rule, labels by argmax, probabilities by weight offset plus temperature, classwise ECE for S and V | decided | done |
-| C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number. In core (A2); design details still open | decided (in core) | doing |
-| C6 | Experiment tracking, seeds, determinism | open | todo |
+| C5 | The honesty exhibit: inside DS1 only, patient-grouped (C1) against beat-level random 5-fold, same frozen config and seeds, CNN and baseline, accuracy shown only here, patient bootstrap on both | decided | done |
+| C6 | Experiment tracking, seeds, determinism | draft | doing |
 | C7 | Compute: Mac (MPS) or rented GPU | open | todo |
 | C8 | Stretch, in order: INCART external test, then saliency overlay, then our own QRS detector (A2) | decided (order) | todo |
 
