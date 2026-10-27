@@ -38,7 +38,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | C5 | The honesty exhibit: inside DS1 only, patient-grouped (C1) against beat-level random 5-fold, same frozen config and seeds, CNN and baseline, accuracy shown only here, patient bootstrap on both | decided | done |
 | C6 | Tracking, seeds, determinism: run folders plus committed `results/`, no tracking service; seeds 0, 1, 2 with seed 0 shipped and selection on the seed mean; all three in the sealed run; frozen models trained on CPU in deterministic mode; single-process loading | decided | done |
 | C7 | Compute: Mac only (M5), MPS for development and CV numbers (within tolerance), CPU deterministic for frozen models, no rented GPU, CI smoke tests only | decided | done |
-| C8 | Stretch, in order: INCART external test, then saliency overlay, then our own QRS detector (A2) | decided (order), entry criteria draft | doing |
+| C8 | Stretch, in order: INCART external test, saliency overlay, our own QRS detector (A2). Starts only after core is publishable; design note committed before any result; ships whole or not at all; INCART core rules pre-registered | decided | done |
 
 ### D. Browser demo
 

@@ -261,3 +261,22 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Frozen models train on CPU in deterministic mode (C6). The run folder records the PyTorch thread count, since it can change floating-point results.
 - CI runs smoke tests only: a few training batches, the leakage tests, parity on fixed inputs (E5, E6).
 - Noted for E4, not decided: a fast default rebuild (MPS, within tolerance) and an `--exact` mode (CPU, a few hours).
+
+## 2026-10-27: C8 decided, stretch entry rules (section C complete)
+
+**INCART facts (PhysioNet incartdb 1.0.0, checked 2026-10-27):** ODC-By 1.0; 794.5 MB; 75 records of 30 minutes from 32 patients (patient number in each header; several records per patient); 257 Hz; 12 standard leads (standard lead II, not MIT-BIH's modified lead II); no paced patients; beat annotations placed by an algorithm near the middle of the QRS using all 12 leads, then corrected, with locations not manually aligned; DOI 10.13026/C2V88N; PhysioNet asks for the Pollard et al. (2026) citation.
+
+**Decisions (Din), all stretch items:**
+1. Stretch starts only when core is publishable: sealed DS2 run done and logged, model card filled, demo passing the acceptance checks (stage, full width, phone, light and dark, keyboard, reduced motion), case study drafted with real numbers, CI green. Din gives the go per item; Claude gives a time estimate then.
+2. Each item has a short design note committed before its first result.
+3. Each item ships whole (tests, page text, a line in the limits section) or not at all.
+
+**INCART (stretch 1), pre-registered now:**
+- Test the shipped seed-0 model as frozen: no retraining, fine-tuning, threshold change or calibration refit.
+- All 75 records; C4 metrics (S and V recall and precision, macro F1 over N, S, V with four-class beside it, calibration error); bootstrap over the 32 patients, not the records.
+- Run once, logged in `results/test_runs.jsonl`. A drop is reported, never tuned away.
+- Left to its design note, fixed before any INCART prediction: resampling 257 to 360 Hz, the lead, and the annotation offset (Claude's lean: snap each annotation to the nearest peak so both datasets follow one convention, decided blind and stated on the page).
+
+**Saliency (stretch 2):** ONNX Runtime Web runs inference only (no gradients), so saliency is precomputed in Python and shipped, or computed by occlusion in the browser. The design note includes a randomized-weights sanity check, and the page says "where the output was most sensitive", never "what the model looked at".
+
+**Own QRS detector (stretch 3):** scored end to end. Detections are matched to reference beats within 150 ms (AAMI); misses and extra detections are counted. Details in its design note.
