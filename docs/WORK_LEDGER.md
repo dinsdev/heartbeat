@@ -301,3 +301,13 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 1. `demo.src` in the `projects` schema accepts `https://heartbeat.dins.dev` (an allowlist of demo origins, not any URL).
 2. The case study renders a `live` demo as an iframe in its window; the home stage keeps the capture or video.
 3. The site's `frame-src` allows the demo origin.
+
+## 2026-10-27: D2 decided, front-end stack
+
+**Decisions (Din):**
+- Svelte 5 with Vite as a single-page app, no SvelteKit: one page, two modes (full and `?embed=page`), no routing or server rendering needed. Reason: the demo has real interface (patient picker, speed, play and pause, a live accessible data table, labels and limits text), and Svelte's reactivity keeps that simple with a small runtime. It matches the site's islands.
+- The ECG trace is a plain TypeScript canvas module outside Svelte: per-frame drawing, testable alone, mirroring the site's Ottie player.
+- ONNX Runtime Web runs in a Web Worker, so model loading and inference stay off the main thread. The parity test (E5) exercises the same path.
+- Tooling as on the site (Node 24 LTS, pnpm, TypeScript 6.0, Vitest 4.1, Playwright 1.64 with axe, Prettier, ESLint), re-checked in E1 and pinned for this repo in E2.
+- Brand: `brand/tokens/tokens.css` and the font files are copied from `~/Develop/dins.dev/brand/` with the source commit recorded, so the case study iframe looks native without depending on the site's deploys. A small check script flags drift.
+- Not chosen: React (heavier, differs from the site), Astro (content-first; this is one interactive canvas).

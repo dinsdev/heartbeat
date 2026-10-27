@@ -45,8 +45,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | ID | Item | State | Status |
 |---|---|---|---|
 | D1 | Integration with dins.dev (amended 2026-10-27): video capture on the home stage; live demo in an iframe at the top of the case study; full demo at `heartbeat.dins.dev` (own Worker, deployed from this repo) with `?embed` modes and `frame-ancestors` for dins.dev. Site changes listed under G4 | decided | done |
-| D2 | Front-end stack: Svelte 5 to match the site, or plain TypeScript and canvas | draft | doing |
-| D3 | Live inference or replayed labels, in the stage iframe and in the full demo | open | todo |
+| D2 | Front-end stack: Svelte 5 with Vite (no SvelteKit), a plain TypeScript canvas module for the trace, ONNX Runtime Web in a Web Worker, the site's tooling, vendored brand tokens | decided | done |
+| D3 | Live inference or replayed labels, in the stage iframe and in the full demo | draft | doing |
 | D4 | Data shipped to the browser: which records, how long, file format, size budget | open | todo |
 | D5 | Performance budget: model size, runtime size, load time, time per beat | open | todo |
 | D6 | Interaction and accessibility: controls, reduced motion, keyboard, data table, color never the only signal | open | todo |
