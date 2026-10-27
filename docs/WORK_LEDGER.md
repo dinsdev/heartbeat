@@ -158,3 +158,15 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - New from the abstract: de Chazal's feature sets come from two ECG leads. Any context comparison on the page says their numbers come from a two-lead classifier tested on all 22 DS2 records; ours is one lead on 21.
 
 **Not verified:** the full text. TARA serves the PDF behind a Cloudflare bot check, and Claude does not get past those; eDeposit Ireland exposes no direct file link. The DS1 and DS2 record lists still rest on secondary transcriptions plus our matching class totals, and the RR feature details on memory. Din can download the PDF in a browser and hand it over; until then the page states only what the abstract supports.
+
+## 2026-10-26: C1 decided, folds and the sealed test set
+
+**Decisions (Din):**
+- Development uses 5-fold `StratifiedGroupKFold` on DS1, grouped by subject and balanced by class as far as groups allow, with a fixed seed. The fold assignment is a committed file. 22 subjects give 4 or 5 per fold. Leave-one-subject-out was not chosen: one-patient validation folds make the spread between folds noise, and it costs four times the training runs.
+- Known limit: F cannot be balanced (208 holds 90% of DS1's F), so folds without 208 in training see almost no F. Reported, not engineered around.
+- Development metrics come from pooled out-of-fold predictions (each beat predicted by the model that did not train on its patient), plus the spread across folds.
+- No early stopping on validation folds. Folds train to a fixed maximum, one epoch count is chosen from the averaged validation curves, and the final model retrains on all of DS1 for that many epochs. Choosing the epoch on out-of-fold numbers makes them slightly optimistic; stated, not hidden. Calibration is fitted on out-of-fold predictions (details in C4).
+- The data loader enforces the split: training and cross-validation code cannot load DS2 records, and a test checks it. Only the `evaluate-test` command reads DS2.
+- `evaluate-test` refuses to run without a freeze record (A3) matching the commit hash, config and model checksum. The baseline and the CNN are frozen and tested in the same run. Every run is appended to a log, so the no-silent-rerun rule is enforced in code.
+- Leakage tests work on subjects: none on both sides of DS1 and DS2, none on both sides of any fold. 201 and 202 share one subject ID.
+- The demo is built and tuned on DS1 recordings. It switches to DS2 patients only after the sealed run, using the frozen model, because producing predictions on DS2 is a use of the test set. This ordering goes into `docs/PLAN.md` (F2).

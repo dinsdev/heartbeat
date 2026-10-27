@@ -31,8 +31,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| C1 | Split discipline: DS1 and DS2, validation by patient groups within DS1, test set touched once. Leak confirmed (201 in DS1, 202 in DS2, same subject) and fixed under B1: 202 leaves DS2, so DS1 is 22 subjects and DS2 is 21. Still open: the patient-group folds and test-once mechanics | draft | doing |
-| C2 | Baseline: RR-interval features with logistic regression | draft | todo |
+| C1 | Split discipline: 201/202 leak fixed under B1 (DS1 22 subjects, DS2 21). 5-fold StratifiedGroupKFold by subject on DS1 with a committed fold file, pooled out-of-fold metrics, fixed epoch count, final retrain on all of DS1, DS2 sealed behind a freeze-checked command, demo uses DS2 only after the sealed run | decided | done |
+| C2 | Baseline: RR-interval features with logistic regression | draft | doing |
 | C3 | CNN design: inputs, size, class imbalance handling | draft | todo |
 | C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method. From B4: macro F1 over N, S, V, F or only N, S, V; how per-patient rows show patients with under 10 beats of a class; final wording of the A3 addendum | draft | todo |
 | C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number. In core (A2); design details still open | decided (in core) | todo |
