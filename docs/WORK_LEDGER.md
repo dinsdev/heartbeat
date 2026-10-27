@@ -280,3 +280,24 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 **Saliency (stretch 2):** ONNX Runtime Web runs inference only (no gradients), so saliency is precomputed in Python and shipped, or computed by occlusion in the browser. The design note includes a randomized-weights sanity check, and the page says "where the output was most sensitive", never "what the model looked at".
 
 **Own QRS detector (stretch 3):** scored end to end. Detections are matched to reference beats within 150 ms (AAMI); misses and extra detections are counted. Details in its design note.
+
+## 2026-10-27: D1 amended, how the demo meets dins.dev
+
+**Conflict found:** the dins.dev site plans (`~/Develop/dins.dev/docs/site/plans/`, read 2026-10-27) do not support an iframe on the home stage. M1's `ProjectWindow` and M4's stage hold the capture image or a `<video>`, and "Pause demos" only pauses videos. `demo.src` must be a site path (a test rejects outside URLs). M5's policy allows only Turnstile in `frame-src`. The case study already plans an "Open the live demo" button below its window.
+
+**Decision (Din), replacing the stage part of the 2026-10-22 D1 decision:**
+- Home stage: a 16:10 video recorded from the real demo (G2). The site already handles it, including the calm version, poster frame and "Pause demos". A1's 10-second read holds: a real ECG scrolling with beats labeled, plus the one plain line.
+- Case study: the live demo in an iframe at the top, which matches the site PRD ("opens with the project's window and live demo") and settles the note left for G1.
+- Full demo at `https://heartbeat.dins.dev`: its own Cloudflare Worker with static assets, deployed from this repo, so the demo stays independent of the site build and one pattern serves all four projects.
+- Reason: the home page budget (100 KB first-party JavaScript, 60 fps, no task over 50 ms) is at real risk from three or four live iframes loading ONNX Runtime's WebAssembly on scroll, and pausing cross-origin iframes would need a postMessage protocol. The live claim is proven where readers look closely: the case study, the demo, the parity test.
+
+**Heartbeat side:**
+- `?embed=page` (case study iframe: no page chrome, muted) alongside the full page. `?embed=stage` is not needed for the home stage now; the stage capture is recorded from the full demo or the page embed.
+- Response headers: `Content-Security-Policy` with `frame-ancestors https://dins.dev` plus the site's preview hostnames (exact names settled at build time), and `'wasm-unsafe-eval'` in `script-src` so ONNX Runtime Web can run.
+- Reduced motion is respected inside the iframe (the media query reflects the viewer's setting).
+- To confirm in E1: Workers custom domain on a subdomain, on the free plan.
+
+**Changes for the dins.dev repo (logged here, not made; tracked as G4):**
+1. `demo.src` in the `projects` schema accepts `https://heartbeat.dins.dev` (an allowlist of demo origins, not any URL).
+2. The case study renders a `live` demo as an iframe in its window; the home stage keeps the capture or video.
+3. The site's `frame-src` allows the demo origin.

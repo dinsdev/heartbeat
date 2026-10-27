@@ -44,8 +44,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| D1 | Integration with dins.dev: the demo is a standalone web app, shown in an iframe on the dins.dev stage; clicking it opens the case study, which links to the live demo. Still open: host and domain, embed mode, framing headers | decided (core), open (details) | todo |
-| D2 | Front-end stack: Svelte 5 to match the site, or plain TypeScript and canvas | open | todo |
+| D1 | Integration with dins.dev (amended 2026-10-27): video capture on the home stage; live demo in an iframe at the top of the case study; full demo at `heartbeat.dins.dev` (own Worker, deployed from this repo) with `?embed` modes and `frame-ancestors` for dins.dev. Site changes listed under G4 | decided | done |
+| D2 | Front-end stack: Svelte 5 to match the site, or plain TypeScript and canvas | draft | doing |
 | D3 | Live inference or replayed labels, in the stage iframe and in the full demo | open | todo |
 | D4 | Data shipped to the browser: which records, how long, file format, size budget | open | todo |
 | D5 | Performance budget: model size, runtime size, load time, time per beat | open | todo |
@@ -82,6 +82,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | G1 | Case study outline mapped to the site's `projects` fields | open | todo |
 | G2 | Stage capture: the 16:10 iframe view, and a video fallback if needed | open | todo |
 | G3 | Ask Ottie sources for this project (the case study's project-scoped retrieval needs a corpus) | open | todo |
+| G4 | Hand the dins.dev changes (D1) to that repo: `demo.src` accepts the Heartbeat origin, case study renders a live demo as an iframe, `frame-src` allows the origin | open | todo |
 
 ## Build phases
 
