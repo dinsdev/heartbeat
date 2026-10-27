@@ -197,3 +197,22 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - Optimizer: AdamW, learning rate 1e-3, weight decay 1e-4, batch 256, constant rate, since the epoch count is chosen after the folds (C1) and a schedule tied to total epochs would differ in the final retrain.
 - Tuning: width multiplier 0.5, 1 or 2, plus the epoch count, on the C1 folds by pooled out-of-fold macro F1. 3 configurations times 5 folds, 15 runs. Seeds and repeats: C6.
 - Not doing: a shape-only CNN. The "rhythm against rhythm plus shape" comparison carries the story.
+
+## 2026-10-26: C4 decided, metrics and calibration (completes the pre-registration)
+
+**Headline metrics:**
+1. S and V recall and precision on the 21 DS2 patients (A3).
+2. Macro F1 over N, S and V as the headline, with four-class macro F1 beside it. Reason: DS2's F is 94% one patient (213), so a four-class headline lets one person swing the average and the CNN-minus-baseline interval. F stays visible beside it. Decided before any result, so it is not a choice made after seeing numbers.
+3. Secondary: false positive rate for S and V, for a like-for-like comparison with de Chazal.
+4. A3 addendum, final wording: "S recall and precision on DS2 without record 232, with intervals from a bootstrap over the remaining 20 patients" and "Model card: a per-patient table of S and V results".
+5. Per-patient table: every cell shows raw counts ("41 of 50"); a percentage appears only when the patient has at least 10 beats of that class, otherwise counts only with a footnote.
+
+**Bootstrap:** resample the 21 DS2 patients with replacement, 10,000 draws, fixed seed, percentile intervals. Paired: CNN and baseline are scored on the same draws. If a draw has no predicted S beats, S precision is undefined for it; that draw is skipped for that metric only and the skip count is reported.
+
+**Calibration:**
+- Labels are the argmax of the weighted model's outputs (C2, C3). Calibration never changes a label.
+- Probabilities: subtract the log class weights from the logits (logit adjustment, undoing the deliberate inflation of rare classes from balanced weighting), then apply one temperature fitted on DS1 out-of-fold predictions. Same procedure for both models. Consequence: the demo can say "flagged as S, estimated probability 30%", because rare classes are flagged below 50% on purpose.
+- Metrics: one-vs-rest calibration error for S and V with 10 equal-mass bins (headline), reliability diagrams, and log loss and Brier score in the model card.
+- Stated limit: calibration depends on class prevalence, which varies widely between patients, so calibrated probabilities are fragile across patients.
+
+**Model card also has:** a four-by-four confusion matrix with the 7 Q test beats noted as not scored; N and F recall and precision with the F caveat.

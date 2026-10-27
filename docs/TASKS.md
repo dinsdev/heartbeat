@@ -34,8 +34,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | C1 | Split discipline: 201/202 leak fixed under B1 (DS1 22 subjects, DS2 21). 5-fold StratifiedGroupKFold by subject on DS1 with a committed fold file, pooled out-of-fold metrics, fixed epoch count, final retrain on all of DS1, DS2 sealed behind a freeze-checked command, demo uses DS2 only after the sealed run | decided | done |
 | C2 | Baseline: multinomial logistic regression on the six B3 RR features (log ratios, standardized in fold), balanced class weights, C from five values on the C1 folds | decided | done |
 | C3 | CNN design: beat window plus the six RR features, four conv blocks (about 52k parameters at width 1), width from 0.5/1/2 plus epoch count on the C1 folds, balanced weighted cross-entropy, fixed light augmentation, AdamW at a constant rate | decided | done |
-| C4 | Metrics and calibration: per-class precision and recall, macro F1, calibration error, calibration method. From B4: macro F1 over N, S, V, F or only N, S, V; how per-patient rows show patients with under 10 beats of a class; final wording of the A3 addendum | draft | doing |
-| C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number. In core (A2); design details still open | decided (in core) | todo |
+| C4 | Metrics and calibration: headline macro F1 over N, S, V with four-class beside it, S and V FPR, paired 10,000-draw patient bootstrap, per-patient count rule, labels by argmax, probabilities by weight offset plus temperature, classwise ECE for S and V | decided | done |
+| C5 | The honesty exhibit: also train on a patient-mixed split and show the inflated number. In core (A2); design details still open | decided (in core) | doing |
 | C6 | Experiment tracking, seeds, determinism | open | todo |
 | C7 | Compute: Mac (MPS) or rented GPU | open | todo |
 | C8 | Stretch, in order: INCART external test, then saliency overlay, then our own QRS detector (A2) | decided (order) | todo |
