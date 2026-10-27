@@ -379,3 +379,23 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Short line: "Research demo, not medical advice. Recordings come from a public research database."
 - Fuller note: "This is a research demo. The model has not been clinically validated and must not be used to make health decisions. The recordings come from the MIT-BIH Arrhythmia Database, collected in a hospital lab between 1975 and 1979. Nothing here uses your data, and you cannot upload your own. If you have concerns about your heart, talk to a doctor." The 1975 to 1979 dates are from Claude's memory; check against PhysioNet before use, or cut the clause.
 - Avoid: "diagnose" or "diagnosis", "detects arrhythmia" or "detects heart disease", "clinical-grade", "accurate" as a headline, "AI doctor". Use: "labels heartbeats", "flags irregular beats", "on patients it never saw", "estimated probability". Checked in review.
+- Verified 2026-10-27: PhysioNet says the recordings were "obtained by the Beth Israel Hospital Arrhythmia Laboratory between 1975 and 1979", so the fuller note stands as worded.
+
+## 2026-10-27: E1 decided, versions researched and a pinning policy
+
+**Correction:** in the D5 entry and in chat, Claude called "stable and at least 14 days old" Din's rule. Din's rule is "prefer stable releases over prereleases". The 14-day wait was proposed here as a supply-chain policy and adopted below.
+
+**Policy (Din):**
+- Pin the newest stable release that is at least 14 days old (a compromised release is usually caught within days).
+- The same ONNX Runtime version in Python and the browser: 1.30.0. Python's onnxruntime has 1.31.0 (2026-10-09), but onnxruntime-web skipped it and published 1.31.1 on 2026-10-26, so 1.30.0 is the newest version both have that meets the policy.
+- Python 3.14: 3.15 is out (3.15.2), but torch 2.14.1 ships macOS arm64 wheels for cp310 to cp314 only.
+- Node 24 LTS, matching the site. Node 26 becomes LTS on 2026-10-28; upgrade with the site later.
+
+**Candidates as of 2026-10-27 (cutoff 2026-10-13), confirmed in E2:**
+- Python: torch 2.14.1, numpy 2.5.4, scipy 1.18.1, scikit-learn 1.9.1, wfdb 4.3.1, pandas 3.0.6, onnx 1.23.2, onnxscript 0.7.2, onnxruntime 1.30.0, pytest 9.1.1, hypothesis 6.169.0, ruff 0.17.0, mypy 2.4.0, matplotlib 3.11.2, uv 0.13.0.
+- Front end: svelte 5.57.2, vite 8.3.4, @sveltejs/vite-plugin-svelte 7.3.1, typescript 6.0.3 or 7.0.2, vitest 5.0.4, @playwright/test 1.64.0, @axe-core/playwright 4.13.0, eslint 10.12.0, typescript-eslint 8.71.2, eslint-plugin-svelte 3.23.1, prettier 3.9.10, prettier-plugin-svelte 4.1.1, svelte-check 4.7.6, wrangler 4.150.0, pnpm 12.13.0, onnxruntime-web 1.30.0.
+
+**Findings:**
+- The site's Vitest 4.1 hold exists for Cloudflare's Workers test plugin, which the demo does not use, so Vitest 5 is fine here. The site's TypeScript 6.0 hold exists for `@astrojs/check`; whether `svelte-check` supports TypeScript 7 is unknown, so 6.0.3 is the default unless E2 shows 7 works.
+- To test in E2: wfdb 4.3.1 (February 2026, needs pandas 2.2.3 or later) with pandas 3; torch's ONNX exporter with onnxscript 0.7.2; `svelte-check` with TypeScript 7.
+- Cloudflare: `application/wasm` is on the automatic compression list, so visitors download the 2.4 MB Brotli runtime from D5. `application/octet-stream` is not, so the int16 trace ships raw (about 1.3 MB per patient), which D4 accepted. Requests to Workers static assets are "free and unlimited". Custom domains on a subdomain are documented; the pricing page does not say whether the free plan includes them, but dins.dev already runs on Workers in the same zone. Confirm at deploy (E6).

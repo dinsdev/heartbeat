@@ -56,8 +56,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| E1 | Research current stable versions: Python, uv, PyTorch, wfdb, onnx, ONNX Runtime and ONNX Runtime Web, Node, front-end tooling | draft | doing |
-| E2 | Lock the stack with pins and a reason for each | open | todo |
+| E1 | Research current stable versions: done 2026-10-27; policy adopted (newest stable at least 14 days old; ONNX Runtime 1.30.0 in Python and browser; Python 3.14; Node 24) | decided | done |
+| E2 | Lock the stack with pins and a reason for each | draft | doing |
 | E3 | Repo layout: Python package, front end, artifacts, docs | open | todo |
 | E4 | One-command rebuild | open | todo |
 | E5 | Test strategy: patient leakage test, metric tests, PyTorch and ONNX output match, Python and browser output match | open | todo |
@@ -80,7 +80,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | ID | Item | State | Status |
 |---|---|---|---|
 | G1 | Case study outline mapped to the site's `projects` fields | open | todo |
-| G2 | Stage capture: the 16:10 iframe view, and the home stage video (D1), with the D7 short line burned in | open | todo |
+| G2 | Stage capture: the 16:10 home stage video recorded from the demo (D1), default patient 200 (D4), with the D7 short line burned in | open | todo |
 | G3 | Ask Ottie sources for this project (the case study's project-scoped retrieval needs a corpus) | open | todo |
 | G4 | Hand the dins.dev changes (D1) to that repo: `demo.src` accepts the Heartbeat origin, case study renders a live demo as an iframe with `loading="lazy"`, `frame-src` allows the origin, the iframe has a `title`, the site posts its theme to the iframe | open | todo |
 
