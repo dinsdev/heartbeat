@@ -500,3 +500,20 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 **Also:** Din ran Prettier over the PRD (table padding, blank lines before lists). Checked: formatting only, no content change. Kept; F4 should say whether Markdown docs are Prettier-formatted.
 
 **From now on:** the PRD is the source of truth for requirements. A change to a requirement gets a ledger entry, like any decision.
+
+## 2026-10-27: F2 drafted, the plan
+
+**Work done:** `docs/PLAN.md` written and build phases added to `docs/TASKS.md` (Phases 1 to 8, 36 tasks).
+
+**Proposed (for Din's lock):**
+- Order follows the trust chain: skeleton and CI; data and split; evaluation harness on the baseline; CNN and exhibit; export, parity and rebuild; demo on DS1; freeze and sealed run; content and launch; stretch. The demo shell may start after Phase 2 with an untrained network as a stand-in.
+- PLAN.md stays phase-level. Each phase gets a task-level plan (files, interfaces, test-first steps) appended to PLAN.md when it starts, reviewed by Din. Noted conflict: the superpowers writing-plans skill wants a code-level plan up front; F4's conventions and earlier phases' interfaces would change it, so it waits.
+- Phase 7 gate checklist before `evaluate-test`: all rows through R40 green on `main`, pre-registration unchanged or changes logged, freeze record pushed, clean tree.
+- The G items move from Phase 0 into build phases (G4 in 6, G1 in 7, G2 and G3 in 8), since none can finish during planning.
+- Branch per phase (`phase-N-<name>`), pushes at checkpoints with Din's go, merge after CI.
+- Rule-to-test table: 49 rows. Two are new checks no planning item decided: R46 (a workflow check that rejects action tags instead of commit hashes) and R47 (`evaluate-test` refuses unless the freeze commit is on `origin/main`).
+- Review focus, five untested failure modes assigned to phases: interrupted downloads (atomic writes), MPS against CPU selection drift, labeling falling behind at 4x, scrubbing to the ends, background-tab throttling.
+
+**Estimates (Claude's guesses, not measured):** about 18 to 23 focused days for Phases 1 to 8. Compute times are the measured C7 and E4 figures. Against the best-case 2026-12-01 freeze, Heartbeat fits with little slack, before the other three projects. Cut order if short: P1 items, then timing polish, never a P0 rigor rule.
+
+**Not verified:** whether Workers preview URLs need a production deploy first (checked when the token is set up, Phase 6).
