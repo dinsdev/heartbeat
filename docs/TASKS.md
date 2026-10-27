@@ -49,8 +49,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | D3 | Live inference in both modes: browser computes windows and RR from shipped trace and beat positions, labels chunks just ahead of the playhead, single-thread wasm; expert labels and Python predictions shipped; visible match counter; labeled fallback | decided | done |
 | D4 | Data shipped: all 21 DS2 patients, full 30 minutes, loaded per patient; default record 200 by a label-only rule; int16 trace at 200 units/mV (canonical in Python too, B3 amendment); beats JSON; hashed manifest | decided | done |
 | D5 | Performance: stock ORT wasm build; trace first, model loads alongside; iframe fetches nothing heavy until visible; CI gates on model, JS, beats JSON size and long tasks; timings measured and reported | decided | done |
-| D6 | Interaction and accessibility: controls, reduced motion, keyboard, data table, color never the only signal | draft | doing |
-| D7 | Research demo, not medical advice, stated on the page | draft | todo |
+| D6 | Interaction and accessibility: native controls only (no single-key shortcuts), next-irregular and next-disagreement buttons, letters and shapes as well as color, visible-window table with a polite 10-second summary, reduced-motion paged view, theme via postMessage, axe in all modes plus a VoiceOver pass | decided | done |
+| D7 | Research demo, not medical advice, stated on the page | draft | doing |
 
 ### E. Stack and tooling
 
@@ -82,7 +82,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | G1 | Case study outline mapped to the site's `projects` fields | open | todo |
 | G2 | Stage capture: the 16:10 iframe view, and a video fallback if needed | open | todo |
 | G3 | Ask Ottie sources for this project (the case study's project-scoped retrieval needs a corpus) | open | todo |
-| G4 | Hand the dins.dev changes (D1) to that repo: `demo.src` accepts the Heartbeat origin, case study renders a live demo as an iframe with `loading="lazy"`, `frame-src` allows the origin | open | todo |
+| G4 | Hand the dins.dev changes (D1) to that repo: `demo.src` accepts the Heartbeat origin, case study renders a live demo as an iframe with `loading="lazy"`, `frame-src` allows the origin, the iframe has a `title`, the site posts its theme to the iframe | open | todo |
 
 ## Build phases
 

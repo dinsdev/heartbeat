@@ -353,3 +353,21 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Measured and reported in Playwright (4x CPU slowdown, fast 4G for the phone profile), not gated: first trace under 1.5 s desktop and 3 s phone; first live label under 3 s desktop and 6 s phone; median inference under 2 ms per beat in the Worker; steady 60 fps; memory under 100 MB.
 - A first visit is about 4 to 5 MB compressed; return visits load only the chosen patient's trace.
 - To confirm in E1: whether Cloudflare compresses `.wasm` and the int16 trace; if not, pre-compress at build time.
+
+## 2026-10-27: D6 decided, interaction and accessibility
+
+**Bar:** the site's own (WCAG 2.2 AA, full keyboard, a calm version under reduced motion, color never the only signal).
+
+**Decisions (Din):**
+- Native controls only (buttons, a `<select>` for the patient, a range input for scrubbing). No custom single-key shortcuts (WCAG 2.1.4, and they would fight the host page inside an iframe). The teal focus ring from the brand tokens.
+- Controls: play and pause; speed 0.5x, 1x, 2x, 4x; patient picker with class counts (D4); scrub slider with the time as text, 5-second steps; "Next irregular beat"; "Next disagreement" (jumps to the next beat where model and experts differ, handing visitors the model's mistakes).
+- Targets at least 24 by 24 CSS pixels (WCAG 2.5.8); on phones the controls stack under the canvas.
+- Every beat shows its class as a letter (N, S, V, F) as well as color; disagreements get a distinct mark (outlined ring with the expert's letter beneath); Q beats a grey "not scored" dash.
+- Class colors from the brand tokens, at least 3:1 against the background in light and dark (WCAG 1.4.11), enforced by a test.
+- Plain-language legend: Normal, Supraventricular early beat, Ventricular early beat, Fusion beat, Not scored, one line each. Probabilities worded as in C4.
+- The canvas has an image role and a summary label (patient, time span, beat count, flags), updated on pause and seek, not per frame.
+- An HTML table of the beats in view (about 12 rows: time, model label, probability, expert label, match), not live-announced. A polite status line updates every 10 seconds of playback ("Last 10 seconds: 12 beats, 2 flagged, all agree with the experts"). Pausing lets screen-reader users read at their pace.
+- Reduced motion: no scrolling and no autoplay; fixed 10-second pages with Previous and Next; play swaps pages every 10 seconds without animation.
+- Otherwise the full demo autoplays on load and the case study iframe when visible, silent, with a visible pause (WCAG 2.2.2).
+- Theme: the iframe follows the system setting by default; the site posts `{type: "theme", value}` and the demo accepts it only from the dins.dev origin. Added to G4, with an iframe `title`.
+- Tests: axe at zero violations in Playwright for both modes, light and dark, with and without reduced motion; a keyboard-only walk of every control; one manual VoiceOver pass before publishing.
