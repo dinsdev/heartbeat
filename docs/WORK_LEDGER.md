@@ -339,3 +339,17 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Per visit: about 1.3 MB of trace, tens of KB of beats, about 210 KB of model, plus ONNX Runtime's WebAssembly (D5). Whether Cloudflare compresses the binary trace is checked in E1.
 
 **B3 amendment (Din):** the canonical signal is "filtered, then rounded to int16 at 200 units per mV". Python trains and evaluates on this rounded trace too, so the browser and Python see identical inputs and the parity counter cannot fail for a rounding reason. The rounding (5 microvolt steps) is far below the signal's noise.
+
+## 2026-10-27: D5 decided, performance budget
+
+**Measured (2026-10-27, onnxruntime-web 1.31.1 from unpkg, compressed locally):** `ort-wasm-simd-threaded.wasm` 14.8 MB raw, 3.8 MB gzip, 2.4 MB Brotli; `ort.wasm.min.mjs` 54 KB raw, 17 KB gzip, 15 KB Brotli. The runtime is about ten times everything else in a visit. Version note for E1 and E2: 1.31.1 was released 2026-10-26; the previous stable, 1.30.0, on 2026-09-14, so the two-week rule likely pins 1.30.0.
+
+**Decisions (Din):**
+- Stock ONNX Runtime Web WebAssembly build. Kept as fallbacks if the measured load time misses budget: a reduced-operator custom build (needs the Emscripten toolchain), or hand-written TypeScript inference (no download, but parity would rest on our own code).
+- The trace and expert labels play as soon as the trace arrives; a "model loading" note shows until the Worker is ready, then live labels start. This is loading, not the D3 failure fallback.
+- The case study iframe loads nothing heavy until visible: the site marks it `loading="lazy"` (added to G4) and the demo waits for visibility before fetching the runtime.
+- Hashed filenames, served as immutable.
+- Gated in CI: model file under 1 MB; demo JavaScript under 60 KB gzip excluding ONNX Runtime; beats JSON under 100 KB per patient; no main-thread task over 50 ms during playback.
+- Measured and reported in Playwright (4x CPU slowdown, fast 4G for the phone profile), not gated: first trace under 1.5 s desktop and 3 s phone; first live label under 3 s desktop and 6 s phone; median inference under 2 ms per beat in the Worker; steady 60 fps; memory under 100 MB.
+- A first visit is about 4 to 5 MB compressed; return visits load only the chosen patient's trace.
+- To confirm in E1: whether Cloudflare compresses `.wasm` and the int16 trace; if not, pre-compress at build time.
