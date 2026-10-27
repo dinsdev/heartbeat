@@ -70,7 +70,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | F1 | `docs/PRD.md`, promoted from the dins-projects PRD section 7: written from the A to E decisions, P0 core, P1 supporting work, P2 stretch, requirements traced to planning items | decided | done |
 | F2 | `docs/PLAN.md`: nine phases, a Phase 7 gate before the sealed run, 49-row rule-to-test table (R46 and R47 added), task plans written per phase; build phases added to this file | decided | done |
 | F3 | `AGENTS.md` (one root file, seven rigor rules, approvals, commands marked as Phase 1) and `CLAUDE.md` importing it; conventions go in `docs/CONVENTIONS.md` (F4) | decided | done |
-| F4 | Coding conventions and rules in `docs/CONVENTIONS.md`: Python and TypeScript style, typing, naming, ML hygiene | open | doing |
+| F4 | Coding conventions and rules in `docs/CONVENTIONS.md`: drafted 2026-10-27 (tool settings, Python, ML hygiene mapped to a leakage taxonomy, TypeScript and Svelte, tests, git and docs) | draft | doing |
 | F5 | `.claude/settings.json`: permissions and hooks | open | todo |
 | F6 | Model card and data card templates, filled with real numbers later | open | todo |
 | F7 | `docs/WORK_LEDGER.md` kept current | ongoing | doing |

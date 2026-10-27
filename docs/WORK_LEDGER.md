@@ -564,3 +564,32 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 - `CLAUDE.md` imports `AGENTS.md` and adds three Claude-only notes.
 
 **Carried to F4 and F5:** whether Markdown docs are Prettier-formatted, and whether TASKS.md's build status key separates implemented, verified and accepted (F4); deny rules or hooks for the no-exception rules (F5).
+
+## 2026-10-27: F4 drafted, conventions
+
+**Checked locally:** dins.dev has no tooling config yet (no `package.json`, Prettier or ESLint config), so "the site's tooling" (D2) means its locked workflow rules in `~/Develop/dins.dev/docs/PLAN.md`: Conventional Commits, `type/short-description` branches, a PR for every change, squash merge only, one `check.sh`. That plan also says shared conventions live once in the `handbook` repo; `dins-handbook` has no conventions file and is private, so a public repo can't point to it. `docs/CONVENTIONS.md` stands (F3). Prettier, ruff and mypy are not installed on the Mac, so no tool setting below was run; Phase 1 checks them against the pinned versions. Existing docs: only the PRD is Prettier-formatted (padded tables); PLAN, TASKS and the ledger are not.
+
+**Research (2026-10-27, primary sources):**
+- scikit-learn "Common pitfalls": split before any preprocessing, never `fit` on test data, use pipelines; pass an integer `random_state` to CV splitters for comparable folds; avoid `np.random.seed`.
+- NumPy "Parallel random number generation": derive streams with `SeedSequence.spawn` or `default_rng`; `seed + i` is marked unsafe because nearby root seeds give overlapping worker seeds across runs.
+- PyTorch 2.14 reproducibility notes: no guarantee across releases, platforms, or CPU against GPU; `torch.use_deterministic_algorithms`; seed the `DataLoader` with a `generator`.
+- Ruff rules: `NPY002` flags legacy `np.random` functions and recommends a `Generator`; `ERA001` flags commented-out code; `T201` flags `print`.
+- typescript-eslint configs: start from `recommended(TypeChecked)` plus `stylistic(TypeChecked)`; `strict` configs are for teams highly proficient in TypeScript and are not semver-stable (rules can change in minor releases).
+- TypeScript tsconfig reference: `strict` does not include `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride` or `noFallthroughCasesInSwitch`.
+- Svelte best practices: `$derived` not `$effect` for computed values, effects as an escape hatch, classes with `$state` instead of stores, keyed each blocks not keyed by index.
+- Kapoor and Narayanan, "Leakage and the reproducibility crisis in machine-learning-based science" (Patterns 2023): leakage found in at least 294 papers across 17 fields; the taxonomy (L1.1 to L1.4, L2, L3.1 to L3.3) is mapped to this repo in CONVENTIONS section 3.
+- From Claude's memory, not checked: Hypothesis's `derandomize` setting for a fixed-seed CI profile; the rule name `@typescript-eslint/switch-exhaustiveness-check`; Prettier printing tables wider than the print width compactly (which would keep TASKS and ledger diffs small). Phase 1 checks all three.
+
+**Proposed (for Din's lock):**
+- Tools enforce whatever they can; `docs/CONVENTIONS.md` (120 lines) names the tool settings and keeps only what a linter can't see. Ruff with a wider rule set than the default, including `NPY` (bans global NumPy random state) and `ERA`; `mypy --strict`; strict TypeScript plus four extra flags and `erasableSyntaxOnly` (no enums, matching Node's type stripping); typescript-eslint's recommended and stylistic type-checked sets rather than strict (stable across minor upgrades, which matters with Renovate).
+- Python: names carry units (`_samples`, `_s`, `_hz`, `_mv`, `_adu`); decided values as named constants with the decision ID; arrays typed with shapes in docstrings and asserts at boundaries (no jaxtyping, to avoid two dependencies); `ddof=0` everywhere so TypeScript matches; errors fail loudly; atomic writes.
+- ML hygiene: the leakage taxonomy table; a separate fit step and apply step for anything learned; no global random state, streams spawned from one master seed with `SeedSequence`; figures made by code; no notebooks in the repo.
+- TypeScript and Svelte: runes only, plain TypeScript for the trace, preprocessing and Worker protocol, string unions, validated message unions, parity code mirrors Python name for name.
+- Tests: three Python test folders by layer with a `realdata` marker; rule IDs on tests (`@pytest.mark.rule("R12")`, `R29:` title prefixes) plus a small CI check that every non-manual row in PLAN section 6 has a test. New: no planning item decided this check.
+- Git: Conventional Commits from Phase 1 (as on dins.dev). Merge commits, never squash or rebase: run folders, the freeze record and R47 refer to commit hashes, and a squash would leave the freeze commit off `main`. This differs from dins.dev's squash-only rule on purpose.
+- Task status for the build phases uses dins.dev's words (Planned, In progress, Implemented, Verified, Accepted by Din only, Blocked), closing the gap noted at F3. The build-phase rows in TASKS.md switch from todo to Planned at the lock.
+- Markdown: Prettier formats every `.md` file (`proseWrap: "preserve"`). Proposed timing: one formatting-only pass with the pinned Prettier 3.9.10 just before the Phase 0 push (needs Din's go for the download), so the pushed pre-registration is already formatted and the Phase 7 gate never sees a reformat as a change.
+
+**Gap found (for the Phase 2 plan, not decided here):** B3's per-window z-score does not say what happens when a window's standard deviation is zero or near zero (a flat or lead-off segment). Python and TypeScript must handle it the same way.
+
+**Verified:** no em or en dashes, no avoid-list words, ASCII only (grep).
