@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft for Din's review (F2). |
+| **Status** | Locked by Din (F2, 2026-10-27). Phase task plans are added in section 8 as each phase starts. |
 | **Date** | 2026-10-27 |
 | **Implements** | `docs/PRD.md` (locked F1). Requirement IDs below (for example `EVAL-05`) refer to it. |
 | **Related** | `docs/TASKS.md` (build tasks per phase), `docs/WORK_LEDGER.md` (decisions and verification results) |
@@ -44,7 +44,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 - Sections A to F decided and committed.
 - `dinsdev/heartbeat` created as a public repo and `main` pushed, with Din's go (E6). This timestamps the pre-registered plan (A3, C4, C5, C8) before any code exists.
 
-**Proposed change to TASKS.md:** the G items (publishing) are not planning and cannot finish in Phase 0, since G2 needs the demo and G3 needs the case study. They move into the build phases: G4 in Phase 6, G1 in Phase 7, G2 and G3 in Phase 8.
+**Decided at the F2 lock:** the G items (publishing) are not planning and cannot finish in Phase 0, since G2 needs the demo and G3 needs the case study. They move into the build phases: G4 in Phase 6, G1 in Phase 7, G2 and G3 in Phase 8.
 
 ### Phase 1: Skeleton and CI (about 1 day)
 
@@ -143,7 +143,7 @@ From E5. The rule-to-test table names a layer for every rule.
 
 ## 6. Rule-to-test table
 
-Each locked rigor rule and the test that enforces it. Test names are indicative; the phase plan fixes the real ones. "Proposed" marks a check that no planning item decided; Din's lock of F2 decides it.
+Each locked rigor rule and the test that enforces it. Test names are indicative; the phase plan fixes the real ones. R46 and R47 were added at F2; Din locked them with the plan.
 
 | # | Rule | Source | Enforced by | Layer | Phase |
 |---|---|---|---|---|---|
@@ -192,8 +192,8 @@ Each locked rigor rule and the test that enforces it. Test names are indicative;
 | R43 | The default patient rule picks record 200 | D4 | test on the built DS2 manifest | L2 | 7 |
 | R44 | Published text avoids D7's list and dash separators | D7 | wording lint | TX | 1 onward |
 | R45 | Dependencies respect the 14-day rule | E2 | uv and pnpm config; CI installs from frozen lockfiles | GATE | 1 |
-| R46 | Third-party actions pinned to commit hashes | E6 | proposed: a small workflow check that rejects tag references | TX | 1 |
-| R47 | The freeze commit is on the public remote before the sealed run | E6 | proposed: `evaluate-test` refuses unless the freeze commit is on `origin/main` | L2 | 7 |
+| R46 | Third-party actions pinned to commit hashes | E6, F2 | a small workflow check that rejects tag references | TX | 1 |
+| R47 | The freeze commit is on the public remote before the sealed run | E6, F2 | `evaluate-test` refuses unless the freeze commit is on `origin/main` | L2 | 7 |
 | R48 | One VoiceOver pass | D6 | manual, recorded in the ledger | MAN | 8 |
 | R49 | Pre-registered plan unchanged, or changes logged before the gate | A3 | Phase 7 gate checklist | MAN | 7 |
 

@@ -68,7 +68,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | ID | Item | State | Status |
 |---|---|---|---|
 | F1 | `docs/PRD.md`, promoted from the dins-projects PRD section 7: written from the A to E decisions, P0 core, P1 supporting work, P2 stretch, requirements traced to planning items | decided | done |
-| F2 | `docs/PLAN.md` phases, and build phases added to this file. Drafted 2026-10-27; awaiting Din's review and lock | draft | doing |
+| F2 | `docs/PLAN.md`: nine phases, a Phase 7 gate before the sealed run, 49-row rule-to-test table (R46 and R47 added), task plans written per phase; build phases added to this file | decided | done |
 | F3 | `AGENTS.md`, and `CLAUDE.md` starting with `@AGENTS.md` | open | todo |
 | F4 | Coding conventions and rules: Python and TypeScript style, typing, naming, ML hygiene | open | todo |
 | F5 | `.claude/settings.json`: permissions and hooks | open | todo |
@@ -76,6 +76,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | F7 | `docs/WORK_LEDGER.md` kept current | ongoing | doing |
 
 ### G. Publishing
+
+Scheduled into the build phases at the F2 lock (none can finish during planning): G4 in Phase 6, G1 in Phase 7, G2 and G3 in Phase 8. Phase 0 ends when F is done and the repo is pushed.
 
 | ID | Item | State | Status |
 |---|---|---|---|
@@ -86,7 +88,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 ## Build phases
 
-From `docs/PLAN.md` (F2, draft until Din locks it). Each phase gets a task-level plan at its start, which may split these rows further. Status is todo until then. The G items above are scheduled into these phases (G4 in 6, G1 in 7, G2 and G3 in 8).
+From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan at its start, which may split these rows further. Status is todo until then. The G items above are scheduled into these phases (G4 in 6, G1 in 7, G2 and G3 in 8).
 
 ### Phase 1: Skeleton and CI
 

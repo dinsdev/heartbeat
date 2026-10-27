@@ -517,3 +517,14 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 **Estimates (Claude's guesses, not measured):** about 18 to 23 focused days for Phases 1 to 8. Compute times are the measured C7 and E4 figures. Against the best-case 2026-12-01 freeze, Heartbeat fits with little slack, before the other three projects. Cut order if short: P1 items, then timing polish, never a P0 rigor rule.
 
 **Not verified:** whether Workers preview URLs need a production deploy first (checked when the token is set up, Phase 6).
+
+## 2026-10-27: F2 decided, the plan
+
+**Decision (Din):** lock `docs/PLAN.md` as drafted, including:
+- R46: a CI check that rejects third-party actions referenced by tag instead of commit hash (Phase 1).
+- R47: `evaluate-test` refuses unless the freeze commit is on `origin/main`, so "pushed before the sealed run" is enforced in code, not only promised (built with the other refusals, checked at Phase 7).
+- The G items move out of Phase 0 into the build phases: G4 in Phase 6, G1 in Phase 7, G2 and G3 in Phase 8. Phase 0 ends when section F is done and the repo is pushed public.
+
+Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-level PLAN.md with a task-level plan appended per phase at its start, a branch per phase with pushes at checkpoints (Din's go), the five review-focus failure modes, and the cut order if time runs short (P1 items, then timing polish, never a P0 rigor rule).
+
+**Handoff (2026-10-27, end of session):** F1 and F2 are decided. Next is F3 (`AGENTS.md`, and `CLAUDE.md` starting with `@AGENTS.md`) in a new conversation, then F4 (conventions, including whether Markdown docs are Prettier-formatted, since Din ran Prettier on the PRD), F5 (`.claude/settings.json`), F6 (model and data card templates). After F: create `dinsdev/heartbeat` as a public repo and push (Din's go), which closes Phase 0 and timestamps the pre-registration. Open items carried: the de Chazal full text (PRD Q2; Din downloads the PDF); Workers custom-domain coverage on the free plan (Q3, at first deploy); whether Workers preview URLs need a production deploy first (Phase 6); the dins-projects PRD section 7 should point to this PRD (listed in the PRD's Appendix A; that change belongs to the dins-projects repo).
