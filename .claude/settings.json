@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git switch *)",
+      "Bash(git checkout -b *)",
+      "Bash(git branch *)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
+      "Bash(git mv *)",
+      "Bash(git rm *)",
+      "Bash(uv sync *)",
+      "Bash(uv lock *)",
+      "Bash(uv run pytest *)",
+      "Bash(uv run ruff *)",
+      "Bash(uv run mypy *)",
+      "Bash(uv run heartbeat *)",
+      "Bash(scripts/check.sh *)",
+      "Bash(pnpm -C web install *)",
+      "Bash(pnpm -C web run *)",
+      "Bash(pnpm -C web build *)",
+      "Bash(pnpm -C web test *)",
+      "Bash(pnpm -C web exec *)",
+      "Bash(python3 -m unittest discover -s .claude/hooks)"
+    ],
+    "ask": [
+      "Bash(gh api *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Edit(/manifests/**)",
+      "Edit(/.claude/**)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git remote add *)",
+      "Bash(git remote set-url *)",
+      "Bash(gh repo create *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh release *)",
+      "Bash(gh workflow run *)",
+      "Bash(gh secret *)",
+      "Bash(gh variable *)",
+      "Bash(gh auth token *)",
+      "Bash(*wrangler deploy*)",
+      "Bash(*wrangler versions *)",
+      "Bash(*wrangler secret *)",
+      "Bash(*wrangler login *)",
+      "Bash(pnpm * deploy*)",
+      "Bash(uv run heartbeat evaluate-test *)",
+      "Bash(uv run heartbeat make-folds *)",
+      "Bash(uv run heartbeat rebuild *--exact*)",
+      "Bash(git clean *)",
+      "Bash(git reset --hard *)",
+      "Bash(git checkout -- *)",
+      "Bash(git stash drop *)",
+      "Bash(git stash clear *)",
+      "Edit(/results/**)",
+      "Edit(/models/heartbeat-v1/**)",
+      "Edit(/config/folds.json)",
+      "Edit(/web/vendor/brand/**)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.dev.vars)",
+      "Read(.dev.vars.*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|NotebookEdit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
