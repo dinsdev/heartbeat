@@ -1,11 +1,11 @@
 # Heartbeat data card
 
-| | |
-|---|---|
-| **Status** | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists. |
-| **Covers** | The beat dataset Heartbeat derives from the MIT-BIH Arrhythmia Database 1.0.0: which records, how they are split, how beats are cut and labeled, and what ships to the browser. |
-| **Requirements** | PUB-04 (this card), DATA-01 to DATA-11, EVAL-01 to EVAL-03, DEMO-07, DEMO-08, DEMO-16, PUB-07 |
-| **Related** | `docs/MODEL_CARD.md`, `manifests/`, `DATA_LICENSE.md`, `docs/WORK_LEDGER.md` (B1 to B5, C1, D4) |
+|                  |                                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**       | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists.                                                                                         |
+| **Covers**       | The beat dataset Heartbeat derives from the MIT-BIH Arrhythmia Database 1.0.0: which records, how they are split, how beats are cut and labeled, and what ships to the browser. |
+| **Requirements** | PUB-04 (this card), DATA-01 to DATA-11, EVAL-01 to EVAL-03, DEMO-07, DEMO-08, DEMO-16, PUB-07                                                                                   |
+| **Related**      | `docs/MODEL_CARD.md`, `manifests/`, `DATA_LICENSE.md`, `docs/WORK_LEDGER.md` (B1 to B5, C1, D4)                                                                                 |
 
 The layout follows Gebru et al., "Datasheets for Datasets" (arXiv 1803.09010, v8), section by section, answering the questions that apply to a dataset derived from a public one. Facts about the source database come from its PhysioNet page and are cited, not repeated in full.
 
@@ -25,12 +25,12 @@ Every count in this card sits in a generated block between `<!-- card:begin NAME
 
 **Records used:** 44 of the 48 records (the four paced records are excluded), from 43 people.
 
-| Set | Records | Role |
-|---|---|---|
-| DS1 | 101, 106, 108, 109, 112, 114, 115, 116, 118, 119, 122, 124, 201, 203, 205, 207, 208, 209, 215, 220, 223, 230 | Training and development (22 records, 22 patients) |
-| DS2 | 100, 103, 105, 111, 113, 117, 121, 123, 200, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234 | Test, sealed until one logged run (21 records, 21 patients) |
-| Excluded | 102, 104, 107, 217 | Paced rhythms (AAMI practice) |
-| Excluded | 202 | Same person as 201, which stays in DS1 (fixes the 201/202 leak) |
+| Set      | Records                                                                                                      | Role                                                            |
+| -------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| DS1      | 101, 106, 108, 109, 112, 114, 115, 116, 118, 119, 122, 124, 201, 203, 205, 207, 208, 209, 215, 220, 223, 230 | Training and development (22 records, 22 patients)              |
+| DS2      | 100, 103, 105, 111, 113, 117, 121, 123, 200, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234      | Test, sealed until one logged run (21 records, 21 patients)     |
+| Excluded | 102, 104, 107, 217                                                                                           | Paced rhythms (AAMI practice)                                   |
+| Excluded | 202                                                                                                          | Same person as 201, which stays in DS1 (fixes the 201/202 leak) |
 
 Source of truth: `manifests/splits.toml`, with the record-to-person map in `manifests/subjects.toml`. The DS1 and DS2 lists follow de Chazal et al. (2004) as transcribed in secondary sources and checked against PhysioNet's class totals; the check against the paper's full text is still open (PRD Q2).
 

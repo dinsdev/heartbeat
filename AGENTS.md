@@ -18,15 +18,15 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 Phase 0 is planning only: none of this exists yet. Phase 1 builds it; update this section then with the exact single-test commands.
 
-| What | Command |
-|---|---|
-| Install (Python) | `uv sync --frozen` |
-| Install (web) | `pnpm -C web install --frozen-lockfile` |
-| Lint and unit tests, under 2 minutes; run before every commit | `scripts/check.sh` |
-| Quick integrity check: manifests, checksums, frozen-model parity, results against the test log | `uv run heartbeat verify` |
-| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch) | `uv run heartbeat rebuild` |
-| Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
-| Web build (reads demo data from the rebuild) | `pnpm -C web build` |
+| What                                                                                           | Command                                   |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| Install (Python)                                                                               | `uv sync --frozen`                        |
+| Install (web)                                                                                  | `pnpm -C web install --frozen-lockfile`   |
+| Lint and unit tests, under 2 minutes; run before every commit                                  | `scripts/check.sh`                        |
+| Quick integrity check: manifests, checksums, frozen-model parity, results against the test log | `uv run heartbeat verify`                 |
+| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch)                      | `uv run heartbeat rebuild`                |
+| Rerun from one stage                                                                           | `uv run heartbeat rebuild --from <stage>` |
+| Web build (reads demo data from the rebuild)                                                   | `pnpm -C web build`                       |
 
 Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI runs all of them on every push; see `.github/workflows/`.
 

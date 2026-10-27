@@ -1,11 +1,11 @@
 # Heartbeat: Plan
 
-| | |
-|---|---|
-| **Status** | Locked by Din (F2, 2026-10-27). Phase task plans are added in section 8 as each phase starts. |
-| **Date** | 2026-10-27 |
-| **Implements** | `docs/PRD.md` (locked F1). Requirement IDs below (for example `EVAL-05`) refer to it. |
-| **Related** | `docs/TASKS.md` (build tasks per phase), `docs/WORK_LEDGER.md` (decisions and verification results) |
+|                |                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| **Status**     | Locked by Din (F2, 2026-10-27). Phase task plans are added in section 8 as each phase starts.       |
+| **Date**       | 2026-10-27                                                                                          |
+| **Implements** | `docs/PRD.md` (locked F1). Requirement IDs below (for example `EVAL-05`) refer to it.               |
+| **Related**    | `docs/TASKS.md` (build tasks per phase), `docs/WORK_LEDGER.md` (decisions and verification results) |
 
 This plan says in what order Heartbeat gets built, what each phase must prove before the next starts, and which test enforces each rigor rule. It does not repeat the requirements; the PRD holds those.
 
@@ -41,6 +41,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 **Remaining:** F8 (one formatting-only Prettier pass over the Markdown docs before the push, Din's go for the download).
 
 **Exit:**
+
 - Sections A to F decided and committed.
 - `dinsdev/heartbeat` created as a public repo and `main` pushed by Din (E6; F5 denies both to Claude). This timestamps the pre-registered plan (A3, C4, C5, C8) before any code exists.
 
@@ -92,6 +93,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 ### Phase 7: Freeze and the sealed run (about 1 day, plus compute)
 
 **Gate (all must hold before `evaluate-test`; Claude checks, Din confirms):**
+
 1. Every rule-to-test row through R40 passes in CI on `main`.
 2. The pre-registered plan (A3, C4, C5, C8 in the ledger; PRD section 8.2) is unchanged since the Phase 0 push, or every change has a dated ledger entry made before this gate.
 3. The freeze record (commit, config, model checksum) is committed and pushed (Din's go).
@@ -130,73 +132,73 @@ External dependencies: PhysioNet S3 mirror and PhysioNet (Phase 2); GitHub Actio
 
 From E5. The rule-to-test table names a layer for every rule.
 
-| Layer | What | Where it runs |
-|---|---|---|
-| L1 | Python unit tests (pytest, hypothesis), no data | CI on every push; `scripts/check.sh` |
-| L2 | Python tests on real MIT-BIH data (cached download) | CI on every push |
-| L3 | Parity chain on shared DS1 fixtures (1e-5, labels exact) | CI (Python half and browser half) |
-| L4 | Web unit tests (Vitest) | CI; `scripts/check.sh` |
-| L5 | Web end to end (Playwright, Chromium and WebKit) | CI |
-| TX | Wording lint on built demo text and the case study draft | CI |
-| GATE | Size and performance gates in the web build and Playwright | CI |
-| MAN | Manual check, recorded in the ledger | Before the named milestone |
+| Layer | What                                                       | Where it runs                        |
+| ----- | ---------------------------------------------------------- | ------------------------------------ |
+| L1    | Python unit tests (pytest, hypothesis), no data            | CI on every push; `scripts/check.sh` |
+| L2    | Python tests on real MIT-BIH data (cached download)        | CI on every push                     |
+| L3    | Parity chain on shared DS1 fixtures (1e-5, labels exact)   | CI (Python half and browser half)    |
+| L4    | Web unit tests (Vitest)                                    | CI; `scripts/check.sh`               |
+| L5    | Web end to end (Playwright, Chromium and WebKit)           | CI                                   |
+| TX    | Wording lint on built demo text and the case study draft   | CI                                   |
+| GATE  | Size and performance gates in the web build and Playwright | CI                                   |
+| MAN   | Manual check, recorded in the ledger                       | Before the named milestone           |
 
 ## 6. Rule-to-test table
 
 Each locked rigor rule and the test that enforces it. Test names are indicative; the phase plan fixes the real ones. R46 and R47 were added at F2; Din locked them with the plan. R50 was added, and R44 widened to the README and cards, at F6.
 
-| # | Rule | Source | Enforced by | Layer | Phase |
-|---|---|---|---|---|---|
-| R1 | A checksum mismatch stops the run | B5 | download test with a corrupted file | L1 | 2 |
-| R2 | The cache matches the pinned 132 checksums | B5 | every run's checksum step; `heartbeat verify` | L2 | 2 |
-| R3 | Paced records excluded; DS1 and DS2 lists match the manifest | B1 | `splits.toml` schema and content test | L1 | 2 |
-| R4 | MLII picked by name in any channel order | B1 | unit test with 114's layout; real-data test on 100 and 114 | L1, L2 | 2 |
-| R5 | Bandpass is zero-phase, 0.5 to 40 Hz | B3 | phase and band test on synthetic sines | L1 | 2 |
-| R6 | int16 rounding error at most 0.0025 mV | B3, D4 | property test | L1 | 2 |
-| R7 | Window is 96 before, 160 after the annotation | B3 | index test | L1 | 2 |
-| R8 | RR features are causal except post-RR, by one beat | B3 | hypothesis test changing beats further ahead | L1 | 2 |
-| R9 | RR uses every annotated beat, including Q | B3, B4 | unit test with a Q beat between two N beats | L1 | 2 |
-| R10 | Unknown annotation symbol fails loudly | B4 | unit test | L1 | 2 |
-| R11 | Class counts match PhysioNet's table per record | B4 | real-data test over all 44 records | L2 | 2 |
-| R12 | No subject on both sides of DS1 and DS2; 201 and 202 one subject | B1, C1 | leakage test on subject IDs | L2 | 2 |
-| R13 | No subject on both sides of any fold | C1 | leakage test on `folds.json` | L2 | 2 |
-| R14 | `rebuild` checks folds and never regenerates them | C1, E4 | test that a changed `folds.json` fails `check-folds` | L2 | 2 |
-| R15 | Training and CV code cannot load DS2 | C1 | loader test | L2 | 2 |
-| R16 | Metrics agree with scikit-learn | C4 | unit tests on known cases | L1 | 3 |
-| R17 | Bootstrap resamples whole patients; CNN and baseline share draws | C4 | unit tests | L1 | 3 |
-| R18 | Draws with no predicted S are skipped for S precision only, and counted | C4 | unit test | L1 | 3 |
-| R19 | Per-patient cells show counts; percentage only at 10 or more beats | C4 | unit test | L1 | 3 |
-| R20 | Calibration never changes a label; logit adjustment; equal-mass ECE | C4 | unit tests | L1 | 3 |
-| R21 | Baseline and CNN use the same folds, class weights and selection metric | C2, C3 | test that both read one fold file and one weight function | L1 | 3 |
-| R22 | Same seed on CPU gives identical weights | C6 | two short CPU runs compared | L1 | 4 |
-| R23 | Training runs without crashing on real data | C7 | smoke run of a few CPU batches | L2 | 4 |
-| R24 | The exhibit differs from the honest run only in the splitter | C5 | test comparing the two resolved configs | L1 | 4 |
-| R25 | ONNX model is one file, under 1 MB | E2, D5 | export test and size gate | L3, GATE | 5 |
-| R26 | PyTorch and Python ONNX Runtime agree within 1e-5, labels exact | E5 | parity test on fixtures | L3 | 5 |
-| R27 | Parity fixtures come from DS1 only | E5 | test on fixture record IDs | L3 | 5 |
-| R28 | `rebuild` stops before DS2 without a freeze record | E4 | test with no freeze record | L2 | 5 |
-| R29 | Browser ONNX Runtime agrees with Python within 1e-5, labels exact, in Chromium and WebKit | E5 | Playwright parity test | L3, L5 | 6 |
-| R30 | TypeScript preprocessing matches Python step by step | E5 | Vitest on fixtures (window, z-score, RR, scaler, calibration) | L3, L4 | 6 |
-| R31 | `manifest.json` matches the shipped files | D4 | build check | L4 | 6 |
-| R32 | Demo data is DS1-only until the sealed run is logged | C1, E4 | `build-demo-data` test with no test log entry | L2 | 6 |
-| R33 | Fallback is labeled when WebAssembly is blocked | D3 | Playwright with WebAssembly disabled | L5 | 6 |
-| R34 | Class colors at least 3:1 in light and dark | D6 | contrast unit test | L4 | 6 |
-| R35 | Axe at zero violations: full and embed, light and dark, reduced motion on and off | D6 | Playwright with axe | L5 | 6 |
-| R36 | Every control reachable and usable by keyboard | D6 | Playwright keyboard walk | L5 | 6 |
-| R37 | Theme messages accepted only from the dins.dev origin | D6 | unit test | L4 | 6 |
-| R38 | No main-thread task over 50 ms during playback | D5 | Playwright long-task observer | GATE | 6 |
-| R39 | Model under 1 MB, demo JS under 60 KB gzip, beats JSON under 100 KB per patient | D5 | build size gates | GATE | 6 |
-| R40 | Headers carry `frame-ancestors` and `'wasm-unsafe-eval'` | D1 | test on built headers | L5 | 6 |
-| R41 | `evaluate-test` refuses without a matching freeze record or on a dirty tree | C1, C6 | tests with a mismatched record and a dirty tree | L2 | 5 |
-| R42 | Sealed runs append to `test_runs.jsonl`; nothing is rewritten; reproductions are a separate entry type | C6, E4 | test on the log writer; `heartbeat verify` checks results against the log | L2 | 5 |
-| R43 | The default patient rule picks record 200 | D4 | test on the built DS2 manifest | L2 | 7 |
-| R44 | Published text (built demo, case study draft, README, model and data cards) avoids D7's list and dash separators | D7, F6 | wording lint | TX | 1 onward |
-| R45 | Dependencies respect the 14-day rule | E2 | uv and pnpm config; CI installs from frozen lockfiles | GATE | 1 |
-| R46 | Third-party actions pinned to commit hashes | E6, F2 | a small workflow check that rejects tag references | TX | 1 |
-| R47 | The freeze commit is on the public remote before the sealed run | E6, F2 | `evaluate-test` refuses unless the freeze commit is on `origin/main` | L2 | 7 |
-| R48 | One VoiceOver pass | D6 | manual, recorded in the ledger | MAN | 8 |
-| R49 | Pre-registered plan unchanged, or changes logged before the gate | A3 | Phase 7 gate checklist | MAN | 7 |
-| R50 | Card numbers come from committed results: every generated block equals what `heartbeat cards` renders, and no test block is pending once the sealed run is logged | F6 | renderer unit tests; `heartbeat verify` check on the two cards | L1, L2 | 5 |
+| #   | Rule                                                                                                                                                              | Source | Enforced by                                                               | Layer    | Phase    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------- | -------- | -------- |
+| R1  | A checksum mismatch stops the run                                                                                                                                 | B5     | download test with a corrupted file                                       | L1       | 2        |
+| R2  | The cache matches the pinned 132 checksums                                                                                                                        | B5     | every run's checksum step; `heartbeat verify`                             | L2       | 2        |
+| R3  | Paced records excluded; DS1 and DS2 lists match the manifest                                                                                                      | B1     | `splits.toml` schema and content test                                     | L1       | 2        |
+| R4  | MLII picked by name in any channel order                                                                                                                          | B1     | unit test with 114's layout; real-data test on 100 and 114                | L1, L2   | 2        |
+| R5  | Bandpass is zero-phase, 0.5 to 40 Hz                                                                                                                              | B3     | phase and band test on synthetic sines                                    | L1       | 2        |
+| R6  | int16 rounding error at most 0.0025 mV                                                                                                                            | B3, D4 | property test                                                             | L1       | 2        |
+| R7  | Window is 96 before, 160 after the annotation                                                                                                                     | B3     | index test                                                                | L1       | 2        |
+| R8  | RR features are causal except post-RR, by one beat                                                                                                                | B3     | hypothesis test changing beats further ahead                              | L1       | 2        |
+| R9  | RR uses every annotated beat, including Q                                                                                                                         | B3, B4 | unit test with a Q beat between two N beats                               | L1       | 2        |
+| R10 | Unknown annotation symbol fails loudly                                                                                                                            | B4     | unit test                                                                 | L1       | 2        |
+| R11 | Class counts match PhysioNet's table per record                                                                                                                   | B4     | real-data test over all 44 records                                        | L2       | 2        |
+| R12 | No subject on both sides of DS1 and DS2; 201 and 202 one subject                                                                                                  | B1, C1 | leakage test on subject IDs                                               | L2       | 2        |
+| R13 | No subject on both sides of any fold                                                                                                                              | C1     | leakage test on `folds.json`                                              | L2       | 2        |
+| R14 | `rebuild` checks folds and never regenerates them                                                                                                                 | C1, E4 | test that a changed `folds.json` fails `check-folds`                      | L2       | 2        |
+| R15 | Training and CV code cannot load DS2                                                                                                                              | C1     | loader test                                                               | L2       | 2        |
+| R16 | Metrics agree with scikit-learn                                                                                                                                   | C4     | unit tests on known cases                                                 | L1       | 3        |
+| R17 | Bootstrap resamples whole patients; CNN and baseline share draws                                                                                                  | C4     | unit tests                                                                | L1       | 3        |
+| R18 | Draws with no predicted S are skipped for S precision only, and counted                                                                                           | C4     | unit test                                                                 | L1       | 3        |
+| R19 | Per-patient cells show counts; percentage only at 10 or more beats                                                                                                | C4     | unit test                                                                 | L1       | 3        |
+| R20 | Calibration never changes a label; logit adjustment; equal-mass ECE                                                                                               | C4     | unit tests                                                                | L1       | 3        |
+| R21 | Baseline and CNN use the same folds, class weights and selection metric                                                                                           | C2, C3 | test that both read one fold file and one weight function                 | L1       | 3        |
+| R22 | Same seed on CPU gives identical weights                                                                                                                          | C6     | two short CPU runs compared                                               | L1       | 4        |
+| R23 | Training runs without crashing on real data                                                                                                                       | C7     | smoke run of a few CPU batches                                            | L2       | 4        |
+| R24 | The exhibit differs from the honest run only in the splitter                                                                                                      | C5     | test comparing the two resolved configs                                   | L1       | 4        |
+| R25 | ONNX model is one file, under 1 MB                                                                                                                                | E2, D5 | export test and size gate                                                 | L3, GATE | 5        |
+| R26 | PyTorch and Python ONNX Runtime agree within 1e-5, labels exact                                                                                                   | E5     | parity test on fixtures                                                   | L3       | 5        |
+| R27 | Parity fixtures come from DS1 only                                                                                                                                | E5     | test on fixture record IDs                                                | L3       | 5        |
+| R28 | `rebuild` stops before DS2 without a freeze record                                                                                                                | E4     | test with no freeze record                                                | L2       | 5        |
+| R29 | Browser ONNX Runtime agrees with Python within 1e-5, labels exact, in Chromium and WebKit                                                                         | E5     | Playwright parity test                                                    | L3, L5   | 6        |
+| R30 | TypeScript preprocessing matches Python step by step                                                                                                              | E5     | Vitest on fixtures (window, z-score, RR, scaler, calibration)             | L3, L4   | 6        |
+| R31 | `manifest.json` matches the shipped files                                                                                                                         | D4     | build check                                                               | L4       | 6        |
+| R32 | Demo data is DS1-only until the sealed run is logged                                                                                                              | C1, E4 | `build-demo-data` test with no test log entry                             | L2       | 6        |
+| R33 | Fallback is labeled when WebAssembly is blocked                                                                                                                   | D3     | Playwright with WebAssembly disabled                                      | L5       | 6        |
+| R34 | Class colors at least 3:1 in light and dark                                                                                                                       | D6     | contrast unit test                                                        | L4       | 6        |
+| R35 | Axe at zero violations: full and embed, light and dark, reduced motion on and off                                                                                 | D6     | Playwright with axe                                                       | L5       | 6        |
+| R36 | Every control reachable and usable by keyboard                                                                                                                    | D6     | Playwright keyboard walk                                                  | L5       | 6        |
+| R37 | Theme messages accepted only from the dins.dev origin                                                                                                             | D6     | unit test                                                                 | L4       | 6        |
+| R38 | No main-thread task over 50 ms during playback                                                                                                                    | D5     | Playwright long-task observer                                             | GATE     | 6        |
+| R39 | Model under 1 MB, demo JS under 60 KB gzip, beats JSON under 100 KB per patient                                                                                   | D5     | build size gates                                                          | GATE     | 6        |
+| R40 | Headers carry `frame-ancestors` and `'wasm-unsafe-eval'`                                                                                                          | D1     | test on built headers                                                     | L5       | 6        |
+| R41 | `evaluate-test` refuses without a matching freeze record or on a dirty tree                                                                                       | C1, C6 | tests with a mismatched record and a dirty tree                           | L2       | 5        |
+| R42 | Sealed runs append to `test_runs.jsonl`; nothing is rewritten; reproductions are a separate entry type                                                            | C6, E4 | test on the log writer; `heartbeat verify` checks results against the log | L2       | 5        |
+| R43 | The default patient rule picks record 200                                                                                                                         | D4     | test on the built DS2 manifest                                            | L2       | 7        |
+| R44 | Published text (built demo, case study draft, README, model and data cards) avoids D7's list and dash separators                                                  | D7, F6 | wording lint                                                              | TX       | 1 onward |
+| R45 | Dependencies respect the 14-day rule                                                                                                                              | E2     | uv and pnpm config; CI installs from frozen lockfiles                     | GATE     | 1        |
+| R46 | Third-party actions pinned to commit hashes                                                                                                                       | E6, F2 | a small workflow check that rejects tag references                        | TX       | 1        |
+| R47 | The freeze commit is on the public remote before the sealed run                                                                                                   | E6, F2 | `evaluate-test` refuses unless the freeze commit is on `origin/main`      | L2       | 7        |
+| R48 | One VoiceOver pass                                                                                                                                                | D6     | manual, recorded in the ledger                                            | MAN      | 8        |
+| R49 | Pre-registered plan unchanged, or changes logged before the gate                                                                                                  | A3     | Phase 7 gate checklist                                                    | MAN      | 7        |
+| R50 | Card numbers come from committed results: every generated block equals what `heartbeat cards` renders, and no test block is pending once the sealed run is logged | F6     | renderer unit tests; `heartbeat verify` check on the two cards            | L1, L2   | 5        |
 
 ## 7. Review focus
 
