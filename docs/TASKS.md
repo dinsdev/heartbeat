@@ -60,8 +60,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | E2 | Stack locked with pins and reasons (2026-10-27): compatibility checked hands-on; policy enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`; TypeScript 6.0.3; single-file ONNX | decided | done |
 | E3 | Repo layout: one repo, Python package at the root (`src/heartbeat`), front end in `web/`; `manifests/` for pinned inputs, `config/` for settings; frozen model and small results committed; data, runs and demo data gitignored; MIT for code, ODC-By for data | decided | done |
 | E4 | One-command rebuild: `uv run heartbeat rebuild` with cached stages; folds only checked, never regenerated; stops before DS2 until a freeze exists; after the freeze, a reproduction check logged as such; default and `--exact` modes; `heartbeat verify` for quick checks; web build separate | decided | done |
-| E5 | Test strategy: patient leakage test, metric tests, PyTorch and ONNX output match, Python and browser output match | draft | doing |
-| E6 | CI and remote: GitHub Actions needs a remote; the case study needs a public repo link | open | todo |
+| E5 | Test strategy: five layers (Python unit; Python on real data, downloaded and cached in CI; parity chain at 1e-5 with exact labels on DS1 fixtures; web unit; Playwright in Chromium and WebKit), wording lint, rule-to-test table in PLAN.md, no coverage percentage gate | decided | done |
+| E6 | CI and remote: GitHub Actions needs a remote; the case study needs a public repo link | draft | doing |
 
 ### F. Docs and agent rules
 
