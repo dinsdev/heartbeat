@@ -25,7 +25,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | B2 | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace | decided | done |
 | B3 | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, int16 rounding at 200 units/mV (D4 amendment), per-window z-score, causal RR features plus post-RR | decided | done |
 | B4 | Class mapping: AAMI symbols, strict; four scored classes N, S, V, F; Q out of training and scoring, kept for RR; F caveat; A3 addendum (S without 232, per-patient table) | decided | done |
-| B5 | Download, caching, checksums, ODC-By attribution and citations: 132 files, pinned SHA256 manifest, gitignored cache. Still open: read the de Chazal full text (DS lists, RR features) | decided (paper check open) | doing |
+| B5 | Download, caching, checksums, attribution and citations: 132 files from the PhysioNet S3 mirror first, PhysioNet as fallback (E2 amendment), pinned SHA256 manifest, gitignored cache. Still open: read the de Chazal full text (DS lists, RR features) | decided (paper check open) | doing |
 
 ### C. Modeling and evaluation
 
@@ -57,8 +57,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | ID | Item | State | Status |
 |---|---|---|---|
 | E1 | Research current stable versions: done 2026-10-27; policy adopted (newest stable at least 14 days old; ONNX Runtime 1.30.0 in Python and browser; Python 3.14; Node 24) | decided | done |
-| E2 | Lock the stack with pins and a reason for each | draft | doing |
-| E3 | Repo layout: Python package, front end, artifacts, docs | open | todo |
+| E2 | Stack locked with pins and reasons (2026-10-27): compatibility checked hands-on; policy enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`; TypeScript 6.0.3; single-file ONNX | decided | done |
+| E3 | Repo layout: Python package, front end, artifacts, docs | draft | doing |
 | E4 | One-command rebuild | open | todo |
 | E5 | Test strategy: patient leakage test, metric tests, PyTorch and ONNX output match, Python and browser output match | open | todo |
 | E6 | CI and remote: GitHub Actions needs a remote; the case study needs a public repo link | open | todo |

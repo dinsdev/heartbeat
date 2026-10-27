@@ -399,3 +399,28 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - The site's Vitest 4.1 hold exists for Cloudflare's Workers test plugin, which the demo does not use, so Vitest 5 is fine here. The site's TypeScript 6.0 hold exists for `@astrojs/check`; whether `svelte-check` supports TypeScript 7 is unknown, so 6.0.3 is the default unless E2 shows 7 works.
 - To test in E2: wfdb 4.3.1 (February 2026, needs pandas 2.2.3 or later) with pandas 3; torch's ONNX exporter with onnxscript 0.7.2; `svelte-check` with TypeScript 7.
 - Cloudflare: `application/wasm` is on the automatic compression list, so visitors download the 2.4 MB Brotli runtime from D5. `application/octet-stream` is not, so the int16 trace ships raw (about 1.3 MB per patient), which D4 accepted. Requests to Workers static assets are "free and unlimited". Custom domains on a subdomain are documented; the pricing page does not say whether the free plan includes them, but dins.dev already runs on Workers in the same zone. Confirm at deploy (E6).
+
+## 2026-10-27: E2 decided, the stack (and a B5 amendment)
+
+**Checked hands-on (2026-10-27, throwaway environments in Claude's scratchpad, nothing in the repo):**
+- Python stack resolved with uv under the cutoff (86 packages, CPython 3.14.7).
+- wfdb 4.3.1 with pandas 3.0.6 and numpy 2.5.4 read records 100 and 114 (checksums verified). AAMI counts match PhysioNet's table exactly (100: N 2239, S 33, V 1; 114: N 1820, S 12, V 43, F 4). MLII found by name: index 0 in 100, index 1 in 114.
+- Filter then int16 rounding: maximum rounding error 0.0025 mV, as designed.
+- The C3 network exported with torch 2.14.1 and onnxscript 0.7.2 (`dynamo=True`): opset 20, batch norm folded by the exporter, nine basic operator types (Concat, Conv, Gemm, MaxPool, ReduceMean, Relu, Reshape, Squeeze, Unsqueeze).
+- PyTorch against onnxruntime 1.30.0 (Python): maximum difference 1.0e-7, identical argmax. onnxruntime-web 1.30.0 (WebAssembly, one thread, run in Node) against Python: maximum difference 8.9e-8, identical argmax. The in-browser check is E5's Playwright test.
+- Front-end stack resolved with pnpm under `minimumReleaseAge`; svelte-check and vite build pass on TypeScript 6.0.3 and catch a planted type error. svelte-check 4.7.6 crashes at startup on TypeScript 7.0.2.
+
+**Findings:**
+- pnpm's minute-level check rejected wrangler 4.150.0 and pnpm 12.13.0 (published hours inside the window), and it covers transitive packages; so does uv's `exclude-newer`. Both now enforce the policy.
+- pnpm 12 blocks install scripts by default: allow esbuild and workerd (they fetch their binaries), keep protobufjs blocked (its script only checks versions).
+- The dynamo exporter writes weights to a separate `.data` file by default; save as one file (238 KB at width 1).
+- PhysioNet's main server ran at about 10 KB/s at times; PhysioNet's open S3 mirror (`https://physionet-open.s3.amazonaws.com/mitdb/1.0.0/`) ran at 1.9 MB/s with identical checksums.
+
+**Decisions (Din):**
+- Runtimes: Python 3.14 (newest torch supports); Node 24 LTS (matches the site); uv 0.13.0; pnpm 12.12.1 (12.13.0 too new).
+- Python: torch 2.14.1; onnx 1.23.2; onnxscript 0.7.2 (exporter); onnxruntime 1.30.0 (same as the browser); numpy 2.5.4; scipy 1.18.1 (filter); scikit-learn 1.9.1 (baseline, folds); pandas 3.0.6 (wfdb dependency, tested); wfdb 4.3.1 (tested); matplotlib 3.11.2 (model card figures). Dev: pytest 9.1.1, hypothesis 6.169.0, ruff 0.17.0, mypy 2.4.0.
+- Front end: svelte 5.57.2; vite 8.3.4; @sveltejs/vite-plugin-svelte 7.3.1; typescript 6.0.3 (7 breaks svelte-check); svelte-check 4.7.6; vitest 5.0.4 (the site's 4.1 hold does not apply); @playwright/test 1.64.0; @axe-core/playwright 4.13.0; eslint 10.12.0; typescript-eslint 8.71.2; eslint-plugin-svelte 3.23.1; prettier 3.9.10 with prettier-plugin-svelte 4.1.1; onnxruntime-web 1.30.0; wrangler 4.149.0 (deploy only).
+- Enforcement: `[tool.uv] exclude-newer` (a fixed date, moved forward deliberately on upgrade) and pnpm `minimumReleaseAge: 20160` (rolling 14 days), with `allowBuilds` for esbuild and workerd only.
+- ONNX export saved as a single file.
+
+**B5 amendment (Din):** the downloader fetches from PhysioNet's S3 mirror first and falls back to `physionet.org`. The pinned checksums make the source irrelevant to trust.
