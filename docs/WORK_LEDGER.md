@@ -553,3 +553,14 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 - Enforcement split for F5: rules with no exceptions (no push, no `evaluate-test`, no edits to `results/test_runs.jsonl`, `manifests/` or `config/folds.json`) get deny rules or hooks there; the code checks from the rule-to-test table stay the real guard, since Codex doesn't run Claude hooks.
 
 **Verified:** no em or en dashes, no avoid-list words, ASCII only (grep); DS2 list has 21 records and matches the B1 entry minus 202.
+
+## 2026-10-27: F3 decided, AGENTS.md and CLAUDE.md
+
+**Decision (Din):** lock `AGENTS.md` and `CLAUDE.md` as drafted:
+- One root `AGENTS.md`; no nested `web/AGENTS.md` until Phase 1 shows a need.
+- The seven rigor rules as written (DS2 sealed, no number without a run, tests are the spec, folds and splits as rigor events, results from code, the pre-registered plan, determinism).
+- The approvals list, including the two new stops: `rebuild --exact` (about 15 hours), and any download other than the pinned MIT-BIH files. The pinned download inside `rebuild` needs no go.
+- Conventions live in `docs/CONVENTIONS.md` (F4), linked from `AGENTS.md`. This adds a sixth file to E3's docs list.
+- `CLAUDE.md` imports `AGENTS.md` and adds three Claude-only notes.
+
+**Carried to F4 and F5:** whether Markdown docs are Prettier-formatted, and whether TASKS.md's build status key separates implemented, verified and accepted (F4); deny rules or hooks for the no-exception rules (F5).

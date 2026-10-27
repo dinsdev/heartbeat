@@ -38,7 +38,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 0: Planning (in progress)
 
-**Remaining:** F2 (this plan), F3 (`AGENTS.md`, `CLAUDE.md`), F4 (conventions), F5 (`.claude/settings.json`), F6 (model and data card templates).
+**Remaining:** F4 (conventions), F5 (`.claude/settings.json`), F6 (model and data card templates).
 
 **Exit:**
 - Sections A to F decided and committed.
