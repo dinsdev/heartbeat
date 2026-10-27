@@ -311,3 +311,17 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Tooling as on the site (Node 24 LTS, pnpm, TypeScript 6.0, Vitest 4.1, Playwright 1.64 with axe, Prettier, ESLint), re-checked in E1 and pinned for this repo in E2.
 - Brand: `brand/tokens/tokens.css` and the font files are copied from `~/Develop/dins.dev/brand/` with the source commit recorded, so the case study iframe looks native without depending on the site's deploys. A small check script flags drift.
 - Not chosen: React (heavier, differs from the site), Astro (content-first; this is one interactive canvas).
+
+## 2026-10-27: D3 decided, live inference in the browser
+
+**Rule:** A1 says the browser model is provably the same model; the page should show it, not only CI.
+
+**Decisions (Din):**
+- Live inference in the full demo and the case study iframe; every label shown is computed in the visitor's browser by the shipped ONNX model.
+- The browser does the per-beat pipeline after filtering: cut and z-score the 256-sample window from the shipped filtered trace, compute the six RR features from the shipped beat positions (the whole recording's positions ship, so the 5-minute history exists when playback starts mid-recording), apply the shipped scaler, run the model, apply the C4 calibration for the displayed probability. Filtering stays in Python (B3).
+- The Web Worker labels beats in chunks just ahead of the playhead (about the next 10 seconds). Labels still appear one beat late (post-RR, B3).
+- ONNX Runtime Web's WebAssembly backend, single-threaded: a beat takes well under a millisecond, and multi-threaded WebAssembly would need COOP and COEP headers that make iframe embedding painful. No WebGPU.
+- Shipped per patient: filtered trace, beat positions, the expert label per beat, and the seed-0 sealed-run label and probabilities from Python.
+- Shown: model label and expert label per beat with disagreements marked, and a counter such as "Labels match the Python results: 2,134 of 2,134 beats" (labels exact, probabilities within a tolerance fixed in E5, about 1e-4). A mismatch is shown, not hidden; CI should catch it first.
+- Fallback: if WebAssembly or the model fails to load, the demo plays the shipped Python labels with a visible note ("Showing precomputed labels; in-browser model unavailable"). Never silent.
+- C1 ordering holds: DS1 recordings during development; DS2 patients and their sealed-run labels only after the sealed run.
