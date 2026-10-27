@@ -769,3 +769,22 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 - The license stated for the model weights (code is MIT, data ODC-By 1.0); decided by Din before launch (task 8.1).
 - Block names and their source files are fixed in the Phase 5 task plan, alongside the `results/` layout from Phases 3 and 4.
 - The data card's DS1 and DS2 lists still rest on secondary transcriptions (PRD Q2).
+
+## 2026-10-27: F8 done, the formatting-only Prettier pass
+
+**Go (Din):** download Prettier 3.9.10 into the scratchpad, commit `.prettierrc.json`, run the pass over every `.md` file with a token-diff check.
+
+**Checked before the download:** npm lists 3.9.10 as `latest`, published 2026-10-10 (17 days old, so it meets the 14-day rule); no dependencies; registry integrity `sha512-skGHTH1Y...IdA==`. Installed with `npm install prettier@3.9.10 --ignore-scripts` in the session scratchpad (Node 24.21.0; pnpm is not installed); the lockfile's integrity matched the registry value. Nothing was installed in the repo.
+
+**Done:**
+
+- `.prettierrc.json` committed with `{"proseWrap": "preserve"}` (CONVENTIONS section 1). Task 1.6 extends this file rather than starting a new one.
+- `prettier --write` over the nine tracked Markdown files (AGENTS, CLAUDE and the seven in `docs/`). PRD and CLAUDE.md were already formatted.
+
+**Verified:**
+
+- Token diff (scratchpad script): for every file, the text before and after is identical once whitespace and the markup characters `| - : * _ \` are removed. The 40 card markers are identical, and `CLAUDE.md` still starts with `@AGENTS.md`.
+- What changed: table padding, and 71 blank lines added before lists. One line moved: in the B4 entry, "Reason: one patient carries the pooled S number..." followed list item 2 with no blank line, so Markdown already rendered it as part of that item (a lazy continuation); Prettier indented it to match. The rendered page is unchanged. Making it its own paragraph would change the pre-registered entry's rendering, so it was left as is.
+- A second run changes nothing; `prettier --check` passes on all nine files and the config; no em or en dashes.
+
+**Finding for task 1.6:** Prettier pads tables to the widest cell even past the print width (the F4 entry recalled the opposite). Editing one wide cell, such as a status in `docs/TASKS.md`, re-pads its whole table, so status diffs will be noisy. Accepted for now; options (shorter cells, or moving long text out of tables) can come up at task 1.6.

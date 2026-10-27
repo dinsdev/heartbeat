@@ -75,7 +75,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | F5  | `.claude/settings.json`: deny rules for everything only Din runs (ask rules did not prompt in one desktop bypass session, measured; held as refusals headless), file denies for `results/`, the frozen model and the folds, a fail-closed guard hook with tests                                               | decided | done   |
 | F6  | Model card and data card templates (2026-10-27): Mitchell et al. and Gebru et al. layouts in `docs/MODEL_CARD.md` and `docs/DATA_CARD.md`; every number in a generated block rendered by `heartbeat cards` and checked by `verify` (R50); wording lint covers the cards and README; committed before the push | decided | done   |
 | F7  | `docs/WORK_LEDGER.md` kept current                                                                                                                                                                                                                                                                            | ongoing | doing  |
-| F8  | Before the Phase 0 push: one formatting-only Prettier 3.9.10 pass over every `.md` file (Din's go for the download)                                                                                                                                                                                           | decided | todo   |
+| F8  | Before the Phase 0 push: one formatting-only Prettier 3.9.10 pass over every `.md` file (done 2026-10-27, token-diff checked; `.prettierrc.json` committed)                                                                                                                                                   | decided | done   |
 
 ### G. Publishing
 

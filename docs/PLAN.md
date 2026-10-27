@@ -38,7 +38,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 0: Planning (in progress)
 
-**Remaining:** F8 (one formatting-only Prettier pass over the Markdown docs before the push, Din's go for the download).
+**Remaining:** Din creates `dinsdev/heartbeat` and pushes `main` (F1 to F8 done).
 
 **Exit:**
 
