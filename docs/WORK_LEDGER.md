@@ -492,3 +492,11 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 **Found:** the dins-projects PRD section 7 differs from the decisions in eight places (saliency, five classes, the 202 fix, metrics, CNN inputs, GPU, stage, stack). Listed in the PRD's Appendix A; updating the dins-projects PRD belongs to that repo.
 
 **Verified:** no em or en dashes, no avoid-list words, ASCII only (grep). Every number in the PRD traced to a ledger entry. Not verified: anything new; the PRD adds no new facts beyond the research summary above.
+
+## 2026-10-27: F1 decided, the PRD
+
+**Decision (Din):** lock `docs/PRD.md` as drafted, with the P1 split accepted (Ask Ottie sources, `scripts/check.sh`, Renovate, brand drift check: they should ship with core but do not block publishing). Q1 is closed and removed from the PRD's open questions; the other question numbers stay as they were so references hold.
+
+**Also:** Din ran Prettier over the PRD (table padding, blank lines before lists). Checked: formatting only, no content change. Kept; F4 should say whether Markdown docs are Prettier-formatted.
+
+**From now on:** the PRD is the source of truth for requirements. A change to a requirement gets a ledger entry, like any decision.

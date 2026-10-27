@@ -1,18 +1,19 @@
 # Heartbeat: Product Requirements
 
-| | |
-|---|---|
-| **Status** | Draft for Din's review (F1). Becomes the source of truth once Din locks it. |
-| **Owner** | Din (decisions); Claude (drafting) |
-| **Date** | 2026-10-27 |
-| **Supersedes** | Section 7 of `~/Develop/dins-projects/docs/PRD.md` (the slate-level draft). Differences are listed in Appendix A. |
-| **Related** | `docs/WORK_LEDGER.md` (every decision with its reason), `docs/TASKS.md` (planning items A1 to G4), `docs/PLAN.md` (phases and the rule-to-test table, F2), `~/Develop/dins-projects/docs/PRD.md` (shared requirements for all four projects), `~/Develop/dins.dev/docs/site/PRD.md` (site content model) |
+|                |                                                                                                                                                                                                                                                                                                          |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Locked by Din (F1, 2026-10-27). The source of truth for requirements; changes go through the ledger.                                                                                                                                                                                                     |
+| **Owner**      | Din (decisions); Claude (drafting)                                                                                                                                                                                                                                                                       |
+| **Date**       | 2026-10-27                                                                                                                                                                                                                                                                                               |
+| **Supersedes** | Section 7 of `~/Develop/dins-projects/docs/PRD.md` (the slate-level draft). Differences are listed in Appendix A.                                                                                                                                                                                        |
+| **Related**    | `docs/WORK_LEDGER.md` (every decision with its reason), `docs/TASKS.md` (planning items A1 to G4), `docs/PLAN.md` (phases and the rule-to-test table, F2), `~/Develop/dins-projects/docs/PRD.md` (shared requirements for all four projects), `~/Develop/dins.dev/docs/site/PRD.md` (site content model) |
 
 **How to read this document.** Requirements carry an ID (for example `EVAL-04`), a priority and the planning item that decided them (for example `C1`). The ledger holds the reasoning; this document holds the requirement. If the two disagree, that is a bug: raise it, don't pick one.
 
 **Priorities.**
+
 - **P0:** core (A2). The project does not publish without it.
-- **P1:** decided supporting work. It should ship with core, but a late P1 does not block publishing. (A2 defined only core, stretch and out; the P1 split is Claude's proposal, see open question Q1.)
+- **P1:** decided supporting work. It should ship with core, but a late P1 does not block publishing. (A2 defined only core, stretch and out; Din accepted this P1 split at the F1 lock.)
 - **P2:** stretch (C8). Starts only after core is publishable, in a fixed order.
 
 ---
@@ -42,26 +43,29 @@ Admissions readers and technical reviewers see many student ECG projects that re
 The problem for this project is therefore credibility, not accuracy: **show, in a way a skeptical reader can check, that Din knows where medical ML results get inflated, measured this one honestly, and shipped a model that works on people it never saw.** A good outcome makes the honest number the more impressive one, because the reader can see exactly what the inflated number hides.
 
 What makes this hard:
+
 - The interesting classes are rare and concentrated in a few patients. In DS2 without 202, record 232 holds 78% of S beats, and record 213 holds 94% of F beats (B4). A pooled number can be one person's number.
 - "Trust me" is not evidence. Every claim needs a test, a committed file or a reproducible command behind it.
 - The demo must run in a browser on a portfolio page, within the site's performance and accessibility budgets.
 
 ## 4. Audience and stakeholders
 
-| Audience | What they need | Time they give | Where they meet Heartbeat |
-|---|---|---|---|
-| **Admissions committees** (primary) | A real question, careful method, honest results and named limits | 2 to 5 minutes | Home stage video, then the case study |
-| **Recruiters and hiring managers** | What it does, the stack, one real number | 30 seconds | Home stage video and the case study summary block |
-| **Curious visitors** | Something to play with | About a minute | Case study iframe and the full demo |
-| **Technical skeptics** (reviewers, engineers) | Proof: the split, the pre-registration, the parity test, a rebuild | As long as it takes | The public repo |
+| Audience                                      | What they need                                                     | Time they give      | Where they meet Heartbeat                         |
+| --------------------------------------------- | ------------------------------------------------------------------ | ------------------- | ------------------------------------------------- |
+| **Admissions committees** (primary)           | A real question, careful method, honest results and named limits   | 2 to 5 minutes      | Home stage video, then the case study             |
+| **Recruiters and hiring managers**            | What it does, the stack, one real number                           | 30 seconds          | Home stage video and the case study summary block |
+| **Curious visitors**                          | Something to play with                                             | About a minute      | Case study iframe and the full demo               |
+| **Technical skeptics** (reviewers, engineers) | Proof: the split, the pre-registration, the parity test, a rebuild | As long as it takes | The public repo                                   |
 
 **Conflicting needs.** Recruiters want one striking number; the honest headline number is modest. Proposed resolution (follows from A1 and C5; final wording in G1): lead with the leakage exhibit (two numbers side by side), so the one number a fast reader takes away is the gap, not a bare score.
 
 **Not for:**
+
 - **Patients or clinicians.** Heartbeat is a research demo, never medical advice (D7). It accepts no uploads and no device input (A2).
 - **ML researchers looking for state of the art.** Beating published numbers is a non-goal (A1).
 
 **Stakeholders.**
+
 - **Din:** owner; locks every decision; gives the go for repo creation, pushes, secrets and the first production deploy (E6).
 - **dins.dev site repo:** hosts the stage video and case study, and must accept the integration changes in G4.
 - **PhysioNet and the database authors:** license terms (ODC-By 1.0) and requested citations (B5).
@@ -70,16 +74,17 @@ What makes this hard:
 
 A3 rules out numeric results targets: a number to hit invites tuning toward it, which is the behavior this project calls out. Success is defined by checks that are true or false, not by scores.
 
-| # | Goal (A1) | Done when | Checked by |
-|---|---|---|---|
-| G1 | **The 10-second read works** | The home stage video shows a real ECG scrolling with beats labeled, plus one plain line saying the model is tested on patients it never saw (amended by D1: video on the stage, live demo in the case study) | Din's review in a preview deploy |
-| G2 | **The trap is shown, not described** | The case study shows the leakage exhibit (C5): same model, same 22 patients, patient-grouped number beside the beat-split number, both with intervals | Results file plus case study review |
-| G3 | **Every claim is traceable** | One command reproduces the artifacts (E4); CI proves no subject appears on both sides of any split; the evaluation plan was pushed publicly before the sealed run (E6) | CI, `heartbeat verify`, git history on GitHub |
-| G4 | **The browser model is provably the same model** | The parity chain passes in CI (E5), and the page shows a live counter of browser labels matching the Python results (D3) | CI and the on-page counter |
-| G5 | **Failures are named** | A limits section and the model card say in plain words where the model fails (per-patient table, F caveat, annotation caveat) | Model card and case study review |
-| G6 | **The comparison is reported straight** | CNN and baseline are compared on the same draws with intervals, and the page states the outcome whichever way it goes (A3) | Results file plus case study review |
+| #   | Goal (A1)                                        | Done when                                                                                                                                                                                                    | Checked by                                    |
+| --- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| G1  | **The 10-second read works**                     | The home stage video shows a real ECG scrolling with beats labeled, plus one plain line saying the model is tested on patients it never saw (amended by D1: video on the stage, live demo in the case study) | Din's review in a preview deploy              |
+| G2  | **The trap is shown, not described**             | The case study shows the leakage exhibit (C5): same model, same 22 patients, patient-grouped number beside the beat-split number, both with intervals                                                        | Results file plus case study review           |
+| G3  | **Every claim is traceable**                     | One command reproduces the artifacts (E4); CI proves no subject appears on both sides of any split; the evaluation plan was pushed publicly before the sealed run (E6)                                       | CI, `heartbeat verify`, git history on GitHub |
+| G4  | **The browser model is provably the same model** | The parity chain passes in CI (E5), and the page shows a live counter of browser labels matching the Python results (D3)                                                                                     | CI and the on-page counter                    |
+| G5  | **Failures are named**                           | A limits section and the model card say in plain words where the model fails (per-patient table, F caveat, annotation caveat)                                                                                | Model card and case study review              |
+| G6  | **The comparison is reported straight**          | CNN and baseline are compared on the same draws with intervals, and the page states the outcome whichever way it goes (A3)                                                                                   | Results file plus case study review           |
 
 **Guardrails (must never be violated):**
+
 - No result appears anywhere (page, README, commit message, chat) until a run produces it (dins-projects shared requirement 5).
 - DS2 is read only by `evaluate-test`, only with a matching freeze record, and every run is logged (C1, C6).
 - The home page budget of the site is not touched: the stage uses a video, not a live iframe (D1).
@@ -89,19 +94,19 @@ A3 rules out numeric results targets: a number to hit invites tuning toward it, 
 
 Each of these could reasonably have been a goal. They are excluded on purpose.
 
-| Non-goal | Why not |
-|---|---|
-| **State-of-the-art or published-number targets** | Rigor leads (A1). A target invites tuning toward it (A3). de Chazal's numbers appear only as context, labeled as two-lead and measured on all 22 DS2 records. |
-| **Clinical use or clinical claims** | No clinical validation is possible here. The wording is controlled by D7's avoid list. |
-| **Visitor uploads or live device input** | Needs privacy handling and different preprocessing, and changes the claim from "tested on unseen patients" to "runs on anything" (A2). |
-| **Rhythm-level diagnosis or multi-lead models** | Beat classification on one lead fits a one-trace demo and the standard benchmark (A2, B1). |
-| **Our own beat detector in core** | Core uses the expert beat annotations to isolate the classifier (B2). A detector is stretch 3, scored end to end. |
-| **Large hyperparameter sweeps, ensembles, LLM explanations** | Tuning budget is fixed and equal for both models (C2, C3); explanations would invite clinical-sounding text (A2). |
-| **Accuracy as a headline** | Accuracy is dominated by the N class. It appears only in the leakage exhibit, labeled as the number papers often lead with (C5). |
-| **A live iframe on the dins.dev home stage** | Risks the home page's performance budget and needs a cross-origin pause protocol (D1). |
-| **Rented GPUs or paid serving** | The model trains on a Mac in hours (C7); the demo runs on Cloudflare's free plan. |
-| **An experiment tracking service** | About 20 development configurations do not justify one; run folders and committed results do the job (C6). |
-| **DS1 patients in the final demo** | Training patients would look better than they deserve (D4). |
+| Non-goal                                                     | Why not                                                                                                                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **State-of-the-art or published-number targets**             | Rigor leads (A1). A target invites tuning toward it (A3). de Chazal's numbers appear only as context, labeled as two-lead and measured on all 22 DS2 records. |
+| **Clinical use or clinical claims**                          | No clinical validation is possible here. The wording is controlled by D7's avoid list.                                                                        |
+| **Visitor uploads or live device input**                     | Needs privacy handling and different preprocessing, and changes the claim from "tested on unseen patients" to "runs on anything" (A2).                        |
+| **Rhythm-level diagnosis or multi-lead models**              | Beat classification on one lead fits a one-trace demo and the standard benchmark (A2, B1).                                                                    |
+| **Our own beat detector in core**                            | Core uses the expert beat annotations to isolate the classifier (B2). A detector is stretch 3, scored end to end.                                             |
+| **Large hyperparameter sweeps, ensembles, LLM explanations** | Tuning budget is fixed and equal for both models (C2, C3); explanations would invite clinical-sounding text (A2).                                             |
+| **Accuracy as a headline**                                   | Accuracy is dominated by the N class. It appears only in the leakage exhibit, labeled as the number papers often lead with (C5).                              |
+| **A live iframe on the dins.dev home stage**                 | Risks the home page's performance budget and needs a cross-origin pause protocol (D1).                                                                        |
+| **Rented GPUs or paid serving**                              | The model trains on a Mac in hours (C7); the demo runs on Cloudflare's free plan.                                                                             |
+| **An experiment tracking service**                           | About 20 development configurations do not justify one; run folders and committed results do the job (C6).                                                    |
+| **DS1 patients in the final demo**                           | Training patients would look better than they deserve (D4).                                                                                                   |
 
 ## 7. Use cases
 
@@ -245,16 +250,16 @@ Starts only when core is publishable (sealed run done and logged, model card fil
 
 **Performance (D5).**
 
-| Measure | Requirement | Enforcement |
-|---|---|---|
-| Model file | Under 1 MB | CI gate |
-| Demo JavaScript, excluding ONNX Runtime | Under 60 KB gzip | CI gate |
-| Beats JSON per patient | Under 100 KB | CI gate |
-| Main-thread tasks during playback | None over 50 ms | CI gate (Playwright) |
-| First trace visible | Under 1.5 s desktop, 3 s phone | Measured and reported, not gated |
-| First live label | Under 3 s desktop, 6 s phone | Measured and reported, not gated |
-| Inference per beat in the Worker | Median under 2 ms | Measured and reported, not gated |
-| Frame rate and memory | Steady 60 fps; under 100 MB | Measured and reported, not gated |
+| Measure                                 | Requirement                    | Enforcement                      |
+| --------------------------------------- | ------------------------------ | -------------------------------- |
+| Model file                              | Under 1 MB                     | CI gate                          |
+| Demo JavaScript, excluding ONNX Runtime | Under 60 KB gzip               | CI gate                          |
+| Beats JSON per patient                  | Under 100 KB                   | CI gate                          |
+| Main-thread tasks during playback       | None over 50 ms                | CI gate (Playwright)             |
+| First trace visible                     | Under 1.5 s desktop, 3 s phone | Measured and reported, not gated |
+| First live label                        | Under 3 s desktop, 6 s phone   | Measured and reported, not gated |
+| Inference per beat in the Worker        | Median under 2 ms              | Measured and reported, not gated |
+| Frame rate and memory                   | Steady 60 fps; under 100 MB    | Measured and reported, not gated |
 
 Reported timings use Playwright with 4x CPU slowdown, and fast 4G for the phone profile. The iframe fetches nothing heavy until visible. Files use hashed names and are served as immutable. A first visit is about 4 to 5 MB compressed, mostly ONNX Runtime's WebAssembly (2.4 MB Brotli); return visits load only the chosen patient's trace.
 
@@ -263,6 +268,7 @@ Reported timings use Playwright with 4x CPU slowdown, and fast 4G for the phone 
 **Reliability.** A static site with no server logic beyond headers. Failure modes are loading failures; DEMO-05 covers the model, and the trace either loads or shows an error. No uptime target beyond Cloudflare's.
 
 **Security and supply chain (D1, E2, E6).**
+
 - Response headers: `Content-Security-Policy` with `frame-ancestors` limited to `https://dins.dev` and the site's preview hostnames, and `'wasm-unsafe-eval'` in `script-src`. A test checks the built headers.
 - Theme messages accepted only from the dins.dev origin.
 - Dependencies pinned to the newest stable release at least 14 days old, enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`, covering transitive packages. Install scripts allowed only for esbuild and workerd.
@@ -281,30 +287,30 @@ Reported timings use Playwright with 4x CPU slowdown, and fast 4G for the phone 
 
 ## 10. Constraints
 
-| Constraint | Detail | Source |
-|---|---|---|
-| Compute | Apple M5 Mac with 16 GB only. MPS for development numbers, CPU deterministic for frozen models. No rented GPU. Measured: about 1 hour for the 45 development runs on MPS; about 30 minutes for the three final models on CPU at width 1, about 2 hours at width 2. | C7 |
-| Hosting | Cloudflare Workers free plan with static assets on a subdomain of dins.dev. | D1, E6 |
-| Site integration | The dins.dev home stage holds a video, and the site's home budget (100 KB first-party JavaScript, 60 fps, no task over 50 ms) must not be put at risk. | D1 |
-| Data license | ODC-By 1.0: attribution required wherever derived data ships. | B5 |
-| Pinned stack | Python 3.14, torch 2.14.1, onnxruntime 1.30.0, scikit-learn 1.9.1, wfdb 4.3.1; Node 24, Svelte 5.57.2, Vite 8.3.4, TypeScript 6.0.3 (7 breaks svelte-check), onnxruntime-web 1.30.0. Full list in the E2 ledger entry. | E1, E2 |
-| People | Din, working with Claude. Din approves every decision, push, secret and first deploy. | E6 |
-| Schedule | Best case: content freeze 2026-12-01, site launch 2026-12-12, applications from mid-January 2027. Not a deadline (Din, 2026-10-22). If Heartbeat is not ready, it stays a draft; the site never shows a half-built project. | dins-projects PLAN, site PRD |
+| Constraint       | Detail                                                                                                                                                                                                                                                             | Source                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| Compute          | Apple M5 Mac with 16 GB only. MPS for development numbers, CPU deterministic for frozen models. No rented GPU. Measured: about 1 hour for the 45 development runs on MPS; about 30 minutes for the three final models on CPU at width 1, about 2 hours at width 2. | C7                           |
+| Hosting          | Cloudflare Workers free plan with static assets on a subdomain of dins.dev.                                                                                                                                                                                        | D1, E6                       |
+| Site integration | The dins.dev home stage holds a video, and the site's home budget (100 KB first-party JavaScript, 60 fps, no task over 50 ms) must not be put at risk.                                                                                                             | D1                           |
+| Data license     | ODC-By 1.0: attribution required wherever derived data ships.                                                                                                                                                                                                      | B5                           |
+| Pinned stack     | Python 3.14, torch 2.14.1, onnxruntime 1.30.0, scikit-learn 1.9.1, wfdb 4.3.1; Node 24, Svelte 5.57.2, Vite 8.3.4, TypeScript 6.0.3 (7 breaks svelte-check), onnxruntime-web 1.30.0. Full list in the E2 ledger entry.                                             | E1, E2                       |
+| People           | Din, working with Claude. Din approves every decision, push, secret and first deploy.                                                                                                                                                                              | E6                           |
+| Schedule         | Best case: content freeze 2026-12-01, site launch 2026-12-12, applications from mid-January 2027. Not a deadline (Din, 2026-10-22). If Heartbeat is not ready, it stays a draft; the site never shows a half-built project.                                        | dins-projects PLAN, site PRD |
 
 ## 11. Assumptions
 
 Each is falsifiable. High-risk ones carry a check.
 
-| # | Assumption | If wrong | Risk and check |
-|---|---|---|---|
-| AS1 | de Chazal's DS1 and DS2 record lists are as transcribed in secondary sources. | The split would differ from the reference work. | Low: our class totals match the totals usually quoted for the split. Check: read the full text (Q2). |
-| AS2 | The B3 RR features loosely follow de Chazal's. | Only the page wording is affected. | Low. The page states only what the abstract supports until Q2 closes. |
-| AS3 | MPS development numbers stay within tolerance of CPU. | Selection could differ between modes. | Medium. E4's reproduction check exposes it; the frozen models are CPU-only regardless. |
-| AS4 | Cloudflare's free plan covers a custom domain on a subdomain in the same zone. | Hosting plan changes. | Low: dins.dev already runs on Workers in that zone. Confirmed at first deploy (Q3). |
-| AS5 | Cloudflare compresses `application/wasm` automatically and not the int16 trace. | Download sizes differ from D5's estimates. | Low: documented. Measured at first deploy. |
-| AS6 | The dins.dev repo accepts the G4 changes. | The case study cannot show the live iframe; it would fall back to a link. | Medium: the site plans currently reject outside `demo.src` URLs and frames. Hand over early (G4). |
-| AS7 | ONNX Runtime Web gives the same labels in WebKit as in Chromium. | The parity counter would show mismatches on Safari. | Low: measured differences are about 1e-7 in Node. Check: Playwright parity in both engines. |
-| AS8 | Readers value a visible, checkable rigor story over a higher headline number. | The project's framing would underperform. | Medium. This is the project's core bet (A1). Mitigated by the exhibit, which still produces a striking number. |
+| #   | Assumption                                                                      | If wrong                                                                  | Risk and check                                                                                                 |
+| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| AS1 | de Chazal's DS1 and DS2 record lists are as transcribed in secondary sources.   | The split would differ from the reference work.                           | Low: our class totals match the totals usually quoted for the split. Check: read the full text (Q2).           |
+| AS2 | The B3 RR features loosely follow de Chazal's.                                  | Only the page wording is affected.                                        | Low. The page states only what the abstract supports until Q2 closes.                                          |
+| AS3 | MPS development numbers stay within tolerance of CPU.                           | Selection could differ between modes.                                     | Medium. E4's reproduction check exposes it; the frozen models are CPU-only regardless.                         |
+| AS4 | Cloudflare's free plan covers a custom domain on a subdomain in the same zone.  | Hosting plan changes.                                                     | Low: dins.dev already runs on Workers in that zone. Confirmed at first deploy (Q3).                            |
+| AS5 | Cloudflare compresses `application/wasm` automatically and not the int16 trace. | Download sizes differ from D5's estimates.                                | Low: documented. Measured at first deploy.                                                                     |
+| AS6 | The dins.dev repo accepts the G4 changes.                                       | The case study cannot show the live iframe; it would fall back to a link. | Medium: the site plans currently reject outside `demo.src` URLs and frames. Hand over early (G4).              |
+| AS7 | ONNX Runtime Web gives the same labels in WebKit as in Chromium.                | The parity counter would show mismatches on Safari.                       | Low: measured differences are about 1e-7 in Node. Check: Playwright parity in both engines.                    |
+| AS8 | Readers value a visible, checkable rigor story over a higher headline number.   | The project's framing would underperform.                                 | Medium. This is the project's core bet (A1). Mitigated by the exhibit, which still produces a striking number. |
 
 ## 12. Launch criteria
 
@@ -321,62 +327,62 @@ Heartbeat is publishable (and stretch may start) when all of these hold (C8, din
 
 ## 13. Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| **The CNN does not beat the baseline.** RR intervals carry much of the S signal. | Medium | Medium | Pre-registered (A3): the CNN ships, the page says plainly that the baseline matched or beat it and why that is plausible. The rigor story does not depend on the CNN winning. |
-| **One patient drives the S result.** Record 232 holds 78% of DS2's S beats. | High (by construction) | Medium | Pre-registered without-232 line and per-patient table (B4, C4). |
-| **A bug is found after the sealed run.** | Low | High | Fix and rerun; both runs stay in the log and the ledger. No silent reruns (A3, EVAL-06). |
-| **Overfitting to patient 208** (90% of DS1's F beats, each F beat weighted about 110 times a normal beat). | Medium | Low | Visible in the CV curves; F is never a headline (B4, C3). |
-| **Schedule slips past the best-case freeze.** | Medium | Medium | Small core, stretch gated (C8); Heartbeat stays a draft rather than shipping half done. |
-| **First-visit weight on phones** (about 4 to 5 MB, mostly the runtime). | Medium | Low | Trace plays before the model loads (DEMO-06); fallbacks noted in D5 (reduced-operator build or hand-written inference) if measured load times miss. |
-| **We are wrong about the audience** (AS8): readers skim and see only a modest number. | Medium | High | Lead with the exhibit (the gap is the striking number); one plain line on the stage; recruiters get the stack and the gap in the summary block. |
-| **dins.dev integration lags** (AS6). | Medium | Medium | Hand G4 over early; the full demo works standalone at `heartbeat.dins.dev`. |
+| Risk                                                                                                       | Likelihood             | Impact | Mitigation                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The CNN does not beat the baseline.** RR intervals carry much of the S signal.                           | Medium                 | Medium | Pre-registered (A3): the CNN ships, the page says plainly that the baseline matched or beat it and why that is plausible. The rigor story does not depend on the CNN winning. |
+| **One patient drives the S result.** Record 232 holds 78% of DS2's S beats.                                | High (by construction) | Medium | Pre-registered without-232 line and per-patient table (B4, C4).                                                                                                               |
+| **A bug is found after the sealed run.**                                                                   | Low                    | High   | Fix and rerun; both runs stay in the log and the ledger. No silent reruns (A3, EVAL-06).                                                                                      |
+| **Overfitting to patient 208** (90% of DS1's F beats, each F beat weighted about 110 times a normal beat). | Medium                 | Low    | Visible in the CV curves; F is never a headline (B4, C3).                                                                                                                     |
+| **Schedule slips past the best-case freeze.**                                                              | Medium                 | Medium | Small core, stretch gated (C8); Heartbeat stays a draft rather than shipping half done.                                                                                       |
+| **First-visit weight on phones** (about 4 to 5 MB, mostly the runtime).                                    | Medium                 | Low    | Trace plays before the model loads (DEMO-06); fallbacks noted in D5 (reduced-operator build or hand-written inference) if measured load times miss.                           |
+| **We are wrong about the audience** (AS8): readers skim and see only a modest number.                      | Medium                 | High   | Lead with the exhibit (the gap is the striking number); one plain line on the stage; recruiters get the stack and the gap in the summary block.                               |
+| **dins.dev integration lags** (AS6).                                                                       | Medium                 | Medium | Hand G4 over early; the full demo works standalone at `heartbeat.dins.dev`.                                                                                                   |
 
 ## 14. Key decisions and alternatives considered
 
 Full reasoning is in the ledger; these are the decisions a reviewer is most likely to question.
 
-| Decision | Alternatives rejected | Why this one | What it costs |
-|---|---|---|---|
-| Drop 202 from DS2 (B1) | Drop 201 from DS1 | 201 holds 13.6% of DS1's S beats and 97 of its 100 aberrated APC beats | Test set is one record off the published DS2 |
-| Pre-registered evaluation plan (A3) | Numeric results targets | A target invites tuning toward it | No number to declare victory against |
-| 5-fold grouped CV on DS1 (C1) | Leave-one-subject-out | One-patient folds make the spread noise; 4 times the runs | Fewer, larger validation groups |
-| Fixed epochs chosen from averaged CV curves (C1) | Early stopping per fold | Final retrain on all of DS1 needs one epoch count | Out-of-fold numbers slightly optimistic, stated |
-| Exhibit inside DS1 (C5) | Pool all 43 records and split beats at random | Pooling breaks the DS2 seal and compares different patients | The exhibit uses 22 patients, not 43 |
-| Expert beat locations in core (B2) | Our own detector in core | Isolates the classifier; detector is stretch 3 | Numbers assume every beat is found, stated |
-| Filter in Python, ship the filtered trace (B3) | Filter in TypeScript | Parity stays simple; the demo shows the signal the model saw | Traces ship pre-filtered |
-| Macro F1 over N, S, V as headline (C4) | Four-class macro F1 | DS2's F is 94% one patient; F stays visible beside it | Headline ignores F |
-| Live inference in the browser (D3) | Precomputed labels only | Proves the shipped model is the tested model | ONNX Runtime's 2.4 MB download |
-| Video on the home stage, live iframe in the case study (D1) | Live iframe on the stage | Home page budget and a cross-origin pause protocol | The stage is a recording, not live |
-| Stock ONNX Runtime Web (D5) | Reduced-operator build; hand-written inference | No extra toolchain; parity rests on the tested runtime | Larger download; kept as fallbacks |
-| All 21 DS2 patients, default by a label-only rule (D4) | A hand-picked showcase patient | No cherry-picking by construction | Some patients are uneventful |
-| Logit adjustment plus temperature (C4) | Calibrate weighted outputs directly; no calibration | Undoes deliberate rare-class inflation without changing labels | Rare classes are flagged below 50% probability, explained on the page |
+| Decision                                                    | Alternatives rejected                               | Why this one                                                           | What it costs                                                         |
+| ----------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Drop 202 from DS2 (B1)                                      | Drop 201 from DS1                                   | 201 holds 13.6% of DS1's S beats and 97 of its 100 aberrated APC beats | Test set is one record off the published DS2                          |
+| Pre-registered evaluation plan (A3)                         | Numeric results targets                             | A target invites tuning toward it                                      | No number to declare victory against                                  |
+| 5-fold grouped CV on DS1 (C1)                               | Leave-one-subject-out                               | One-patient folds make the spread noise; 4 times the runs              | Fewer, larger validation groups                                       |
+| Fixed epochs chosen from averaged CV curves (C1)            | Early stopping per fold                             | Final retrain on all of DS1 needs one epoch count                      | Out-of-fold numbers slightly optimistic, stated                       |
+| Exhibit inside DS1 (C5)                                     | Pool all 43 records and split beats at random       | Pooling breaks the DS2 seal and compares different patients            | The exhibit uses 22 patients, not 43                                  |
+| Expert beat locations in core (B2)                          | Our own detector in core                            | Isolates the classifier; detector is stretch 3                         | Numbers assume every beat is found, stated                            |
+| Filter in Python, ship the filtered trace (B3)              | Filter in TypeScript                                | Parity stays simple; the demo shows the signal the model saw           | Traces ship pre-filtered                                              |
+| Macro F1 over N, S, V as headline (C4)                      | Four-class macro F1                                 | DS2's F is 94% one patient; F stays visible beside it                  | Headline ignores F                                                    |
+| Live inference in the browser (D3)                          | Precomputed labels only                             | Proves the shipped model is the tested model                           | ONNX Runtime's 2.4 MB download                                        |
+| Video on the home stage, live iframe in the case study (D1) | Live iframe on the stage                            | Home page budget and a cross-origin pause protocol                     | The stage is a recording, not live                                    |
+| Stock ONNX Runtime Web (D5)                                 | Reduced-operator build; hand-written inference      | No extra toolchain; parity rests on the tested runtime                 | Larger download; kept as fallbacks                                    |
+| All 21 DS2 patients, default by a label-only rule (D4)      | A hand-picked showcase patient                      | No cherry-picking by construction                                      | Some patients are uneventful                                          |
+| Logit adjustment plus temperature (C4)                      | Calibrate weighted outputs directly; no calibration | Undoes deliberate rare-class inflation without changing labels         | Rare classes are flagged below 50% probability, explained on the page |
 
 ## 15. Edge cases
 
-| Area | Case | Expected behavior | Source |
-|---|---|---|---|
-| Data | Record 114 has MLII as the second channel | Selected by name; unit test covers it | B1 |
-| Data | Unknown annotation symbol | Pipeline fails loudly | B4 |
-| Data | Flutter waves (`!`, 472 in record 207) and non-conducted P waves | Not beats; not used for RR | B4 |
-| Data | Checksum mismatch in cache | Run stops | B5 |
-| Data | First and last beat of a record | Dropped (no full window or RR) | B3 |
-| Features | Beats near a record's start | RR averages use the available past, expanding | B3 |
-| Features | Playback starts mid-recording | Whole-recording beat positions ship, so the 5-minute history exists | D3 |
-| Metrics | Bootstrap draw with no predicted S beats | Skipped for S precision only; skip count reported | C4 |
-| Metrics | Patient with fewer than 10 beats of a class | Counts only, with a footnote | C4 |
-| Metrics | Q beats in DS2 (7) | Not scored; noted under the confusion matrix | B4 |
-| Folds | Folds without 208 in training see almost no F | Reported, not engineered around | C1 |
-| Sealed run | No matching freeze record, or dirty tree | `evaluate-test` refuses | C1, C6 |
-| Sealed run | Rebuild after the sealed run | Logged as a reproduction; mismatches fail | E4 |
-| Demo | Patient 212 has no irregular beats | Listed with its counts; "Next irregular beat" says there is none (proposed here) | D4, D6 |
-| Demo | Model and expert disagree | Distinct mark; reachable by "Next disagreement" | D6 |
-| Demo | WebAssembly blocked or model fails | Labeled fallback to shipped Python labels | D3 |
-| Demo | Browser labels differ from Python | Counter shows the mismatch | D3 |
-| Demo | Label timing | Labels appear one beat late (post-RR); stated | B3 |
-| Demo | Theme message from another origin | Ignored | D6 |
-| Demo | Reduced motion inside the iframe | Follows the viewer's setting | D1 |
-| Demo | Iframe offscreen | No heavy fetch until visible | D5 |
+| Area       | Case                                                             | Expected behavior                                                                | Source |
+| ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ |
+| Data       | Record 114 has MLII as the second channel                        | Selected by name; unit test covers it                                            | B1     |
+| Data       | Unknown annotation symbol                                        | Pipeline fails loudly                                                            | B4     |
+| Data       | Flutter waves (`!`, 472 in record 207) and non-conducted P waves | Not beats; not used for RR                                                       | B4     |
+| Data       | Checksum mismatch in cache                                       | Run stops                                                                        | B5     |
+| Data       | First and last beat of a record                                  | Dropped (no full window or RR)                                                   | B3     |
+| Features   | Beats near a record's start                                      | RR averages use the available past, expanding                                    | B3     |
+| Features   | Playback starts mid-recording                                    | Whole-recording beat positions ship, so the 5-minute history exists              | D3     |
+| Metrics    | Bootstrap draw with no predicted S beats                         | Skipped for S precision only; skip count reported                                | C4     |
+| Metrics    | Patient with fewer than 10 beats of a class                      | Counts only, with a footnote                                                     | C4     |
+| Metrics    | Q beats in DS2 (7)                                               | Not scored; noted under the confusion matrix                                     | B4     |
+| Folds      | Folds without 208 in training see almost no F                    | Reported, not engineered around                                                  | C1     |
+| Sealed run | No matching freeze record, or dirty tree                         | `evaluate-test` refuses                                                          | C1, C6 |
+| Sealed run | Rebuild after the sealed run                                     | Logged as a reproduction; mismatches fail                                        | E4     |
+| Demo       | Patient 212 has no irregular beats                               | Listed with its counts; "Next irregular beat" says there is none (proposed here) | D4, D6 |
+| Demo       | Model and expert disagree                                        | Distinct mark; reachable by "Next disagreement"                                  | D6     |
+| Demo       | WebAssembly blocked or model fails                               | Labeled fallback to shipped Python labels                                        | D3     |
+| Demo       | Browser labels differ from Python                                | Counter shows the mismatch                                                       | D3     |
+| Demo       | Label timing                                                     | Labels appear one beat late (post-RR); stated                                    | B3     |
+| Demo       | Theme message from another origin                                | Ignored                                                                          | D6     |
+| Demo       | Reduced motion inside the iframe                                 | Follows the viewer's setting                                                     | D1     |
+| Demo       | Iframe offscreen                                                 | No heavy fetch until visible                                                     | D5     |
 
 ## 16. Measurement plan
 
@@ -402,31 +408,30 @@ Detailed phases belong to `docs/PLAN.md` (F2). The order the requirements impose
 
 ## 18. Open questions
 
-| # | Question | Why it matters | Owner | Resolve by |
-|---|---|---|---|---|
-| Q1 | Is the P1 split right (Ask Ottie sources, `scripts/check.sh`, Renovate, brand drift check), or should all of them be P0? | Decides what can slip without blocking launch. | Din | F1 lock |
-| Q2 | Does the de Chazal full text confirm the DS1 and DS2 lists and the RR features? TARA serves the PDF behind a Cloudflare bot check. | Page wording about the reference split and features (AS1, AS2). | Din (download the PDF), then Claude (read) | Before the case study draft |
-| Q3 | Does the free plan cover the `heartbeat.dins.dev` custom domain? | Hosting (AS4). | Claude, at first deploy | First production deploy |
-| Q4 | Should the demo or case study measure usage in any way, given "nothing here uses your data"? | Decides whether reader outcome can be measured at all. Current reading: no analytics. | Din | G1 |
-| Q5 | Is Firefox worth adding to the Playwright matrix? | Firefox users are untested today. | Din | F2 |
-| Q6 | What are the exact stage line and summary wording? | The 10-second read (G1). | Din | G1 and G2 |
-| Q7 | Which dins.dev preview hostnames go in `frame-ancestors`? | The case study iframe in site previews. | Claude | Build time |
-| Q8 | Do the INCART resampling, lead and annotation-offset choices hold up? | Stretch 1 only. | Claude drafts, Din locks | INCART design note |
+| #   | Question                                                                                                                           | Why it matters                                                                        | Owner                                      | Resolve by                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------- |
+| Q2  | Does the de Chazal full text confirm the DS1 and DS2 lists and the RR features? TARA serves the PDF behind a Cloudflare bot check. | Page wording about the reference split and features (AS1, AS2).                       | Din (download the PDF), then Claude (read) | Before the case study draft |
+| Q3  | Does the free plan cover the `heartbeat.dins.dev` custom domain?                                                                   | Hosting (AS4).                                                                        | Claude, at first deploy                    | First production deploy     |
+| Q4  | Should the demo or case study measure usage in any way, given "nothing here uses your data"?                                       | Decides whether reader outcome can be measured at all. Current reading: no analytics. | Din                                        | G1                          |
+| Q5  | Is Firefox worth adding to the Playwright matrix?                                                                                  | Firefox users are untested today.                                                     | Din                                        | F2                          |
+| Q6  | What are the exact stage line and summary wording?                                                                                 | The 10-second read (G1).                                                              | Din                                        | G1 and G2                   |
+| Q7  | Which dins.dev preview hostnames go in `frame-ancestors`?                                                                          | The case study iframe in site previews.                                               | Claude                                     | Build time                  |
+| Q8  | Do the INCART resampling, lead and annotation-offset choices hold up?                                                              | Stretch 1 only.                                                                       | Claude drafts, Din locks                   | INCART design note          |
 
 ## Appendix A: Changes from the dins-projects draft (section 7)
 
 The dins-projects PRD drafted Heartbeat before planning. These are the places this PRD now differs. The dins-projects PRD should be updated to point here (that change belongs to the dins-projects repo).
 
-| dins-projects draft said | This PRD says | Decided in |
-|---|---|---|
-| Visitors see a saliency overlay | Saliency is stretch 2; the core demo has no overlay | A2 |
-| Beats grouped into the five AAMI classes | Four scored classes; Q kept for RR, not scored | B4 |
-| The inter-patient split of de Chazal | The same split without record 202 (one subject leaked across it) | B1 |
-| Measured by per-class metrics, macro F1, calibration error | Pre-registered plan: macro F1 over N, S, V as headline, paired patient bootstrap, without-232 line, per-patient table | A3, C4 |
-| "A small 1D CNN on single beats with a little context" | The window plus six RR features (context as rhythm features) | C3 |
-| Training may use a rented GPU if needed | Mac only | C7 |
-| A stage capture: live demo or video; demo in a stage iframe | Video on the home stage; live iframe in the case study | D1 |
-| Stack: TypeScript and canvas | Svelte 5 with Vite, a plain TypeScript canvas module, ONNX Runtime Web in a Web Worker | D2 |
+| dins-projects draft said                                    | This PRD says                                                                                                         | Decided in |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Visitors see a saliency overlay                             | Saliency is stretch 2; the core demo has no overlay                                                                   | A2         |
+| Beats grouped into the five AAMI classes                    | Four scored classes; Q kept for RR, not scored                                                                        | B4         |
+| The inter-patient split of de Chazal                        | The same split without record 202 (one subject leaked across it)                                                      | B1         |
+| Measured by per-class metrics, macro F1, calibration error  | Pre-registered plan: macro F1 over N, S, V as headline, paired patient bootstrap, without-232 line, per-patient table | A3, C4     |
+| "A small 1D CNN on single beats with a little context"      | The window plus six RR features (context as rhythm features)                                                          | C3         |
+| Training may use a rented GPU if needed                     | Mac only                                                                                                              | C7         |
+| A stage capture: live demo or video; demo in a stage iframe | Video on the home stage; live iframe in the case study                                                                | D1         |
+| Stack: TypeScript and canvas                                | Svelte 5 with Vite, a plain TypeScript canvas module, ONNX Runtime Web in a Web Worker                                | D2         |
 
 ## Appendix B: Glossary
 
@@ -443,13 +448,13 @@ The dins-projects PRD drafted Heartbeat before planning. These are the places th
 
 From PhysioNet's beat table, entire records (B1, B4):
 
-| Class | DS1 (22 records) | DS2 without 202 (21 records) |
-|---|---|---|
-| N | 45,866 | 42,198 |
-| S | 944 (record 209: 41%) | 1,782 (record 232: 78%) |
-| V | 3,788 (record 208: 26%) | 3,202 (records 233 and 200: 26% each) |
-| F | 415 (record 208: 90%) | 387 (record 213: 94%) |
-| Q | 8 | 7 |
+| Class | DS1 (22 records)        | DS2 without 202 (21 records)          |
+| ----- | ----------------------- | ------------------------------------- |
+| N     | 45,866                  | 42,198                                |
+| S     | 944 (record 209: 41%)   | 1,782 (record 232: 78%)               |
+| V     | 3,788 (record 208: 26%) | 3,202 (records 233 and 200: 26% each) |
+| F     | 415 (record 208: 90%)   | 387 (record 213: 94%)                 |
+| Q     | 8                       | 7                                     |
 
 ## References
 
