@@ -593,3 +593,22 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Gap found (for the Phase 2 plan, not decided here):** B3's per-window z-score does not say what happens when a window's standard deviation is zero or near zero (a flat or lead-off segment). Python and TypeScript must handle it the same way.
 
 **Verified:** no em or en dashes, no avoid-list words, ASCII only (grep).
+
+## 2026-10-27: F4 decided, conventions
+
+**Decision (Din):** lock `docs/CONVENTIONS.md` as drafted:
+- Tools enforce whatever they can (ruff, mypy strict, strict TypeScript, typescript-eslint recommended and stylistic type-checked, Prettier); the doc keeps only what a linter can't see.
+- Names carry units; decided values are named constants with their decision ID.
+- The leakage table (Kapoor and Narayanan's taxonomy) and a separate fit step and apply step for anything learned.
+- No global random state; streams spawned from one master seed with `SeedSequence`.
+- Rule IDs on tests, with a CI check that every non-manual row in PLAN.md section 6 has a test.
+- Conventional Commits from Phase 1.
+- Merge commits, never squash or rebase, so commit hashes in run folders, the freeze record and R47 stay on `main`.
+- dins.dev's status words for build tasks.
+- Prettier formats every Markdown file, with one formatting-only pass before the Phase 0 push.
+
+**Applied:**
+- `docs/TASKS.md`: a second status key for the build phases; all 40 build tasks switched from todo to Planned; new tasks 1.6 (tool configs, checked against the pinned versions, including the three settings recalled from memory in the F4 draft entry) and 1.7 (the rule-coverage check); new Phase 0 item F8 (the Prettier pass before the push, Din's go for the download).
+- `docs/PLAN.md`: Phase 0 remaining now lists F5, F6 and F8; Phase 1 builds the tool configs and the rule-coverage check.
+
+**Still open:** the zero standard deviation case in B3's z-score, for the Phase 2 plan.

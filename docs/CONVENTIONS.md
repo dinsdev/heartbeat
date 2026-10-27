@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft (F4, 2026-10-27), not locked |
+| **Status** | Locked by Din (F4, 2026-10-27). Changes need Din's go and a ledger entry. |
 | **Applies to** | All code, tests and docs in this repo. `AGENTS.md` holds the rigor rules and approvals; this file holds how code is written. |
 | **Enforced by** | The tools in section 1 wherever possible. The rest is checked in review. |
 

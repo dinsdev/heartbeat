@@ -1,6 +1,7 @@
 # Heartbeat: Tasks
 
-Status key: todo, doing, done, blocked.
+Status key, Phase 0: todo, doing, done, blocked.
+Status key, build phases (F4): Planned, In progress, Implemented, Verified (checks passed), Accepted (Din tried it; only Din sets it), Blocked.
 Planning state key: open (not discussed), draft (proposed in the dins-projects PRD, not locked by Din), decided (Din locked it, reason in `WORK_LEDGER.md`), ongoing.
 
 The schedule in `~/Develop/dins-projects/docs/PLAN.md` is a best-case recommendation, not a deadline (Din, 2026-10-22).
@@ -70,10 +71,11 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | F1 | `docs/PRD.md`, promoted from the dins-projects PRD section 7: written from the A to E decisions, P0 core, P1 supporting work, P2 stretch, requirements traced to planning items | decided | done |
 | F2 | `docs/PLAN.md`: nine phases, a Phase 7 gate before the sealed run, 49-row rule-to-test table (R46 and R47 added), task plans written per phase; build phases added to this file | decided | done |
 | F3 | `AGENTS.md` (one root file, seven rigor rules, approvals, commands marked as Phase 1) and `CLAUDE.md` importing it; conventions go in `docs/CONVENTIONS.md` (F4) | decided | done |
-| F4 | Coding conventions and rules in `docs/CONVENTIONS.md`: drafted 2026-10-27 (tool settings, Python, ML hygiene mapped to a leakage taxonomy, TypeScript and Svelte, tests, git and docs) | draft | doing |
+| F4 | Coding conventions in `docs/CONVENTIONS.md`: tools enforce what they can, unit-suffixed names, leakage table and fit/apply split, SeedSequence seeds, rule IDs on tests with a coverage check, Conventional Commits, merge commits not squash, dins.dev status words for build tasks, Prettier on Markdown | decided | done |
 | F5 | `.claude/settings.json`: permissions and hooks | open | todo |
 | F6 | Model card and data card templates, filled with real numbers later | open | todo |
 | F7 | `docs/WORK_LEDGER.md` kept current | ongoing | doing |
+| F8 | Before the Phase 0 push: one formatting-only Prettier 3.9.10 pass over every `.md` file (Din's go for the download) | decided | todo |
 
 ### G. Publishing
 
@@ -88,84 +90,86 @@ Scheduled into the build phases at the F2 lock (none can finish during planning)
 
 ## Build phases
 
-From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan at its start, which may split these rows further. Status is todo until then. The G items above are scheduled into these phases (G4 in 6, G1 in 7, G2 and G3 in 8).
+From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan at its start, which may split these rows further. Status is Planned until then. The G items above are scheduled into these phases (G4 in 6, G1 in 7, G2 and G3 in 8).
 
 ### Phase 1: Skeleton and CI
 
 | ID | Task | Status |
 |---|---|---|
-| 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer`, `uv.lock`, `heartbeat` CLI skeleton | todo |
-| 1.2 | Web project in `web/`: pnpm, E2 pins, `minimumReleaseAge`, `allowBuilds` | todo |
-| 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config | todo |
-| 1.4 | Wording lint (D7 avoid list, dash separators) | todo |
-| 1.5 | `LICENSE`, `DATA_LICENSE.md`, README, `.gitignore` | todo |
+| 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer`, `uv.lock`, `heartbeat` CLI skeleton | Planned |
+| 1.2 | Web project in `web/`: pnpm, E2 pins, `minimumReleaseAge`, `allowBuilds` | Planned |
+| 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config | Planned |
+| 1.4 | Wording lint (D7 avoid list, dash separators) | Planned |
+| 1.5 | `LICENSE`, `DATA_LICENSE.md`, README, `.gitignore` | Planned |
+| 1.6 | Tool configs per `docs/CONVENTIONS.md` section 1, checked against the pinned versions (including the three settings recalled from memory in the F4 entry) | Planned |
+| 1.7 | Rule-coverage check: every non-manual row in PLAN.md section 6 has a test carrying its ID | Planned |
 
 ### Phase 2: Data and split
 
 | ID | Task | Status |
 |---|---|---|
-| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions | todo |
-| 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes | todo |
-| 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features | todo |
-| 2.4 | Split-enforcing loader; leakage tests on subject IDs | todo |
-| 2.5 | `make-folds` and committed `config/folds.json` (ledger entry) | todo |
-| 2.6 | `rebuild` stage framework with fingerprints and `--from` | todo |
+| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions | Planned |
+| 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes | Planned |
+| 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features | Planned |
+| 2.4 | Split-enforcing loader; leakage tests on subject IDs | Planned |
+| 2.5 | `make-folds` and committed `config/folds.json` (ledger entry) | Planned |
+| 2.6 | `rebuild` stage framework with fingerprints and `--from` | Planned |
 
 ### Phase 3: Evaluation harness and baseline
 
 | ID | Task | Status |
 |---|---|---|
-| 3.1 | Metrics, per-patient table, paired patient bootstrap | todo |
-| 3.2 | Calibration: logit adjustment, temperature, equal-mass ECE, reliability, log loss, Brier | todo |
-| 3.3 | Run folders and the `results/` writer | todo |
-| 3.4 | Baseline with C selection on the folds; results committed | todo |
+| 3.1 | Metrics, per-patient table, paired patient bootstrap | Planned |
+| 3.2 | Calibration: logit adjustment, temperature, equal-mass ECE, reliability, log loss, Brier | Planned |
+| 3.3 | Run folders and the `results/` writer | Planned |
+| 3.4 | Baseline with C selection on the folds; results committed | Planned |
 
 ### Phase 4: CNN and the leakage exhibit
 
 | ID | Task | Status |
 |---|---|---|
-| 4.1 | CNN, training loop, augmentation, derived seeds, deterministic CPU mode | todo |
-| 4.2 | Cross-validation (3 widths x 5 folds x 3 seeds) and `select` | todo |
-| 4.3 | Exhibit leaky side for CNN and baseline; results committed (ledger entry) | todo |
-| 4.4 | `train-final`: three seeds on CPU | todo |
+| 4.1 | CNN, training loop, augmentation, derived seeds, deterministic CPU mode | Planned |
+| 4.2 | Cross-validation (3 widths x 5 folds x 3 seeds) and `select` | Planned |
+| 4.3 | Exhibit leaky side for CNN and baseline; results committed (ledger entry) | Planned |
+| 4.4 | `train-final`: three seeds on CPU | Planned |
 
 ### Phase 5: Export, parity and the rebuild
 
 | ID | Task | Status |
 |---|---|---|
-| 5.1 | Single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` | todo |
-| 5.2 | DS1 parity fixtures and the Python half of the parity chain | todo |
-| 5.3 | `evaluate-test` refusals and the append-only log writer | todo |
-| 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; clean-clone reproduction logged | todo |
+| 5.1 | Single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` | Planned |
+| 5.2 | DS1 parity fixtures and the Python half of the parity chain | Planned |
+| 5.3 | `evaluate-test` refusals and the append-only log writer | Planned |
+| 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; clean-clone reproduction logged | Planned |
 
 ### Phase 6: Demo on DS1
 
 | ID | Task | Status |
 |---|---|---|
-| 6.1 | App shell: Svelte, full and embed modes, canvas trace, brand tokens and drift check | todo |
-| 6.2 | Worker with ONNX Runtime Web, TypeScript preprocessing, chunked labeling, browser parity | todo |
-| 6.3 | Parity counter, fallback, loading state | todo |
-| 6.4 | Controls, legend, beat table, status line, reduced-motion paging, theme handling | todo |
-| 6.5 | `build-demo-data` (DS1 only), manifest, size and performance gates, axe and keyboard tests | todo |
-| 6.6 | Headers and CSP; deploy workflow with previews (Din: Cloudflare token and secret) | todo |
-| 6.7 | G4 handoff note to the dins.dev repo | todo |
+| 6.1 | App shell: Svelte, full and embed modes, canvas trace, brand tokens and drift check | Planned |
+| 6.2 | Worker with ONNX Runtime Web, TypeScript preprocessing, chunked labeling, browser parity | Planned |
+| 6.3 | Parity counter, fallback, loading state | Planned |
+| 6.4 | Controls, legend, beat table, status line, reduced-motion paging, theme handling | Planned |
+| 6.5 | `build-demo-data` (DS1 only), manifest, size and performance gates, axe and keyboard tests | Planned |
+| 6.6 | Headers and CSP; deploy workflow with previews (Din: Cloudflare token and secret) | Planned |
+| 6.7 | G4 handoff note to the dins.dev repo | Planned |
 
 ### Phase 7: Freeze and the sealed run
 
 | ID | Task | Status |
 |---|---|---|
-| 7.1 | Gate checklist (PLAN.md section 3, Phase 7) | todo |
-| 7.2 | Freeze record committed and pushed (Din's go) | todo |
-| 7.3 | `evaluate-test` once; log pushed; ledger entry with every headline number | todo |
-| 7.4 | DS2 demo data from the frozen model; reproduction check | todo |
-| 7.5 | G1 case study outline | todo |
+| 7.1 | Gate checklist (PLAN.md section 3, Phase 7) | Planned |
+| 7.2 | Freeze record committed and pushed (Din's go) | Planned |
+| 7.3 | `evaluate-test` once; log pushed; ledger entry with every headline number | Planned |
+| 7.4 | DS2 demo data from the frozen model; reproduction check | Planned |
+| 7.5 | G1 case study outline | Planned |
 
 ### Phase 8: Content and launch
 
 | ID | Task | Status |
 |---|---|---|
-| 8.1 | Model card and data card filled from results | todo |
-| 8.2 | Case study draft with real numbers (de Chazal full text read first, PRD Q2) | todo |
-| 8.3 | G2 stage video; G3 Ask Ottie sources | todo |
-| 8.4 | VoiceOver pass; PhysioNet citation recheck | todo |
-| 8.5 | Din's preview review; first production deploy (Din's go) | todo |
+| 8.1 | Model card and data card filled from results | Planned |
+| 8.2 | Case study draft with real numbers (de Chazal full text read first, PRD Q2) | Planned |
+| 8.3 | G2 stage video; G3 Ask Ottie sources | Planned |
+| 8.4 | VoiceOver pass; PhysioNet citation recheck | Planned |
+| 8.5 | Din's preview review; first production deploy (Din's go) | Planned |
