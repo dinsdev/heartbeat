@@ -458,3 +458,18 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - A wording lint scans the built demo text and the case study draft for D7's avoid list and for em or en dashes used as separators (Din's writing rule).
 - `docs/PLAN.md` (F2) gets a table mapping each locked rigor rule to the test that enforces it.
 - No code-coverage percentage gate.
+
+## 2026-10-27: E6 decided, CI, remote and deploys (section E complete)
+
+**Checked:** dins.dev's remote is `dinsdev/dins.dev` (`dinsdev` is a GitHub organization); `dinsdev/heartbeat` does not exist yet; the GitHub CLI is signed in as `dinesh-git17`. dins.dev has no workflows yet. Din's rule (dins.dev ledger): pushing needs permission.
+
+**Decisions (Din):**
+- Remote: `dinsdev/heartbeat`, public (MIT, E3), linked from the case study.
+- Public at the end of Phase 0, before the sealed run: the push gives the pre-registered plan (A3, C4, C5, C8) an outside timestamp that local commit dates cannot. Evidence, not cryptographic proof. The freeze record is pushed before `evaluate-test` runs, and the test log right after.
+- CI: one GitHub Actions workflow on every push and pull request, aiming under about 10 minutes. Python: ruff, mypy, unit tests, real-data tests (download cached by the checksum manifest), smoke training, the Python half of the parity chain. Web: frozen-lockfile install, ESLint, Prettier, svelte-check, Vitest, build and size gates, Playwright in Chromium and WebKit. Text: the wording lint.
+- Supply chain: third-party actions pinned to full commit hashes; read-only workflow permissions by default; Renovate with a 14-day minimum release age, a monthly schedule, pull requests only, no automerge.
+- `scripts/check.sh` runs lint and unit tests locally in under 2 minutes, as on the site.
+- Deploys: GitHub Actions with wrangler, not Workers Builds, because building demo data needs Python, uv and the data download. No training in deploys; demo data is built from the committed frozen model (DS1 only before the freeze, per E4). Production on `main` after checks pass; preview versions on pull requests. `heartbeat.dins.dev` set as a custom domain in wrangler's config; free-plan coverage confirmed on the first deploy.
+- Din's go needed for: creating the repo and making it public, each push, creating a Workers-scoped Cloudflare API token and adding it as a GitHub secret (Claude never handles its value), and the first production deploy.
+
+**Handoff (2026-10-27, end of session):** sections A to E are decided. Next is section F (F1 PRD, F2 PLAN with build phases and the rule-to-test table, F3 AGENTS.md and CLAUDE.md, F4 conventions, F5 `.claude/settings.json`, F6 card templates), then G. Open items carried: the de Chazal full text (B5; TARA is behind a Cloudflare bot check, so Din downloads it); G4, the dins.dev changes to hand over; and confirming Workers custom-domain coverage at the first deploy.
