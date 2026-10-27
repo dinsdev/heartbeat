@@ -83,5 +83,5 @@ Code enforces most of these (the rule-to-test table names each test). Don't look
 ## Writing
 
 - In docs, UI text, comments and commit messages: no em dashes, no en dashes as separators, no AI-tell buzzwords (elevate, seamless, unleash, journey, tapestry, "not just X but Y"). Use periods, commas, colons or parentheses. Refer to Din by name.
-- Public text (demo, case study, README) also avoids D7's list: "diagnose", "diagnosis", "detects arrhythmia", "detects heart disease", "clinical-grade", "accurate" as a headline, "AI doctor". Say "labels heartbeats", "flags irregular beats", "on patients it never saw". The wording lint checks both.
+- Public text (demo, case study, README, model and data cards) also avoids D7's list: "diagnose", "diagnosis", "detects arrhythmia", "detects heart disease", "clinical-grade", "accurate" as a headline, "AI doctor". Say "labels heartbeats", "flags irregular beats", "on patients it never saw". The wording lint checks both.
 - Ledger entries are dated and say what was decided, why, and what was verified and how.

@@ -673,3 +673,34 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Carried to task 1.6:** the root ruff config targets py314 and the hook files must keep running on 3.9, so if a future rule needs 3.10 syntax the hook directory gets a nested config with `extend` and `target-version = "py39"`. Today both targets pass, so no nested config was added. Task 1.3 runs `.claude/hooks` in `scripts/check.sh` (carried from the F5 draft).
 
 **Handoff (2026-10-27, end of session):** F5 is decided and closed, including the ruff follow-up. Phase 0 remaining: F6 (model and data card templates), then F8 (the formatting-only Prettier 3.9.10 pass, Din's go for the download), then Din creates `dinsdev/heartbeat` and pushes `main` (F5 denies repo creation and pushes to Claude, so Claude prepares the exact commands). Tools before Phase 1: `uvx ruff@0.17.0` and `uvx --python 3.14 pytest@9.1.1 .claude/hooks`; the terminal CLI is now logged in, so `claude -p` runs in a scratchpad repo work for end-to-end hook checks. Open items carried: Din's check that ask rules prompt in a new desktop session; the de Chazal full text (PRD Q2); the zero standard deviation case in B3's z-score (Phase 2 plan); Workers custom-domain coverage and preview URLs (Phase 6); the dins-projects PRD pointer (that repo).
+
+## 2026-10-27: F6 decided, model card and data card templates
+
+**Checked first (2026-10-27, primary sources):**
+- Mitchell et al., "Model Cards for Model Reporting" (arXiv 1810.03993, Figure 1): nine sections (model details, intended use, factors, metrics, evaluation data, training data, quantitative analyses, ethical considerations, caveats and recommendations).
+- Gebru et al., "Datasheets for Datasets" (arXiv 1803.09010v8): seven question groups (motivation, composition, collection process, preprocessing/cleaning/labeling, uses, distribution, maintenance).
+- PhysioNet mitdb 1.0.0 page: 47 subjects (25 men aged 32 to 89, 22 women aged 23 to 89); Beth Israel Hospital Arrhythmia Laboratory, 1975 to 1979, about 60% inpatients; 23 excerpts chosen at random and 25 to include uncommon arrhythmias; 360 samples per second, 11-bit over 10 mV; automatic first labels, then two cardiologists independently, disagreements resolved by consensus; ODC-By 1.0; requested citations as in B5. The page says nothing about consent or de-identification.
+- Record 101's header (`101.hea`, a DS1 file) lists age, sex and one medication, so the data card's line on header contents is checked on one record, not all.
+- Both papers were fetched as PDFs to the session's tool-results folder and their extracted text deleted from the scratchpad after the check.
+
+**Decision (Din):** lock F6 as proposed.
+1. `docs/MODEL_CARD.md` follows Mitchell's nine sections, for heartbeat-v1 (the CNN, seed 0) with the baseline as the comparison row. Section 7.1 has one block per EVAL-08 item, then calibration (EVAL-12), development results and the C5 exhibit. Caveats repeat the PUB-02 limits list.
+2. `docs/DATA_CARD.md` follows Gebru's seven sections for the derived dataset (the 44-record subset, the split, preprocessing, AAMI mapping, what ships), citing PhysioNet for the source database rather than retelling it.
+3. Every count and metric sits in a generated block (`<!-- card:begin NAME -->` to `<!-- card:end NAME -->`), rendered by `heartbeat cards` from committed `results/`. `heartbeat verify` fails if a block differs from what the results would render, or if a test block is still pending once the sealed run is logged (new row R50, Phase 5, task 5.5). Prose holds definitions only (record lists, exclusions, processing steps). Reason: rule 2 then holds by construction, and the cards can't drift after a logged rerun.
+4. The data card gains an age and sex table per set, from the record headers; the model card reports no subgroup metrics and says why (21 test patients).
+5. The templates are committed now and pushed with Phase 0, so the report layout is publicly timestamped with the pre-registered plan. Anything added after the sealed run goes in each card's change log.
+6. The wording lint (R44) covers the README and both cards as well as the built demo and the case study draft.
+
+**Applied:**
+- New: `docs/MODEL_CARD.md`, `docs/DATA_CARD.md` (templates, every block pending).
+- `docs/PRD.md`: PUB-04 names the generated blocks and R50; PUB-05 widens the lint scope.
+- `docs/PLAN.md`: F6 off Phase 0 remaining; Phase 5 builds `heartbeat cards` and exits on R50; Phase 8 wording; R44 widened; R50 added after R49.
+- `docs/TASKS.md`: F6 decided and done; new task 5.5; task 8.1 reworded.
+- `docs/CONVENTIONS.md`: rule ID range now R1 to R50. `AGENTS.md`: the public-text list names the cards.
+
+**Verified:** grep over both cards found no em or en dashes and no avoid-list words (the one quoted "diagnose" in the model card was reworded, since the lint will cover the cards). Not run: Prettier (not installed until F8's pass, which will reformat the cards' tables along with the other docs).
+
+**Open, carried:**
+- The license stated for the model weights (code is MIT, data ODC-By 1.0); decided by Din before launch (task 8.1).
+- Block names and their source files are fixed in the Phase 5 task plan, alongside the `results/` layout from Phases 3 and 4.
+- The data card's DS1 and DS2 lists still rest on secondary transcriptions (PRD Q2).

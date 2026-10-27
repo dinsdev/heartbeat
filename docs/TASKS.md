@@ -73,7 +73,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | F3 | `AGENTS.md` (one root file, seven rigor rules, approvals, commands marked as Phase 1) and `CLAUDE.md` importing it; conventions go in `docs/CONVENTIONS.md` (F4) | decided | done |
 | F4 | Coding conventions in `docs/CONVENTIONS.md`: tools enforce what they can, unit-suffixed names, leakage table and fit/apply split, SeedSequence seeds, rule IDs on tests with a coverage check, Conventional Commits, merge commits not squash, dins.dev status words for build tasks, Prettier on Markdown | decided | done |
 | F5 | `.claude/settings.json`: deny rules for everything only Din runs (ask rules did not prompt in one desktop bypass session, measured; held as refusals headless), file denies for `results/`, the frozen model and the folds, a fail-closed guard hook with tests | decided | done |
-| F6 | Model card and data card templates, filled with real numbers later | open | todo |
+| F6 | Model card and data card templates (2026-10-27): Mitchell et al. and Gebru et al. layouts in `docs/MODEL_CARD.md` and `docs/DATA_CARD.md`; every number in a generated block rendered by `heartbeat cards` and checked by `verify` (R50); wording lint covers the cards and README; committed before the push | decided | done |
 | F7 | `docs/WORK_LEDGER.md` kept current | ongoing | doing |
 | F8 | Before the Phase 0 push: one formatting-only Prettier 3.9.10 pass over every `.md` file (Din's go for the download) | decided | todo |
 
@@ -141,6 +141,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 | 5.2 | DS1 parity fixtures and the Python half of the parity chain | Planned |
 | 5.3 | `evaluate-test` refusals and the append-only log writer | Planned |
 | 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; clean-clone reproduction logged | Planned |
+| 5.5 | `heartbeat cards` renderer for the card blocks, and its `verify` check (R50) | Planned |
 
 ### Phase 6: Demo on DS1
 
@@ -168,7 +169,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 |---|---|---|
-| 8.1 | Model card and data card filled from results | Planned |
+| 8.1 | Model card and data card: blocks rendered from results, prose finished, model weights license decided (Din) | Planned |
 | 8.2 | Case study draft with real numbers (de Chazal full text read first, PRD Q2) | Planned |
 | 8.3 | G2 stage video; G3 Ask Ottie sources | Planned |
 | 8.4 | VoiceOver pass; PhysioNet citation recheck | Planned |

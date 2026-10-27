@@ -38,7 +38,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 0: Planning (in progress)
 
-**Remaining:** F6 (model and data card templates), F8 (one formatting-only Prettier pass over the Markdown docs before the push, Din's go for the download).
+**Remaining:** F8 (one formatting-only Prettier pass over the Markdown docs before the push, Din's go for the download).
 
 **Exit:**
 - Sections A to F decided and committed.
@@ -77,10 +77,10 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 5: Export, parity and the rebuild (about 2 days)
 
-**Builds:** single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` (pre-freeze contents); parity fixtures from DS1; the Python half of the parity chain; `rebuild` end to end up to export, stopping before DS2; `heartbeat verify`; `evaluate-test` with its freeze and clean-tree checks and the append-only log writer, tested only for its refusals (it never reads DS2 before Phase 7).
+**Builds:** single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` (pre-freeze contents); parity fixtures from DS1; the Python half of the parity chain; `rebuild` end to end up to export, stopping before DS2; `heartbeat verify`; `heartbeat cards`, which renders the generated blocks of `docs/MODEL_CARD.md` and `docs/DATA_CARD.md` from `results/`, with its check in `verify` (F6); `evaluate-test` with its freeze and clean-tree checks and the append-only log writer, tested only for its refusals (it never reads DS2 before Phase 7).
 **Requirements:** PARITY-01, PARITY-02, PARITY-03 (Python half), PARITY-04, OPS-01, OPS-02, OPS-04, EVAL-05, EVAL-06.
 **Depends on:** Phase 4.
-**Exit:** rows R25 to R28, R41 and R42 pass; `rebuild` from a clean clone reproduces `results/` within tolerance (default mode) and logs the result in the ledger.
+**Exit:** rows R25 to R28, R41, R42 and R50 pass; `rebuild` from a clean clone reproduces `results/` within tolerance (default mode) and logs the result in the ledger.
 
 ### Phase 6: Demo on DS1 (about 5 to 7 days)
 
@@ -104,7 +104,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 8: Content and launch (about 3 to 4 days)
 
-**Builds:** model card and data card filled from committed results (F6 templates); the case study (in the dins.dev repo, from G1); the stage video from patient 200 with the research-demo line (G2); Ask Ottie sources (G3); PhysioNet's citation rechecked; one VoiceOver pass; Din's review in a preview deploy; first production deploy (Din's go).
+**Builds:** model card and data card: numbers rendered by `heartbeat cards` from committed results into the F6 templates, prose finished by hand, the model weights license decided; the case study (in the dins.dev repo, from G1); the stage video from patient 200 with the research-demo line (G2); Ask Ottie sources (G3); PhysioNet's citation rechecked; one VoiceOver pass; Din's review in a preview deploy; first production deploy (Din's go).
 **Requirements:** PUB-01 to PUB-09, launch criteria (PRD section 12).
 **Exit:** every launch criterion holds; the case study is published by the dins.dev repo's own process.
 
@@ -143,7 +143,7 @@ From E5. The rule-to-test table names a layer for every rule.
 
 ## 6. Rule-to-test table
 
-Each locked rigor rule and the test that enforces it. Test names are indicative; the phase plan fixes the real ones. R46 and R47 were added at F2; Din locked them with the plan.
+Each locked rigor rule and the test that enforces it. Test names are indicative; the phase plan fixes the real ones. R46 and R47 were added at F2; Din locked them with the plan. R50 was added, and R44 widened to the README and cards, at F6.
 
 | # | Rule | Source | Enforced by | Layer | Phase |
 |---|---|---|---|---|---|
@@ -190,12 +190,13 @@ Each locked rigor rule and the test that enforces it. Test names are indicative;
 | R41 | `evaluate-test` refuses without a matching freeze record or on a dirty tree | C1, C6 | tests with a mismatched record and a dirty tree | L2 | 5 |
 | R42 | Sealed runs append to `test_runs.jsonl`; nothing is rewritten; reproductions are a separate entry type | C6, E4 | test on the log writer; `heartbeat verify` checks results against the log | L2 | 5 |
 | R43 | The default patient rule picks record 200 | D4 | test on the built DS2 manifest | L2 | 7 |
-| R44 | Published text avoids D7's list and dash separators | D7 | wording lint | TX | 1 onward |
+| R44 | Published text (built demo, case study draft, README, model and data cards) avoids D7's list and dash separators | D7, F6 | wording lint | TX | 1 onward |
 | R45 | Dependencies respect the 14-day rule | E2 | uv and pnpm config; CI installs from frozen lockfiles | GATE | 1 |
 | R46 | Third-party actions pinned to commit hashes | E6, F2 | a small workflow check that rejects tag references | TX | 1 |
 | R47 | The freeze commit is on the public remote before the sealed run | E6, F2 | `evaluate-test` refuses unless the freeze commit is on `origin/main` | L2 | 7 |
 | R48 | One VoiceOver pass | D6 | manual, recorded in the ledger | MAN | 8 |
 | R49 | Pre-registered plan unchanged, or changes logged before the gate | A3 | Phase 7 gate checklist | MAN | 7 |
+| R50 | Card numbers come from committed results: every generated block equals what `heartbeat cards` renders, and no test block is pending once the sealed run is logged | F6 | renderer unit tests; `heartbeat verify` check on the two cards | L1, L2 | 5 |
 
 ## 7. Review focus
 
