@@ -473,3 +473,22 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Din's go needed for: creating the repo and making it public, each push, creating a Workers-scoped Cloudflare API token and adding it as a GitHub secret (Claude never handles its value), and the first production deploy.
 
 **Handoff (2026-10-27, end of session):** sections A to E are decided. Next is section F (F1 PRD, F2 PLAN with build phases and the rule-to-test table, F3 AGENTS.md and CLAUDE.md, F4 conventions, F5 `.claude/settings.json`, F6 card templates), then G. Open items carried: the de Chazal full text (B5; TARA is behind a Cloudflare bot check, so Din downloads it); G4, the dins.dev changes to hand over; and confirming Workers custom-domain coverage at the first deploy.
+
+## 2026-10-27: F1 drafted, the PRD
+
+**Research (2026-10-27), how large tech companies structure requirement docs:**
+- Google design docs (Malte Ubl, "Design Docs at Google", industrialempathy.com): context and scope, goals and non-goals, design, alternatives considered (called one of the most important sections), cross-cutting concerns such as security and privacy. A non-goal is something that could reasonably be a goal but is deliberately excluded, not a negated goal. About 10 to 20 pages for a larger project.
+- Amazon PR/FAQ (workingbackwards.com): start from the customer and work backwards; the internal FAQ names dependencies, the assumptions that must hold and the top reasons the product could fail.
+- Common pattern across published PRD templates (Lenny's Newsletter template roundup, third-party guides): problem before solution, testable requirements with priorities, explicit non-goals, open questions with owners. No internal template from Google, Amazon or Meta is public; these are the closest primary sources.
+
+**Work done:** `docs/PRD.md` written. Structure: summary; background; problem; audience; goals as true-or-false checks (A3 rules out numeric targets); non-goals with reasons; six use cases; 70-odd functional requirements with IDs, priorities and the planning item that decided each; non-functional requirements; constraints; falsifiable assumptions; launch criteria; risks; decisions with rejected alternatives; edge cases; measurement plan; release order; open questions with owners; an appendix of changes from the dins-projects draft.
+
+**Choices made in drafting (for Din's review):**
+- Priorities: P0 is A2's core, P2 is C8's stretch. P1 (Ask Ottie sources, `scripts/check.sh`, Renovate, brand drift check) is Claude's proposal; A2 had no middle tier (open question Q1).
+- Three behaviors not covered by a decision are marked "proposed here": "Next irregular beat" on a patient with none (212), the rollback procedure, and leading with the exhibit's gap to resolve the recruiter conflict.
+- Privacy reads D7 ("Nothing here uses your data") as no analytics in the demo, so reader outcome is not instrumented (Q4).
+- New open questions: Q1 P1 split, Q4 analytics, Q5 Firefox in the Playwright matrix, Q6 stage line wording, Q7 preview hostnames. Carried: de Chazal full text (Q2), custom domain on the free plan (Q3), INCART design choices (Q8).
+
+**Found:** the dins-projects PRD section 7 differs from the decisions in eight places (saliency, five classes, the 202 fix, metrics, CNN inputs, GPU, stage, stack). Listed in the PRD's Appendix A; updating the dins-projects PRD belongs to that repo.
+
+**Verified:** no em or en dashes, no avoid-list words, ASCII only (grep). Every number in the PRD traced to a ledger entry. Not verified: anything new; the PRD adds no new facts beyond the research summary above.

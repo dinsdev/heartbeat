@@ -67,7 +67,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| F1 | `docs/PRD.md`, promoted from the dins-projects PRD section 7 | open | todo |
+| F1 | `docs/PRD.md`, promoted from the dins-projects PRD section 7. Drafted 2026-10-27 from the A to E decisions; awaiting Din's review and lock | draft | doing |
 | F2 | `docs/PLAN.md` phases, and build phases added to this file | open | todo |
 | F3 | `AGENTS.md`, and `CLAUDE.md` starting with `@AGENTS.md` | open | todo |
 | F4 | Coding conventions and rules: Python and TypeScript style, typing, naming, ML hygiene | open | todo |
