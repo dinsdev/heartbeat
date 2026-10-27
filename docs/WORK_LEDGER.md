@@ -231,3 +231,14 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - Metrics: the usual headline metrics with patient-bootstrap intervals on both sides, plus accuracy, shown only in the exhibit and labeled as the number papers often lead with.
 - Timing: DS1 only, so it can run during development. Its design is pre-registered here.
 - Case study wording sketch: "Same model, same 22 patients, same code. The only change: whether beats from one person can land in both training and testing." Then the two rows, then the DS2 headline as the real answer.
+
+## 2026-10-26: C6 decided, tracking, seeds and determinism
+
+**Decisions (Din):**
+- No tracking service (about 20 development configurations do not justify one). Each run writes `runs/<time>-<short commit>-<name>/`: resolved config, commit hash with a dirty flag and diff hash, library versions, lockfile hash, device, metrics, out-of-fold predictions, checkpoint and log. `runs/` is gitignored. Anything the page uses is copied into committed `results/` (small JSON and figures) by the rebuild command, never by hand.
+- Sealed-run log: committed, append-only `results/test_runs.jsonl`, plus a ledger entry per DS2 run. Development runs may start on a dirty tree (recorded); `evaluate-test` refuses one.
+- Seeds: one master seed per run, with Python, NumPy, PyTorch, augmentation and shuffling seeds derived from it. The fold file has its own seed, independent of training seeds.
+- Development runs seeds 0, 1 and 2 for every configuration; width is chosen on the seed mean (3 widths x 5 folds x 3 seeds = 45 CNN runs; the baseline is deterministic, one run).
+- Seed 0 is the shipped model, fixed now. The single sealed run evaluates all three final models: headline numbers are seed 0, and one secondary line gives the range across seeds 1 and 2.
+- Final and frozen models train on CPU with PyTorch deterministic mode; development may use MPS. Data loads in a single process (`num_workers=0`).
+- Claims: retraining reproduces the frozen model bit for bit on the same machine and setup, and within a small tolerance elsewhere; inference with the shipped ONNX model reproduces the reported metrics exactly. E5 turns both into tests.
