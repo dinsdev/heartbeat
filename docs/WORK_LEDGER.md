@@ -325,3 +325,17 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Shown: model label and expert label per beat with disagreements marked, and a counter such as "Labels match the Python results: 2,134 of 2,134 beats" (labels exact, probabilities within a tolerance fixed in E5, about 1e-4). A mismatch is shown, not hidden; CI should catch it first.
 - Fallback: if WebAssembly or the model fails to load, the demo plays the shipped Python labels with a visible note ("Showing precomputed labels; in-browser model unavailable"). Never silent.
 - C1 ordering holds: DS1 recordings during development; DS2 patients and their sealed-run labels only after the sealed run.
+
+## 2026-10-27: D4 decided, data shipped to the browser (and a B3 amendment)
+
+**Rule:** no cherry-picking by construction.
+
+**Decisions (Din):**
+- All 21 DS2 patients ship, each the full 30 minutes with a scrub bar, loaded only when selected. No DS1 patients in the final demo (training patients would look better than they deserve); DS1 recordings appear only during development (C1).
+- Default patient, fixed now by a rule on expert labels only: the DS2 record with the most S plus V beats among those with at least 25 of each. Qualifying: 200 (S 30, V 826) and 213 (S 28, V 220), so the default is record 200. Playback starts at the first 10-second span containing an S or V beat. The page says it was chosen before testing because it has many irregular beats. The stage video is recorded from it.
+- The patient picker shows each patient's beat counts by class from the expert labels (including 212, with no irregular beats, and 232, the S-heavy one).
+- Per patient: `NNN.trace.i16` (filtered trace as little-endian int16 at 200 units per mV, MIT-BIH's native resolution, about 1.3 MB) and `NNN.beats.json` (positions, expert labels, sealed-run seed-0 labels and probabilities; tens of KB).
+- `manifest.json`: patients with class counts, a content hash per file (hashed filenames, cached indefinitely), the model version, and the B5 attribution note. A test checks the manifest against the files.
+- Per visit: about 1.3 MB of trace, tens of KB of beats, about 210 KB of model, plus ONNX Runtime's WebAssembly (D5). Whether Cloudflare compresses the binary trace is checked in E1.
+
+**B3 amendment (Din):** the canonical signal is "filtered, then rounded to int16 at 200 units per mV". Python trains and evaluates on this rounded trace too, so the browser and Python see identical inputs and the parity counter cannot fail for a rounding reason. The rounding (5 microvolt steps) is far below the signal's noise.

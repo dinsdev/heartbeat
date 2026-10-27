@@ -23,7 +23,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 |---|---|---|---|
 | B1 | Records and exclusions: 44 records (four paced out), MLII picked by signal name, 202 dropped from DS2 to fix the 201/202 leak | decided | done |
 | B2 | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace | decided | done |
-| B3 | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, per-window z-score, causal RR features plus post-RR | decided | done |
+| B3 | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, int16 rounding at 200 units/mV (D4 amendment), per-window z-score, causal RR features plus post-RR | decided | done |
 | B4 | Class mapping: AAMI symbols, strict; four scored classes N, S, V, F; Q out of training and scoring, kept for RR; F caveat; A3 addendum (S without 232, per-patient table) | decided | done |
 | B5 | Download, caching, checksums, ODC-By attribution and citations: 132 files, pinned SHA256 manifest, gitignored cache. Still open: read the de Chazal full text (DS lists, RR features) | decided (paper check open) | doing |
 
@@ -47,8 +47,8 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | D1 | Integration with dins.dev (amended 2026-10-27): video capture on the home stage; live demo in an iframe at the top of the case study; full demo at `heartbeat.dins.dev` (own Worker, deployed from this repo) with `?embed` modes and `frame-ancestors` for dins.dev. Site changes listed under G4 | decided | done |
 | D2 | Front-end stack: Svelte 5 with Vite (no SvelteKit), a plain TypeScript canvas module for the trace, ONNX Runtime Web in a Web Worker, the site's tooling, vendored brand tokens | decided | done |
 | D3 | Live inference in both modes: browser computes windows and RR from shipped trace and beat positions, labels chunks just ahead of the playhead, single-thread wasm; expert labels and Python predictions shipped; visible match counter; labeled fallback | decided | done |
-| D4 | Data shipped to the browser: which records, how long, file format, size budget | draft | doing |
-| D5 | Performance budget: model size, runtime size, load time, time per beat | open | todo |
+| D4 | Data shipped: all 21 DS2 patients, full 30 minutes, loaded per patient; default record 200 by a label-only rule; int16 trace at 200 units/mV (canonical in Python too, B3 amendment); beats JSON; hashed manifest | decided | done |
+| D5 | Performance budget: model size, runtime size, load time, time per beat | draft | doing |
 | D6 | Interaction and accessibility: controls, reduced motion, keyboard, data table, color never the only signal | open | todo |
 | D7 | Research demo, not medical advice, stated on the page | draft | todo |
 
