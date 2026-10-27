@@ -38,11 +38,11 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 0: Planning (in progress)
 
-**Remaining:** F5 (`.claude/settings.json`), F6 (model and data card templates), F8 (one formatting-only Prettier pass over the Markdown docs before the push, Din's go for the download).
+**Remaining:** F6 (model and data card templates), F8 (one formatting-only Prettier pass over the Markdown docs before the push, Din's go for the download).
 
 **Exit:**
 - Sections A to F decided and committed.
-- `dinsdev/heartbeat` created as a public repo and `main` pushed, with Din's go (E6). This timestamps the pre-registered plan (A3, C4, C5, C8) before any code exists.
+- `dinsdev/heartbeat` created as a public repo and `main` pushed by Din (E6; F5 denies both to Claude). This timestamps the pre-registered plan (A3, C4, C5, C8) before any code exists.
 
 **Decided at the F2 lock:** the G items (publishing) are not planning and cannot finish in Phase 0, since G2 needs the demo and G3 needs the case study. They move into the build phases: G4 in Phase 6, G1 in Phase 7, G2 and G3 in Phase 8.
 
