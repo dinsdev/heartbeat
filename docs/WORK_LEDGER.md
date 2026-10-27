@@ -170,3 +170,17 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - `evaluate-test` refuses to run without a freeze record (A3) matching the commit hash, config and model checksum. The baseline and the CNN are frozen and tested in the same run. Every run is appended to a log, so the no-silent-rerun rule is enforced in code.
 - Leakage tests work on subjects: none on both sides of DS1 and DS2, none on both sides of any fold. 201 and 202 share one subject ID.
 - The demo is built and tuned on DS1 recordings. It switches to DS2 patients only after the sealed run, using the frozen model, because producing predictions on DS2 is a use of the test set. This ordering goes into `docs/PLAN.md` (F2).
+
+## 2026-10-26: C2 decided, the baseline
+
+**Rule:** the baseline gets the same data, folds, tuning budget and reporting as the CNN. An under-tuned baseline is the quiet way a CNN gets made to look good.
+
+**Decisions (Din):**
+- Inputs: the six RR features from B3, nothing else. With the C3 suggestion, the comparison reads "rhythm alone against rhythm plus learned beat shape".
+- Model: multinomial logistic regression over N, S, V, F (scikit-learn, `lbfgs`).
+- Features: log of the two ratio features (prematurity is multiplicative); all features standardized with a scaler fitted inside each training fold, in an sklearn pipeline.
+- Imbalance: `class_weight="balanced"`. C3 should use the same weighting.
+- Tuning: C from five log-spaced values, 0.01 to 100, on the C1 folds, by pooled out-of-fold macro F1.
+- Prediction: argmax of the probabilities. Calibration and reporting (C4, the A3 bootstrap and addendum) are the same as for the CNN.
+- Expected: reasonable on S (early beats), weak at separating V from S, near useless on F. That gap is what learned shape should fill; if the CNN cannot beat this, A3 covers it.
+- Not doing: a second, hand-built morphology baseline (A2 sets one baseline; de Chazal's numbers already give that context). The baseline does not ship to the browser.
