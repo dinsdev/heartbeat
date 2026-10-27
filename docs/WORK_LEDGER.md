@@ -184,3 +184,16 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - Prediction: argmax of the probabilities. Calibration and reporting (C4, the A3 bootstrap and addendum) are the same as for the CNN.
 - Expected: reasonable on S (early beats), weak at separating V from S, near useless on F. That gap is what learned shape should fill; if the CNN cannot beat this, A3 covers it.
 - Not doing: a second, hand-built morphology baseline (A2 sets one baseline; de Chazal's numbers already give that context). The baseline does not ship to the browser.
+
+## 2026-10-26: C3 decided, the CNN
+
+**Rule:** small enough to be boring in the browser; the same advantages as the baseline, no more.
+
+**Decisions (Din):**
+- Inputs: the 256-sample z-scored window (B3) and the same six RR features as the baseline, with log ratios, standardized with the training scaler. The scaler's 12 numbers ship with the model and are covered by the parity test.
+- Architecture: four blocks of Conv1d (kernel 7), batch norm, ReLU and max-pool by 2, channels 16, 32, 64, 64; global average pooling; the six RR features concatenated; a 64-unit layer with dropout 0.3; four outputs. About 52k parameters (about 210 KB as float32) at width 1, about 800 KB at width 2. Batch norm is folded into the convolutions at export.
+- Loss: cross-entropy with the same balanced class weights as the baseline. In DS1 these are about N 0.28, S 13, V 3.4, F 31, so each F beat weighs about 110 times a normal beat, and 90% of F is patient 208. Overfitting to 208 is a known risk, left visible in the CV curves and covered by the F caveat, not tuned around.
+- Augmentation, fixed and untuned: random time shift of up to 5 samples each way, and light Gaussian noise. No amplitude scaling (the z-score cancels it).
+- Optimizer: AdamW, learning rate 1e-3, weight decay 1e-4, batch 256, constant rate, since the epoch count is chosen after the folds (C1) and a schedule tied to total epochs would differ in the final retrain.
+- Tuning: width multiplier 0.5, 1 or 2, plus the epoch count, on the C1 folds by pooled out-of-fold macro F1. 3 configurations times 5 folds, 15 runs. Seeds and repeats: C6.
+- Not doing: a shape-only CNN. The "rhythm against rhythm plus shape" comparison carries the story.
