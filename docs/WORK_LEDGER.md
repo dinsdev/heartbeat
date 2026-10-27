@@ -242,3 +242,22 @@ Reason: one patient carries the pooled S number. Added after results, this would
 - Seed 0 is the shipped model, fixed now. The single sealed run evaluates all three final models: headline numbers are seed 0, and one secondary line gives the range across seeds 1 and 2.
 - Final and frozen models train on CPU with PyTorch deterministic mode; development may use MPS. Data loads in a single process (`num_workers=0`).
 - Claims: retraining reproduces the frozen model bit for bit on the same machine and setup, and within a small tolerance elsewhere; inference with the shipped ONNX model reproduces the reported metrics exactly. E5 turns both into tests.
+
+## 2026-10-27: C7 decided, compute
+
+**Measured (2026-10-26, Apple M5, 16 GB, PyTorch 2.14.1, synthetic data the size of one training fold, about 41,000 beats, batch 256, 4 CPU threads by default):**
+
+| Width | Parameters | MPS per epoch | CPU deterministic per epoch |
+|---|---|---|---|
+| 0.5 | 14,724 | 0.9 s | 8.9 s |
+| 1 | 52,036 | 1.3 s | 17.9 s |
+| 2 | 196,548 | 3.3 s | 59 s |
+
+At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three frozen final models (all of DS1, CPU) take about half an hour at width 1, about 2 hours at width 2. Caveat: synthetic tensors in memory skip data-loading cost; real data is also preloaded (C6), so timings should be close.
+
+**Decisions (Din):**
+- Mac only; no rented GPU.
+- Development and cross-validation numbers, including the C5 exhibit and the out-of-fold metrics on the page, run on MPS and reproduce within tolerance.
+- Frozen models train on CPU in deterministic mode (C6). The run folder records the PyTorch thread count, since it can change floating-point results.
+- CI runs smoke tests only: a few training batches, the leakage tests, parity on fixed inputs (E5, E6).
+- Noted for E4, not decided: a fast default rebuild (MPS, within tolerance) and an `--exact` mode (CPU, a few hours).
