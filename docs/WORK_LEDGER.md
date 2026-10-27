@@ -643,3 +643,16 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Limits:** none of this binds Codex, a subprocess that opens files itself, or a git alias. The code checks in PLAN.md section 6 stay the real guard.
 
 **Verified:** `python3 -m unittest discover -s .claude/hooks`: 11 tests OK on Python 3.14.7 and on macOS `/usr/bin/python3` 3.9.6; `settings.json` parses as JSON; live checks above. No em or en dashes, no avoid-list words (grep).
+
+## 2026-10-27: F5 decided, `.claude/settings.json` and the guard hook
+
+**Decision (Din):** lock F5 as drafted: deny rules plus the fail-closed guard hook for every step only Din runs and for commands that discard uncommitted work; file denies for `results/`, `models/heartbeat-v1/`, `config/folds.json`, `web/vendor/brand/` and secrets; ask rules only for `manifests/` and `.claude/` edits, `gh api`, `curl` and `wget`; allow rules for routine local commands.
+
+**Verified end to end (after Din logged the CLI in):** Claude Code CLI 2.1.266, `claude -p --model haiku --permission-mode bypassPermissions` in a scratchpad copy of `.claude/` with a local bare remote as `origin`.
+- Run 1, eleven calls: the hook blocked `git push origin main`, `uv run heartbeat evaluate-test`, `echo extra >> results/test_runs.jsonl` and a new test file with a skip marker; deny rules refused Writes to `results/new.json` and `web/vendor/brand/x.css` and a Read of `.env`; the ask rules turned into refusals for the `manifests/splits.toml` Edit and `curl --version` (headless runs can't prompt); `git status --short` ran. The model skipped `git -C . push` on its own, so run 2 covered it.
+- Run 2: the hook blocked `git -C . push origin main`, `sh -c 'git push origin main'`, `/usr/bin/git push origin main` and `uv run python -m heartbeat evaluate-test`.
+- After both runs the bare remote had no `main`, and `results/test_runs.jsonl` and `manifests/splits.toml` were unchanged.
+- Correction to the draft entry: in a fresh process the ask rules were enforced in bypass mode, as the docs say. The earlier "ask rules did not prompt" result is limited to this desktop session, where the rules were added mid-session. Deny-first still stands, since it holds either way. Din's check in a new desktop session settles the desktop case.
+- Setting up the scratch repo, the guard blocked my own `git remote add` (it applies to any repo, by design); the scratch remote was set by cloning the empty bare repo instead. The scratch folder was deleted after the runs.
+
+**Carried:** unchanged from the draft entry (hook tests in `scripts/check.sh` and CI at task 1.3; DS2 Read denies and `manifests/` to deny in Phase 2; the desktop ask-rule check).

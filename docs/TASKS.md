@@ -72,7 +72,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | F2 | `docs/PLAN.md`: nine phases, a Phase 7 gate before the sealed run, 49-row rule-to-test table (R46 and R47 added), task plans written per phase; build phases added to this file | decided | done |
 | F3 | `AGENTS.md` (one root file, seven rigor rules, approvals, commands marked as Phase 1) and `CLAUDE.md` importing it; conventions go in `docs/CONVENTIONS.md` (F4) | decided | done |
 | F4 | Coding conventions in `docs/CONVENTIONS.md`: tools enforce what they can, unit-suffixed names, leakage table and fit/apply split, SeedSequence seeds, rule IDs on tests with a coverage check, Conventional Commits, merge commits not squash, dins.dev status words for build tasks, Prettier on Markdown | decided | done |
-| F5 | `.claude/settings.json`: deny rules for everything only Din runs (ask rules do not prompt in bypass mode, measured), file denies for `results/`, the frozen model and the folds, a fail-closed guard hook with tests | draft | doing |
+| F5 | `.claude/settings.json`: deny rules for everything only Din runs (ask rules do not prompt in bypass mode, measured), file denies for `results/`, the frozen model and the folds, a fail-closed guard hook with tests | decided | done |
 | F6 | Model card and data card templates, filled with real numbers later | open | todo |
 | F7 | `docs/WORK_LEDGER.md` kept current | ongoing | doing |
 | F8 | Before the Phase 0 push: one formatting-only Prettier 3.9.10 pass over every `.md` file (Din's go for the download) | decided | todo |
