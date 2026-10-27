@@ -50,13 +50,13 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | D4 | Data shipped: all 21 DS2 patients, full 30 minutes, loaded per patient; default record 200 by a label-only rule; int16 trace at 200 units/mV (canonical in Python too, B3 amendment); beats JSON; hashed manifest | decided | done |
 | D5 | Performance: stock ORT wasm build; trace first, model loads alongside; iframe fetches nothing heavy until visible; CI gates on model, JS, beats JSON size and long tasks; timings measured and reported | decided | done |
 | D6 | Interaction and accessibility: native controls only (no single-key shortcuts), next-irregular and next-disagreement buttons, letters and shapes as well as color, visible-window table with a polite 10-second summary, reduced-motion paged view, theme via postMessage, axe in all modes plus a VoiceOver pass | decided | done |
-| D7 | Research demo, not medical advice, stated on the page | draft | doing |
+| D7 | Research demo, not medical advice: a short line in the full demo, the iframe, the stage video and the case study; a fuller note in the about text and limits section; an avoid list for wording | decided | done |
 
 ### E. Stack and tooling
 
 | ID | Item | State | Status |
 |---|---|---|---|
-| E1 | Research current stable versions: Python, uv, PyTorch, wfdb, onnx, ONNX Runtime and ONNX Runtime Web, Node, front-end tooling | open | todo |
+| E1 | Research current stable versions: Python, uv, PyTorch, wfdb, onnx, ONNX Runtime and ONNX Runtime Web, Node, front-end tooling | draft | doing |
 | E2 | Lock the stack with pins and a reason for each | open | todo |
 | E3 | Repo layout: Python package, front end, artifacts, docs | open | todo |
 | E4 | One-command rebuild | open | todo |
@@ -80,7 +80,7 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 | ID | Item | State | Status |
 |---|---|---|---|
 | G1 | Case study outline mapped to the site's `projects` fields | open | todo |
-| G2 | Stage capture: the 16:10 iframe view, and a video fallback if needed | open | todo |
+| G2 | Stage capture: the 16:10 iframe view, and the home stage video (D1), with the D7 short line burned in | open | todo |
 | G3 | Ask Ottie sources for this project (the case study's project-scoped retrieval needs a corpus) | open | todo |
 | G4 | Hand the dins.dev changes (D1) to that repo: `demo.src` accepts the Heartbeat origin, case study renders a live demo as an iframe with `loading="lazy"`, `frame-src` allows the origin, the iframe has a `title`, the site posts its theme to the iframe | open | todo |
 

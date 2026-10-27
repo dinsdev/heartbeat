@@ -371,3 +371,11 @@ At a 40-epoch cap, the 45 development runs take about an hour on MPS. The three 
 - Otherwise the full demo autoplays on load and the case study iframe when visible, silent, with a visible pause (WCAG 2.2.2).
 - Theme: the iframe follows the system setting by default; the site posts `{type: "theme", value}` and the demo accepts it only from the dins.dev origin. Added to G4, with an iframe `title`.
 - Tests: axe at zero violations in Playwright for both modes, light and dark, with and without reduced motion; a keyboard-only walk of every control; one manual VoiceOver pass before publishing.
+
+## 2026-10-27: D7 decided, research demo framing (section D complete)
+
+**Decisions (Din):**
+- Placement: a short line under the full demo's controls (always visible); the same line inside the case study iframe; burned into a corner of the home stage video (noted on G2); next to the case study's top window; the fuller note in the demo's about text and the case study's limits section.
+- Short line: "Research demo, not medical advice. Recordings come from a public research database."
+- Fuller note: "This is a research demo. The model has not been clinically validated and must not be used to make health decisions. The recordings come from the MIT-BIH Arrhythmia Database, collected in a hospital lab between 1975 and 1979. Nothing here uses your data, and you cannot upload your own. If you have concerns about your heart, talk to a doctor." The 1975 to 1979 dates are from Claude's memory; check against PhysioNet before use, or cut the clause.
+- Avoid: "diagnose" or "diagnosis", "detects arrhythmia" or "detects heart disease", "clinical-grade", "accurate" as a headline, "AI doctor". Use: "labels heartbeats", "flags irregular beats", "on patients it never saw", "estimated probability". Checked in review.
