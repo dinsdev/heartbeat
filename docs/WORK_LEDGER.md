@@ -1121,3 +1121,9 @@ Stored raw, in seconds and plain ratios. The log of the two ratios is taken in t
 **Reason:** a structural check alone passes a swapped but valid fold file, so R14 would catch only broken ones; a hash in `manifests/` means changing the folds takes two protected files and Din's go.
 
 **Rejected:** structural check only; recomputing the folds in `check-folds` and comparing (regeneration in disguise, against C1, and a scikit-learn upgrade that changed the shuffle would break rebuilds).
+
+## 2026-10-29: Phase 2 settling, 6: two goal runs around the folds
+
+**Decision (Din):** Phase 2 runs as two `/goal` prompts, both written in this planning session, each under 4,000 characters. Goal A builds everything except the committed folds (downloader, `prepare`, loader, `make-folds` and `check-folds` code tested in process on temporary files, the stage framework, the CI real-data step, the Table II comparison and DS1 floor hits in the ledger) and ends by giving Din the `make-folds` command. Din runs it. Goal B pins `manifests/folds.sha256` (Din approves the edit prompt), adds the real-file R13 test, writes the folds ledger entry, runs the full verification and ends with the push command. Reason: `make-folds` needs `prepare`'s output and only Din runs it (F5), so one goal would sit waiting; a written second prompt keeps the finish as reviewed as the start.
+
+**Rejected:** one goal ending at the `make-folds` command, with the rest done by hand from a checklist.
