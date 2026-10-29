@@ -1046,3 +1046,11 @@ Also from Task 1 step 5: ruff 0.17.0 accepts all 16 selected rule codes (an unkn
 **New finding, not acted on:** CI's uv used CPython 3.14.8, while the Mac runs 3.14.7. `.python-version` says `3.14`, so uv takes the newest 3.14 patch it has, and the 14-day rule does not cover the interpreter (uv's `exclude-newer` covers packages only). Pinning `.python-version` to an exact patch is a pin change, so it is Din's call.
 
 **Still pending:** the pull request's own run (40965721748, same commit); the Renovate app install on `dinsdev/heartbeat` (Din). Phase 1's exit (CI green in under 10 minutes) is met on the push run; the pull request and merge are Din's decision.
+
+## 2026-10-29: Python pinned to 3.14.7
+
+**Decision (Din):** `.python-version` pins the exact patch, 3.14.7 (it said `3.14`). Reason: the first CI run used CPython 3.14.8 while the Mac runs 3.14.7; one exact interpreter keeps local and CI results comparable.
+
+**Checked (python.org downloads page, 2026-10-29):** 3.14.7 was released 2026-08-05 and 3.14.8 on 2026-09-30. Both are older than 14 days, so the pin is for parity, not the 14-day rule. Moving both the Mac and the pin to 3.14.8 is the alternative, Din's call at the next upgrade.
+
+**Verified:** `uv lock --check` passes (the lock is unchanged; `requires-python` stays `==3.14.*`); `uv sync --frozen` and `uv run python --version` report 3.14.7; `scripts/check.sh` exit 0. CI's interpreter is confirmed on the next run.
