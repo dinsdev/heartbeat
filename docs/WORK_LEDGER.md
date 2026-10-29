@@ -1099,3 +1099,11 @@ Stored raw, in seconds and plain ratios. The log of the two ratios is taken in t
 **Rejected:** excluding the beat's own pre-RR (sharper contrast, but undefined at i = 1 and needs a fallback rule).
 
 **Applied:** `docs/PRD.md` DATA-07; `docs/DATA_CARD.md` features list.
+
+## 2026-10-29: Phase 2 settling, 4: `prepare` builds DS1 only before the freeze
+
+**Decision (Din):** before the sealed run, `prepare` writes DS1 records only. DS2 goes through the same per-record function, in memory, only inside `evaluate-test` and, after the sealed run is logged, `build-demo-data` (DEMO-17). The Phase 2 loader has no DS2 path: asking it for a DS2 record ID raises, which R15 tests. R11 still reads DS2's `.atr` annotations to check class counts (allowed by rule 1). Reason: no DS2-derived file exists on disk before the sealed run, so no floor-hit report, throwaway script or plot can touch one by accident, and the B3 amendment's "DS2's count is not examined" holds by construction. Cost: `evaluate-test` filters 21 records itself (seconds).
+
+**Rejected:** preparing all 44 records with DS2 in a separate folder the loader refuses (simpler to describe, but DS2-derived arrays and floor hits would exist from Phase 2 on).
+
+**Consistent with:** EVAL-04, OPS-01 and OPS-02 as written (the `prepare` stage of `rebuild` covers DS1 until a freeze exists); no requirement text changes.
