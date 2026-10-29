@@ -145,15 +145,15 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 ### Phase 6: Demo on DS1
 
-| ID  | Task                                                                                       | Status  |
-| --- | ------------------------------------------------------------------------------------------ | ------- |
-| 6.1 | App shell: Svelte, full and embed modes, canvas trace, brand tokens and drift check        | Planned |
-| 6.2 | Worker with ONNX Runtime Web, TypeScript preprocessing, chunked labeling, browser parity   | Planned |
-| 6.3 | Parity counter, fallback, loading state                                                    | Planned |
-| 6.4 | Controls, legend, beat table, status line, reduced-motion paging, theme handling           | Planned |
-| 6.5 | `build-demo-data` (DS1 only), manifest, size and performance gates, axe and keyboard tests | Planned |
-| 6.6 | Headers and CSP; deploy workflow with previews (Din: Cloudflare token and secret)          | Planned |
-| 6.7 | G4 handoff note to the dins.dev repo                                                       | Planned |
+| ID  | Task                                                                                                      | Status  |
+| --- | --------------------------------------------------------------------------------------------------------- | ------- |
+| 6.1 | App shell: Svelte, full and embed modes, canvas trace, brand tokens and drift check                       | Planned |
+| 6.2 | Worker with ONNX Runtime Web, TypeScript preprocessing, chunked labeling, browser parity                  | Planned |
+| 6.3 | Parity counter, fallback, loading state                                                                   | Planned |
+| 6.4 | Controls, legend, beat table, status line, reduced-motion paging, theme handling                          | Planned |
+| 6.5 | `build-demo-data` (DS1 only), manifest, size and performance gates, axe and keyboard tests                | Planned |
+| 6.6 | Headers and CSP; deploy workflow with Worker Previews on `workers.dev` (Din: Cloudflare token and secret) | Planned |
+| 6.7 | G4 handoff note to the dins.dev repo                                                                      | Planned |
 
 ### Phase 7: Freeze and the sealed run
 

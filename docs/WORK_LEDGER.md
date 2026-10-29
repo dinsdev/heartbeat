@@ -853,3 +853,35 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Rejected:** `std + eps` on every window (changes every window, so no window is a true z-score); dropping flat beats (a new scoring exclusion that would change the pre-registered plan and make the demo skip beats).
 
 **Applied:** `docs/PRD.md` DATA-06; `docs/PLAN.md` R51 row, R30 fixtures, Phase 2 exit; `docs/CONVENTIONS.md` rule range R1 to R51; `docs/TASKS.md` task 2.3.
+
+## 2026-10-29: Hosting and previews settled for Phase 6, and a guard gap closed
+
+**Checked (2026-10-29, Cloudflare docs through the Cloudflare docs tool, and `dig`):**
+
+- Worker Previews (launched 2026-09-22): `wrangler preview --name <name>` creates or updates a Preview with a stable Preview URL and a URL per deployment. Needs Wrangler 4.135.0 or later; the E2 pin is 4.149.0. "You do not need to deploy a Worker to production before creating its first Preview", which answers PLAN Phase 6's open check.
+- Previews on `workers.dev` send `X-Robots-Tag: noindex` and are public by default.
+- Previews on a custom domain would be `<name>.heartbeat.dins.dev`. Cloudflare's guide on preview URLs under a subdomain says Universal SSL covers only first-level wildcards; the fixes are a paid certificate (Advanced Certificate Manager, $10 a month) or a hand-renewed uploaded certificate.
+- Custom Domains need "an active Cloudflare zone" and "a Worker"; no plan is named. A Custom Domain can't be created over an existing CNAME. `dig` finds no CNAME or A record for `heartbeat.dins.dev`; `dins.dev` resolves to Cloudflare addresses.
+- Not settled by the docs: whether disabling the production `workers.dev` route also disables Worker Previews on `workers.dev` (the docs describe this for the older version URLs, not clearly for Worker Previews).
+- Guard gap: `guard.py` and the deny rules covered `wrangler deploy`, `versions`, `secret` and `login`, not `preview`, `rollback` or `delete`. A global wrangler is installed at `/opt/homebrew/bin/wrangler`, so a public preview or a Worker deletion was not blocked.
+
+**Decision (Din):** lock as proposed.
+
+1. Previews: GitHub Actions runs `wrangler preview --name pr-<N>` on pull requests, served on `workers.dev` only. Public, no Cloudflare Access; before the freeze they show DS1 data only, and noindex keeps them out of search. This replaces E6's "preview versions on pull requests" (same intent, current mechanism).
+2. Production: `heartbeat.dins.dev` as a Custom Domain in the wrangler config (E6 unchanged). Q3 stays open until the first deploy; AS4 records the evidence above.
+3. Task 6.6 settles the `workers.dev` route question with the first preview deploy (which needs Din's go and the token).
+4. Guard fixed now: `wrangler preview` (which also covers `preview delete` and `preview secret put`), `rollback` and `delete` added to the deny rules and to the guard's Din-only table. The `cf` CLI is not installed and is not covered; revisit if it ever is.
+5. Q7 (dins.dev preview hostnames in `frame-ancestors`) stays at build time.
+
+**Applied:** `.claude/hooks/test_guard.py` (four blocked and two allowed cases, written first); `.claude/hooks/guard.py` and `.claude/settings.json` (the three subcommands); `docs/PRD.md` OPS-06 and AS4; `docs/PLAN.md` Phase 6 exit note; `docs/TASKS.md` task 6.6.
+
+**Verified:**
+
+- Before the fix, pytest 9.1.1: 4 failed (the new blocked cases), 92 passed. After: 96 passed with the guard run by Python 3.14, and 96 passed with `GUARD_PYTHON=/usr/bin/python3` (3.9).
+- ruff 0.17.0 with the CONVENTIONS section 1 rule set (`--isolated`, Google docstrings, `D` off for the test file) passes for `target-version` py39 and py314; `ruff format --check` passes; `settings.json` parses.
+- Finding for task 1.6: a bare `uvx ruff check` picked up a ruff config from outside the repo and reported EXE001 and BLE001 on `guard.py` (neither rule is in CONVENTIONS; the broad `except` is the deliberate fail-closed path). Once `pyproject.toml` carries the ruff config, bare runs will use it.
+- Finding: the new deny rule `Bash(*wrangler preview*)` matched the phrase anywhere in a command, so it refused a commit whose message mentioned it (nothing in that command ran). The older `Bash(*wrangler deploy*)` had the same flaw. Claude stopped and asked rather than rewording around it.
+
+**Follow-up decision (Din):** narrow all seven wrangler deny rules (`deploy`, `versions`, `secret`, `login`, `preview`, `rollback`, `delete`) to commands that start with wrangler: `Bash(wrangler <sub>*)`, `Bash(npx wrangler <sub>*)` and `Bash(pnpm * wrangler <sub>*)`. Reason: a deny rule that fires on commit messages trains rewording until a block goes away. Claude Code splits compound commands, so `cd web && wrangler preview` still matches; the guard, which parses argv, stays the catch for other spellings. Side effect: `wrangler versions` with no further argument is now denied too (the old rule needed a trailing argument).
+
+**Verified (follow-up):** `settings.json` parses (49 deny rules); pytest 96 passed; live, `echo` of a line naming both subcommands ran, and `wrangler preview --help` was blocked by the guard.

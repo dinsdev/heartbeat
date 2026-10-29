@@ -56,6 +56,9 @@ DIN_ONLY = (
     ("wrangler", ("versions",)),
     ("wrangler", ("secret",)),
     ("wrangler", ("login",)),
+    ("wrangler", ("preview",)),
+    ("wrangler", ("rollback",)),
+    ("wrangler", ("delete",)),
     ("heartbeat", ("evaluate-test",)),
     ("heartbeat", ("make-folds",)),
 )

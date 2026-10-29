@@ -88,7 +88,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 **Builds:** the Svelte app (full page and `?embed=page`); the canvas trace module; the Worker with ONNX Runtime Web; TypeScript preprocessing; chunked labeling; the parity counter and fallback; controls, legend, beat table, status line; reduced-motion paging; theme handling; brand tokens and drift check; `_headers` with the CSP; `build-demo-data` (DS1 recordings only); deploys (preview on pull requests; Din creates the Cloudflare token and secret); G4 handed to the dins.dev repo once the embed mode and headers exist.
 **Requirements:** DEMO-01 to DEMO-17 (DS1 data), PARITY-03 (browser half), OPS-06, OPS-10, PUB-08, all of PRD section 9.
 **Depends on:** Phase 5 for the real model. The app shell (trace, controls, accessibility) may start after Phase 2 with an untrained exported network as a stand-in, so Phases 3 to 5 and the shell can overlap.
-**Exit:** rows R29 to R40 pass in Chromium and WebKit; the demo runs on a preview URL; timings reported in the ledger; G4 handoff note delivered. To check when the token is set up: whether Workers preview URLs need a production deploy to exist first (not verified).
+**Exit:** rows R29 to R40 pass in Chromium and WebKit; the demo runs on a preview URL; timings reported in the ledger; G4 handoff note delivered. To check with the first preview deploy (task 6.6): whether turning off the production `workers.dev` route also turns off Worker Previews on `workers.dev`.
 
 ### Phase 7: Freeze and the sealed run (about 1 day, plus compute)
 
