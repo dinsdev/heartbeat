@@ -1031,3 +1031,18 @@ Also from Task 1 step 5: ruff 0.17.0 accepts all 16 selected rule codes (an unkn
 **Noticed, not acted on:** Renovate will propose TypeScript 7 (it breaks svelte-check, E2) and may propose onnxruntime and onnxruntime-web in separate pull requests (they must move together, E1). Both stay proposals until Din merges; a `packageRules` entry could hold TypeScript below 7 and group the two ONNX Runtime packages, which is Din's call.
 
 **Verified:** `uv run pytest` exit 0 (290 passed); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R44, R45, R46 covered; 0 uncovered; 47 rows pending, phases 2 to 7); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 1 on a planted em dash, exit 1 on a planted "diagnose", exit 0 on the repo; `pnpm -C web run` lint, format:check, check, test, build and e2e each exit 0; `scripts/check.sh` exit 0 three times warm (times above).
+
+## 2026-10-29: Phase 1 CI, first run green
+
+**Din pushed `phase-1-skeleton` and opened pull request #1** (https://github.com/dinsdev/heartbeat/pull/1), from the commands Claude gave (F5 denies both to Claude).
+
+**Measured (read with `gh run view`, read-only):** push run 40965518904 on `a2be54e`, conclusion success. Wall-clock 1 minute 26 seconds (created 22:23:38Z, last update 22:25:04Z), under the 10-minute exit. Jobs in parallel: `python` 21 seconds, `web` 1 minute 22 seconds.
+
+**Settled by this run:**
+
+- uv 0.13.0 (installed by `setup-uv`) ran `uv sync --frozen` on the lock written by the Mac's uv 0.12.11: 65 packages installed, including `torch==2.14.1+cpu` from the CPU index (review focus 5).
+- `uv run pytest` in CI: 290 passed, the same count as locally, so the wording lint, rule coverage, R45 and R46 checks all ran in CI.
+
+**New finding, not acted on:** CI's uv used CPython 3.14.8, while the Mac runs 3.14.7. `.python-version` says `3.14`, so uv takes the newest 3.14 patch it has, and the 14-day rule does not cover the interpreter (uv's `exclude-newer` covers packages only). Pinning `.python-version` to an exact patch is a pin change, so it is Din's call.
+
+**Still pending:** the pull request's own run (40965721748, same commit); the Renovate app install on `dinsdev/heartbeat` (Din). Phase 1's exit (CI green in under 10 minutes) is met on the push run; the pull request and merge are Din's decision.
