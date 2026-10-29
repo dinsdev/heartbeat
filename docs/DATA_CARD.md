@@ -37,7 +37,7 @@ Source of truth: `manifests/splits.toml`, with the record-to-person map in `mani
 **Instances:** one instance per annotated beat, except the first and last beat of each record. Each has:
 
 - a 256-sample window of the filtered MLII signal (96 samples before the annotation, 160 after), z-scored per window;
-- six RR interval features: pre-RR, post-RR, local average RR (previous 10 beats), long average RR (previous 5 minutes), pre-RR over local average, post-RR over pre-RR;
+- six RR interval features: pre-RR, post-RR, local average RR (the last 10 intervals, ending with this beat's pre-RR), long average RR (every interval ending in the last 5 minutes, including this beat's pre-RR), pre-RR over local average, post-RR over pre-RR;
 - an AAMI class label (section 4);
 - the record and person IDs.
 

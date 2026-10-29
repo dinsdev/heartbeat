@@ -1080,3 +1080,22 @@ Impulse-response energy more than 1 s from the center was below 3e-4 of the tota
 **Rejected:** order 2 (gentler and common, but loses 2.2 dB at 30 Hz and only 17.5 dB at 60 Hz); a longer custom padding (one more parameter for an effect limited to a record's first seconds).
 
 **Applied:** `docs/PRD.md` DATA-05; `docs/DATA_CARD.md` preprocessing step 2. Scratchpad scripts deleted after this entry.
+
+## 2026-10-29: Phase 2 settling, 3: exact RR averages (B3 clarification)
+
+**Gap:** B3 says "local average RR over the previous 10 beats" and "long average RR over the previous 5 minutes" without saying whether the beat's own pre-RR is included or how the 5-minute edge is counted. TypeScript repeats these features within 1e-5 (PARITY-03), so the definition has to be exact before `prepare` exists.
+
+**Decision (Din):** with every annotated beat k (Q included) at sample `s_k` and `RR_k = (s_k - s_(k-1)) / 360` seconds the interval ending at beat k, a kept beat i (`1 <= i <= n-2`) has:
+
+1. pre-RR = `RR_i`; post-RR = `RR_(i+1)` (the one look-ahead);
+2. local average = mean of `RR_(i-9)` to `RR_i`, using the intervals that exist near a record's start;
+3. long average = mean of every `RR_k` with `1 <= k <= i` and `s_i - s_k <= 108000` samples (5 minutes at 360 Hz), inclusive;
+4. pre-RR over local average, and post-RR over pre-RR.
+
+Stored raw, in seconds and plain ratios. The log of the two ratios is taken in the model input step (C2), not in `prepare`.
+
+**Reason:** including the beat's own pre-RR keeps both averages defined for the first kept beat with no special case for TypeScript to mirror, and still uses only past beats. **Cost, stated:** a premature beat's short pre-RR dilutes its own local average by about a tenth, so the pre-over-local contrast is slightly weaker than with the beat excluded.
+
+**Rejected:** excluding the beat's own pre-RR (sharper contrast, but undefined at i = 1 and needs a fallback rule).
+
+**Applied:** `docs/PRD.md` DATA-07; `docs/DATA_CARD.md` features list.
