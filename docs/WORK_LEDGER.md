@@ -830,3 +830,11 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Applied:** `CLAUDE.md` F5 note reworded to match. No settings change in this entry; whether to move the guard's own files from ask to deny is put to Din separately (it changes locked F5).
 
 **Verified:** one command, one observation, by Din. Not checked: Manual mode, and Edit-tool ask rules (`Edit(/.claude/**)`, `Edit(/manifests/**)`) in a fresh session.
+
+## 2026-10-29: F5 guard files stay as ask rules
+
+**Proposed:** move `Edit(/.claude/hooks/**)` and `Edit(/.claude/settings.json)` from ask to deny, so the guard can't be edited by the session it guards; Claude would stage changes in the scratchpad and Din would copy them in.
+
+**Decision (Din):** keep both as ask rules. Reason: the 2026-10-29 check showed ask rules prompt when loaded at session start, so every edit to the guard already reaches Din as a prompt. F5 is unchanged.
+
+**Residual risk, stated:** ask rules added mid-session did not prompt (F5 draft), and an approved prompt is one click. Claude treats any edit to `.claude/` as something to name to Din before making it.
