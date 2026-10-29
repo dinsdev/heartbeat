@@ -134,13 +134,13 @@
 
 **Finding (PhysioNet beat table, entire records, DS2 without 202):**
 
-| Class | DS1                                  | DS2                             |
-| ----- | ------------------------------------ | ------------------------------- |
-| N     | 45866, spread across 22 records      | 42198, spread across 21 records |
-| S     | 944; record 209 holds 41%            | 1782; record 232 holds 78%      |
-| V     | 3788; largest record (208) holds 26% | 3202; 233 and 200 hold 26% each |
-| F     | 415; record 208 holds 90%            | 387; record 213 holds 94%       |
-| Q     | 8                                    | 7                               |
+| Class | DS1 | DS2 |
+| --- | --- | --- |
+| N | 45866, spread across 22 records | 42198, spread across 21 records |
+| S | 944; record 209 holds 41% | 1782; record 232 holds 78% |
+| V | 3788; largest record (208) holds 26% | 3202; 233 and 200 hold 26% each |
+| F | 415; record 208 holds 90% | 387; record 213 holds 94% |
+| Q | 8 | 7 |
 
 Pooled S recall on DS2 is mostly patient 232's recall, and F is one patient on each side.
 
@@ -153,8 +153,7 @@ Pooled S recall on DS2 is mostly patient 232's recall, and F is one patient on e
 **A3 addendum (pre-registered now, before any DS2 run):**
 
 1. Secondary line beside the headline: S recall and precision on DS2 with record 232 left out, with the same patient bootstrap.
-2. Model card table: S and V recall per DS2 patient.
-   Reason: one patient carries the pooled S number. Added after results, this would read as an excuse; added before, it is what pre-registration is for. Final wording under C4.
+2. Model card table: S and V recall per DS2 patient. Reason: one patient carries the pooled S number. Added after results, this would read as an excuse; added before, it is what pre-registration is for. Final wording under C4.
 
 ## 2026-10-26: B5 decided, data download and attribution
 
@@ -900,3 +899,17 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Rejected:** CC BY 4.0 for the weights (Creative Commons advises against CC licenses for software, and it would split the repo across two licenses when the notice already carries attribution).
 
 **Applied:** `docs/PRD.md` PUB-07 and DEMO-16; `docs/MODEL_CARD.md` license line; `docs/PLAN.md` Phase 5 builds and exit, Phase 8 builds, R52 row; `docs/TASKS.md` tasks 5.1 and 8.1; `docs/CONVENTIONS.md` rule range R1 to R52. Closes the item carried from the F6 entry.
+
+## 2026-10-29: Prettier `proseWrap: "never"`, and a correction on table padding
+
+**Correction to today's earlier entries:** the Q2, B3, F5 hosting and weights-license entries said a scratchpad table padder "matches Prettier's table output". It measured column widths including the old separator row, so columns could grow but never shrink; it agreed with Prettier only because the committed files had no shrink case. Removing Q2 and shortening the B5 row needed shrinks, so PRD and TASKS were left mispadded. Found when Prettier 3.9.10 turned up in npm's offline cache (the copy F8 installed and integrity-checked; run with `npm exec --offline`, so nothing was downloaded). Fixed in commit 198f813 by Prettier itself (token diff: only whitespace and table markup changed). The padder is no longer used; formatting goes through the cached Prettier.
+
+**Measured (scratchpad copies, Prettier 3.9.10, `--prose-wrap never`):** tables wider than the print width print compact (`| A1 | text | decided | done |`, separators `| --- |`), so editing one cell changes one line; tables within 80 columns stay aligned. The docs have no hard-wrapped prose. The only other effect: 37 places where consecutive non-blank lines form one paragraph (PLAN's Builds, Requirements, Depends on and Exit lines; PRD's use-case titles and bodies; TASKS' status keys) would be joined into single lines, plus the lazy-continuation line in the B4 entry. GitHub already renders each of these as one run-together paragraph.
+
+**Decision (Din):** lock as proposed.
+
+1. Blank lines inserted at the 37 places in PLAN, PRD and TASKS, so those lines stay separate and also render as separate paragraphs.
+2. `.prettierrc.json` is now `{ "proseWrap": "never" }`, and CONVENTIONS section 1 says so. One formatting-only pass over every Markdown file.
+3. The B4 entry (pre-registered A3 addendum): its continuation line ("Reason: one patient carries the pooled S number...") is joined onto item 2's line. Markdown already rendered it as part of item 2, so the rendering is unchanged and the words are identical. F8 kept it as is because indenting it differently would have changed the rendering; joining does not.
+
+**Verified:** `prettier --check` passes on every Markdown file and `.prettierrc.json`; a second `--write` changes nothing. Token diff against HEAD (whitespace and `| - :` removed): identical for all eight changed Markdown files, apart from CONVENTIONS' intended config text. Card markers unchanged in both cards (36 marker lines at F8, at HEAD and now; F8's count of 40 included mentions outside the cards); `CLAUDE.md` still starts with `@AGENTS.md`.

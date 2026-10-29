@@ -1,11 +1,11 @@
 # Heartbeat model card: heartbeat-v1
 
-|                  |                                                                                                                                                                |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**       | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists, so the layout of every table below is part of the pre-registered plan. |
-| **Model**        | `models/heartbeat-v1/` (written only by `heartbeat export`)                                                                                                    |
-| **Requirements** | PUB-04 (this card), EVAL-08 to EVAL-12, EXHIBIT-01 to EXHIBIT-03, PUB-02, PUB-03                                                                               |
-| **Related**      | `docs/DATA_CARD.md` (the data), `docs/PRD.md`, `docs/WORK_LEDGER.md`                                                                                           |
+|  |  |
+| --- | --- |
+| **Status** | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists, so the layout of every table below is part of the pre-registered plan. |
+| **Model** | `models/heartbeat-v1/` (written only by `heartbeat export`) |
+| **Requirements** | PUB-04 (this card), EVAL-08 to EVAL-12, EXHIBIT-01 to EXHIBIT-03, PUB-02, PUB-03 |
+| **Related** | `docs/DATA_CARD.md` (the data), `docs/PRD.md`, `docs/WORK_LEDGER.md` |
 
 The layout follows Mitchell et al., "Model Cards for Model Reporting" (FAT\* 2019), section by section.
 

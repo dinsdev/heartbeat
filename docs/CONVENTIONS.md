@@ -1,10 +1,10 @@
 # Heartbeat: Conventions
 
-|                 |                                                                                                                              |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Status**      | Locked by Din (F4, 2026-10-27). Changes need Din's go and a ledger entry.                                                    |
-| **Applies to**  | All code, tests and docs in this repo. `AGENTS.md` holds the rigor rules and approvals; this file holds how code is written. |
-| **Enforced by** | The tools in section 1 wherever possible. The rest is checked in review.                                                     |
+|  |  |
+| --- | --- |
+| **Status** | Locked by Din (F4, 2026-10-27). Changes need Din's go and a ledger entry. |
+| **Applies to** | All code, tests and docs in this repo. `AGENTS.md` holds the rigor rules and approvals; this file holds how code is written. |
+| **Enforced by** | The tools in section 1 wherever possible. The rest is checked in review. |
 
 Rule of thumb: if a tool can enforce it, the tool's config is the rule and this file only names the tool. What stays here is what no linter can see.
 
@@ -12,16 +12,16 @@ Rule of thumb: if a tool can enforce it, the tool's config is the rule and this 
 
 Configured in Phase 1; the settings below are the target, checked against the pinned tool versions when Phase 1 installs them.
 
-| Area             | Tool and setting                                                                                                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Python format    | `ruff format`, default style (88 columns, double quotes)                                                                                                                                                            |
-| Python lint      | `ruff check` with `E`, `W`, `F`, `I`, `B`, `UP`, `SIM`, `C4`, `N`, `NPY`, `PT`, `PTH`, `RUF`, `T20`, `ERA`, and `D` with the Google convention. `T20` (no `print`) is off for `cli.py`; `D` is off for tests.       |
-| Python types     | `mypy --strict` over `src/` and `tests/`                                                                                                                                                                            |
+| Area | Tool and setting |
+| --- | --- |
+| Python format | `ruff format`, default style (88 columns, double quotes) |
+| Python lint | `ruff check` with `E`, `W`, `F`, `I`, `B`, `UP`, `SIM`, `C4`, `N`, `NPY`, `PT`, `PTH`, `RUF`, `T20`, `ERA`, and `D` with the Google convention. `T20` (no `print`) is off for `cli.py`; `D` is off for tests. |
+| Python types | `mypy --strict` over `src/` and `tests/` |
 | TypeScript types | `tsconfig`: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, `erasableSyntaxOnly`; `svelte-check` with zero warnings |
-| TypeScript lint  | ESLint with typescript-eslint `recommendedTypeChecked` and `stylisticTypeChecked`, plus `switch-exhaustiveness-check`; `eslint-plugin-svelte` recommended                                                           |
-| Web format       | Prettier defaults with `prettier-plugin-svelte`                                                                                                                                                                     |
-| Markdown         | Prettier with `proseWrap: "preserve"` over every `.md` file                                                                                                                                                         |
-| Writing          | The wording lint (R44): D7's avoid list and dash separators                                                                                                                                                         |
+| TypeScript lint | ESLint with typescript-eslint `recommendedTypeChecked` and `stylisticTypeChecked`, plus `switch-exhaustiveness-check`; `eslint-plugin-svelte` recommended |
+| Web format | Prettier defaults with `prettier-plugin-svelte` |
+| Markdown | Prettier with `proseWrap: "never"` over every `.md` file (wide tables print compact, so editing one cell changes one line) |
+| Writing | The wording lint (R44): D7's avoid list and dash separators |
 
 Don't silence a rule inline without a short comment saying why (`# noqa: B008, reason`). A rule that keeps getting silenced is a conventions change: raise it.
 
@@ -65,14 +65,14 @@ rr = beats[i] - beats[i - 1]                                # bad: samples or se
 
 The leakage types follow Kapoor and Narayanan's taxonomy (Patterns, 2023). Each line says how this repo blocks it.
 
-| Leakage type                                  | Here                                                                                                                                                                                                           |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No separate test set (L1.1)                   | DS2 sealed; only `evaluate-test` reads it (`AGENTS.md`, R15)                                                                                                                                                   |
+| Leakage type | Here |
+| --- | --- |
+| No separate test set (L1.1) | DS2 sealed; only `evaluate-test` reads it (`AGENTS.md`, R15) |
 | Preprocessing fitted on train and test (L1.2) | Anything fitted (RR feature scaler, class weights, temperature, logit adjustment) is fitted on the training part of each fold only. The filter and z-score are per record and per window, so they fit nothing. |
-| Feature selection on all data (L1.3)          | The features are fixed by B3 and C3; none is chosen from data                                                                                                                                                  |
-| Train and test not independent (L3.2)         | Splits and folds by subject; 201 and 202 are one subject (R12, R13)                                                                                                                                            |
-| Illegitimate features (L2)                    | Features use beat positions only, never a beat's label or a neighbour's label. Post-RR looks one beat ahead by design (B3) and is stated.                                                                      |
-| Temporal leakage (L3.1)                       | RR averages use only past beats (R8)                                                                                                                                                                           |
+| Feature selection on all data (L1.3) | The features are fixed by B3 and C3; none is chosen from data |
+| Train and test not independent (L3.2) | Splits and folds by subject; 201 and 202 are one subject (R12, R13) |
+| Illegitimate features (L2) | Features use beat positions only, never a beat's label or a neighbour's label. Post-RR looks one beat ahead by design (B3) and is stated. |
+| Temporal leakage (L3.1) | RR averages use only past beats (R8) |
 
 **Fitted things have a fit step and an apply step.** A function that learns from data takes the training data explicitly and returns a fitted object; applying it is a separate call. Nothing fits on data passed in for evaluation.
 
