@@ -927,3 +927,17 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Verified (Claude):** `git ls-remote origin main` returns 77daee4, the same as local `HEAD`; `gh repo view` reports visibility PUBLIC, default branch `main`, pushed at 2026-10-29T05:29:47Z. That push is the outside timestamp for the pre-registered plan (A3, C4 with its 2026-10-29 clarification, C5, C8) and the card templates. No PDF and no `docs/references/` in the pushed tree.
 
 **Next:** Phase 1 on branch `phase-1-skeleton`, task plan first in PLAN.md section 8. This entry is a local commit on `main`, ahead of `origin/main` until Din's next push.
+
+## 2026-10-29: Phase 1 settling, 1 of 4: the rule-coverage check is gated by phase
+
+**Problem:** CONVENTIONS section 5 and the PLAN Phase 1 builds said the check fails CI when any non-manual row of PLAN section 6 has no test carrying its ID. 50 rows are non-manual (all but R48 and R49), and Phase 1 can cover only R44, R45 and R46, so read literally CI would stay red until Phase 7.
+
+**Decision (Din):** option A.
+
+1. A row whose phase is at or below the current build phase must have at least one test carrying its ID; later rows are listed as pending with their phase. R44 ("1 onward") counts as Phase 1.
+2. The current phase is one committed value, `[tool.heartbeat] current-phase` in `pyproject.toml`: 1 in Phase 1, bumped as the first commit of each phase, beside that phase's section 8 plan. Reason: explicit, visible in a diff, and a phase cannot start without its rows going red.
+3. One test with the ID in any layer covers a row; layers are not checked (R4, tagged L1 and L2, is covered by either).
+
+**Rejected:** placeholder tests (skipped or xfail) carrying every ID now, since they would count as coverage while testing nothing (rigor rule 3); report-only until Phase 7, since it drops enforcement for six phases.
+
+**Applied:** `docs/CONVENTIONS.md` section 5; `docs/PLAN.md` Phase 1 builds; `docs/TASKS.md` task 1.7. On branch `phase-1-skeleton`.

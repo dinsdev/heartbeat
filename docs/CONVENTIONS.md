@@ -110,7 +110,7 @@ x_all = standardize(all_features)            # bad: statistics include validatio
 ## 5. Tests
 
 - Layout: `tests/unit/` (L1, no data), `tests/data/` (L2, real data, pytest marker `realdata`), `tests/parity/` (L3). Web tests sit next to the code (`*.test.ts`); Playwright tests in `web/e2e/`.
-- A test that enforces a row of the rule-to-test table carries its ID: `@pytest.mark.rule("R12")` in Python, and the title starts with `R29:` in Vitest and Playwright. A small check fails CI when a row in `docs/PLAN.md` section 6 (other than MAN rows) has no test carrying its ID.
+- A test that enforces a row of the rule-to-test table carries its ID: `@pytest.mark.rule("R12")` in Python, and the title starts with `R29:` in Vitest and Playwright. A small check fails CI when a row in `docs/PLAN.md` section 6 (other than MAN rows) whose phase is at or below the current build phase has no test carrying its ID; later rows are listed as pending. The current phase is `[tool.heartbeat] current-phase` in `pyproject.toml`, bumped as the first commit of each phase. One test in any layer covers a row.
 - Names say the behavior: `test_unknown_symbol_raises`, not `test_mapping_2`.
 - Hypothesis runs with a fixed seed in CI (a settings profile), so a failure there is reproducible; locally it explores freely.
 - Fixtures come from DS1 only (R27).

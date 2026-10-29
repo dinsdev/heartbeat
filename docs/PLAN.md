@@ -49,7 +49,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 1: Skeleton and CI (about 1 day)
 
-**Builds:** `pyproject.toml` with the E2 pins and `exclude-newer`; `uv.lock`; the `heartbeat` CLI with empty subcommands; `web/` with pnpm, the E2 pins, `minimumReleaseAge` and `allowBuilds`; the GitHub Actions workflow (SHA-pinned actions, read-only permissions); `scripts/check.sh`; Renovate config; the wording lint; tool configs per `docs/CONVENTIONS.md`; the rule-coverage check (every non-manual row of section 6 has a test carrying its ID); `LICENSE`, `DATA_LICENSE.md`, README; `.gitignore` for `data/`, `runs/`, `web/public/data/`.
+**Builds:** `pyproject.toml` with the E2 pins and `exclude-newer`; `uv.lock`; the `heartbeat` CLI with empty subcommands; `web/` with pnpm, the E2 pins, `minimumReleaseAge` and `allowBuilds`; the GitHub Actions workflow (SHA-pinned actions, read-only permissions); `scripts/check.sh`; Renovate config; the wording lint; tool configs per `docs/CONVENTIONS.md`; the rule-coverage check (every non-manual row of section 6 at or below the current phase has a test carrying its ID; later rows listed as pending); `LICENSE`, `DATA_LICENSE.md`, README; `.gitignore` for `data/`, `runs/`, `web/public/data/`.
 
 **Requirements:** OPS-05, OPS-08, OPS-09, PUB-05 (lint only), PUB-07.
 
