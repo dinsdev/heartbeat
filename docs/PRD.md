@@ -430,7 +430,7 @@ Detailed phases belong to `docs/PLAN.md` (F2). The order the requirements impose
 
 ## Appendix A: Changes from the dins-projects draft (section 7)
 
-The dins-projects PRD drafted Heartbeat before planning. These are the places this PRD now differs. The dins-projects PRD should be updated to point here (that change belongs to the dins-projects repo).
+The dins-projects PRD drafted Heartbeat before planning. These are the places this PRD now differs. Since 2026-10-29 its section 7 points here (dins-projects commit 18b0fc3).
 
 | dins-projects draft said | This PRD says | Decided in |
 | --- | --- | --- |
