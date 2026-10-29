@@ -1140,3 +1140,11 @@ Stored raw, in seconds and plain ratios. The log of the two ratios is taken in t
 **Checked (scratchpad script reading the committed files with `tomllib`):** DS1 22 and DS2 21 records, disjoint, the five excluded records in neither; 48 records map to 47 subjects, 201 and 202 to one; no subject on both sides of DS1 and DS2; the counts equal the parsed table for every listed record; the checksum file names exactly the 132 files; AAMI totals from the counts equal PRD Appendix C (DS1 N 45866, S 944, V 3788, F 415, Q 8; DS2 N 42198, S 1782, V 3202, F 387, Q 7); the record 201 and 202 counts equal the B1 entry. Wording lint passes on all five files.
 
 **`config/default.toml`:** cache and prepared-data folders, the two download sources in order, and the fold seed 20261026 (settling 5).
+
+## 2026-10-29: Phase 2 task plan drafted, for Din's review
+
+**Drafted:** `docs/PLAN.md` section 8, Phase 2: nine tasks (Goal A runs 1 to 8 and ends with Din's `make-folds` command; Goal B runs 9), file map, interfaces, test-first cases per rule row, commits, eight stop-and-ask conditions, review focus. It rests on settling 1 to 6, the manifests entry, and the design calls approved in the same session (DS1-only window-range check, a stop at more than 5 DS1 floor hits, stage code fingerprints per declared package folder).
+
+**Checked while drafting:** the R5 thresholds against the settled filter (scipy 1.18.1, order 4, `sosfiltfilt`): worst passband gain from 2 to 25 Hz is -0.14 dB, so the plan says 0.2 dB (a first draft said 0.1 dB, which would have failed on a correct filter); -6.02 dB at 0.5 and 40 Hz; -32.8 dB at 60 Hz; -112.6 dB at 0.1 Hz; a 10 Hz sine comes out with lag 0 and a phase difference of 1.9e-10 rad. Wording lint and Prettier pass on PLAN.
+
+**Noted for Din:** the R4 real-data test names record 100 (DS2) in PLAN section 6; the plan reads only its header (`wfdb.rdheader`, lead names), never its signal, to stay inside rule 1. Phase 1's stub test changes in Task 7 to cover only subcommands not yet built; that follows the behavior change and drops no check.

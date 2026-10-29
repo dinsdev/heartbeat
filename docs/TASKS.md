@@ -112,7 +112,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions | Planned |
+| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions | In progress (2026-10-29): four manifests and `config/default.toml` written in planning and cross-checked (ledger); R3, R11, R12 tests in Goal A; `folds.sha256` in Goal B |
 | 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes | Planned |
 | 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features; class totals against de Chazal's Table II in the ledger; z-score floor hits per DS1 record in the ledger | Planned |
 | 2.4 | Split-enforcing loader; leakage tests on subject IDs | Planned |
