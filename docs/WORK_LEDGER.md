@@ -941,3 +941,18 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Rejected:** placeholder tests (skipped or xfail) carrying every ID now, since they would count as coverage while testing nothing (rigor rule 3); report-only until Phase 7, since it drops enforcement for six phases.
 
 **Applied:** `docs/CONVENTIONS.md` section 5; `docs/PLAN.md` Phase 1 builds; `docs/TASKS.md` task 1.7. On branch `phase-1-skeleton`.
+
+## 2026-10-29: Phase 1 settling, 2 of 4: the wording lint's scope
+
+**Checked:** the repo has no em or en dash anywhere; neither card contains a D7 term; the README does not exist yet. PRD, AGENTS and this ledger quote the D7 list, so a repo-wide D7 check would fail on its own definition.
+
+**Decision (Din):** option A, two tiers, no allowlist.
+
+1. Dash rule over every tracked text file (`.md`, `.py`, `.ts`, `.svelte`, `.toml`, `.yaml`, `.html` and similar), except lockfiles and `web/vendor/brand/`: any U+2014 or U+2013 fails (ranges use "to", citation page ranges a hyphen); in Markdown prose (outside code spans and blocks, not list markers) a hyphen with a space on each side, mid-line, also fails, so it cannot stand in for a dash. Reason: Din's writing rule covers docs and comments, the repo is clean today, and it catches agent drift early.
+2. D7 list on published text only (README and both cards now; the built demo text and the case study draft when they exist), case-insensitive: `diagnos\w*` (wider than the list on purpose), `detect\w* arrhythmi\w*`, `detect\w* heart disease`, `clinical[- ]grade`, `AI doctor`, and "accurate" in headings only (Markdown `#` lines, HTML `h1` to `h6`, `<title>`). Negations count too; "research demo, not medical advice" carries the meaning.
+3. Din's buzzword list (elevate, seamless, unleash, journey, tapestry) on published text as well. Beyond PUB-05's wording, which stays as written; this is a superset. "Not just X but Y" stays a review item, since a regex would misfire.
+4. Commit messages are not linted; a commit-msg hook can come later if needed.
+
+**Rejected:** PUB-05 literally (both checks on published text only), since docs and comments would rely on review alone.
+
+**Applied:** `docs/CONVENTIONS.md` section 1, Writing row; `docs/TASKS.md` task 1.4.

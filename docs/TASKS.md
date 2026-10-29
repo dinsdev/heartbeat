@@ -103,7 +103,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 | 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer`, `uv.lock`, `heartbeat` CLI skeleton | Planned |
 | 1.2 | Web project in `web/`: pnpm, E2 pins, `minimumReleaseAge`, `allowBuilds` | Planned |
 | 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config | Planned |
-| 1.4 | Wording lint (D7 avoid list, dash separators) | Planned |
+| 1.4 | Wording lint, two tiers: dash rule over every tracked text file; D7 avoid list and Din's buzzword list on published text | Planned |
 | 1.5 | `LICENSE`, `DATA_LICENSE.md`, README, `.gitignore` | Planned |
 | 1.6 | Tool configs per `docs/CONVENTIONS.md` section 1, checked against the pinned versions (including the three settings recalled from memory in the F4 entry) | Planned |
 | 1.7 | Rule-coverage check: every non-manual row in PLAN.md section 6 at or below `current-phase` in `pyproject.toml` has a test carrying its ID; later rows listed as pending | Planned |

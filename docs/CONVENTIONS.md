@@ -21,7 +21,7 @@ Configured in Phase 1; the settings below are the target, checked against the pi
 | TypeScript lint | ESLint with typescript-eslint `recommendedTypeChecked` and `stylisticTypeChecked`, plus `switch-exhaustiveness-check`; `eslint-plugin-svelte` recommended |
 | Web format | Prettier defaults with `prettier-plugin-svelte` |
 | Markdown | Prettier with `proseWrap: "never"` over every `.md` file (wide tables print compact, so editing one cell changes one line) |
-| Writing | The wording lint (R44): D7's avoid list and dash separators |
+| Writing | The wording lint (R44): dash separators in every tracked text file except lockfiles and `web/vendor/brand/`; D7's avoid list and Din's buzzword list on published text |
 
 Don't silence a rule inline without a short comment saying why (`# noqa: B008, reason`). A rule that keeps getting silenced is a conventions change: raise it.
 
