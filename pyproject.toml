@@ -2,7 +2,9 @@
 name = "heartbeat"
 version = "0.1.0"
 description = "A heartbeat classifier trained on the MIT-BIH Arrhythmia Database, evaluated on patients it never saw."
+readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Dinesh Dawonauth" }]
 requires-python = "==3.14.*"
 # E2: exact pins, newest stable release at least 14 days old.
