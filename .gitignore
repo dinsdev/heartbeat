@@ -6,3 +6,31 @@ __pycache__/
 
 # Copyrighted papers kept for reference, never committed
 docs/references/
+
+# Data, runs and demo data are rebuilt, never committed (E3)
+/data/
+/runs/
+/web/public/data/
+
+# Environments and build output
+.venv/
+web/node_modules/
+web/dist/
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+
+# Playwright output
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/playwright/.cache/
+
+# Secrets
+.env
+.env.*
+.dev.vars
+.dev.vars.*

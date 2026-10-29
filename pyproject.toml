@@ -1,0 +1,89 @@
+[project]
+name = "heartbeat"
+version = "0.1.0"
+description = "A heartbeat classifier trained on the MIT-BIH Arrhythmia Database, evaluated on patients it never saw."
+license = "MIT"
+authors = [{ name = "Dinesh Dawonauth" }]
+requires-python = "==3.14.*"
+# E2: exact pins, newest stable release at least 14 days old.
+dependencies = [
+    "matplotlib==3.11.2",
+    "numpy==2.5.4",
+    "onnx==1.23.2",
+    "onnxruntime==1.30.0",
+    "onnxscript==0.7.2",
+    "pandas==3.0.6",
+    "scikit-learn==1.9.1",
+    "scipy==1.18.1",
+    "torch==2.14.1",
+    "wfdb==4.3.1",
+]
+
+[project.scripts]
+heartbeat = "heartbeat.cli:main"
+
+[dependency-groups]
+dev = [
+    "hypothesis==6.169.0",
+    "mypy==2.4.0",
+    "pytest==9.1.1",
+    "ruff==0.17.0",
+]
+
+[build-system]
+requires = ["uv_build==0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+# E2 as amended 2026-10-29: rolling 14 days, paired with Renovate's minimumReleaseAge.
+exclude-newer = "14 days"
+
+# Linux (CI) takes torch from PyTorch's CPU wheel index so it does not pull CUDA
+# packages; macOS uses PyPI.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[tool.heartbeat]
+# Bumped as the first commit of each phase (Phase 1 settling, 1 of 4).
+current-phase = 1
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+# Ruff 0.17 also formats Python blocks inside Markdown; CONVENTIONS section 1
+# gives Markdown to Prettier, so ruff formats Python files only.
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "SIM", "C4", "N", "NPY", "PT", "PTH", "RUF",
+    "T20", "ERA", "D",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+".claude/hooks/test_*.py" = ["D"]
+"src/heartbeat/cli.py" = ["T20"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", ".claude/hooks"]
+addopts = ["--strict-markers"]
+markers = [
+    "rule(id): the PLAN.md section 6 rule this test enforces",
+    "realdata: needs the cached MIT-BIH download (layer L2)",
+]
+filterwarnings = ["error"]
