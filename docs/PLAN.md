@@ -78,10 +78,10 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 5: Export, parity and the rebuild (about 2 days)
 
-**Builds:** single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` (pre-freeze contents); parity fixtures from DS1; the Python half of the parity chain; `rebuild` end to end up to export, stopping before DS2; `heartbeat verify`; `heartbeat cards`, which renders the generated blocks of `docs/MODEL_CARD.md` and `docs/DATA_CARD.md` from `results/`, with its check in `verify` (F6); `evaluate-test` with its freeze and clean-tree checks and the append-only log writer, tested only for its refusals (it never reads DS2 before Phase 7).
+**Builds:** single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` (pre-freeze contents, including `NOTICE`: MIT for the weights and the ODC-By 1.0 notice for the training data); parity fixtures from DS1; the Python half of the parity chain; `rebuild` end to end up to export, stopping before DS2; `heartbeat verify`; `heartbeat cards`, which renders the generated blocks of `docs/MODEL_CARD.md` and `docs/DATA_CARD.md` from `results/`, with its check in `verify` (F6); `evaluate-test` with its freeze and clean-tree checks and the append-only log writer, tested only for its refusals (it never reads DS2 before Phase 7).
 **Requirements:** PARITY-01, PARITY-02, PARITY-03 (Python half), PARITY-04, OPS-01, OPS-02, OPS-04, EVAL-05, EVAL-06.
 **Depends on:** Phase 4.
-**Exit:** rows R25 to R28, R41, R42 and R50 pass; `rebuild` from a clean clone reproduces `results/` within tolerance (default mode) and logs the result in the ledger.
+**Exit:** rows R25 to R28, R41, R42, R50 and R52 pass; `rebuild` from a clean clone reproduces `results/` within tolerance (default mode) and logs the result in the ledger.
 
 ### Phase 6: Demo on DS1 (about 5 to 7 days)
 
@@ -106,7 +106,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 8: Content and launch (about 3 to 4 days)
 
-**Builds:** model card and data card: numbers rendered by `heartbeat cards` from committed results into the F6 templates, prose finished by hand, the model weights license decided; the case study (in the dins.dev repo, from G1); the stage video from patient 200 with the research-demo line (G2); Ask Ottie sources (G3); PhysioNet's citation rechecked; one VoiceOver pass; Din's review in a preview deploy; first production deploy (Din's go).
+**Builds:** model card and data card: numbers rendered by `heartbeat cards` from committed results into the F6 templates, prose finished by hand; the case study (in the dins.dev repo, from G1); the stage video from patient 200 with the research-demo line (G2); Ask Ottie sources (G3); PhysioNet's citation rechecked; one VoiceOver pass; Din's review in a preview deploy; first production deploy (Din's go).
 **Requirements:** PUB-01 to PUB-09, launch criteria (PRD section 12).
 **Exit:** every launch criterion holds; the case study is published by the dins.dev repo's own process.
 
@@ -200,6 +200,7 @@ Each locked rigor rule and the test that enforces it. Test names are indicative;
 | R49 | Pre-registered plan unchanged, or changes logged before the gate                                                                                                  | A3     | Phase 7 gate checklist                                                                     | MAN      | 7        |
 | R50 | Card numbers come from committed results: every generated block equals what `heartbeat cards` renders, and no test block is pending once the sealed run is logged | F6     | renderer unit tests; `heartbeat verify` check on the two cards                             | L1, L2   | 5        |
 | R51 | The per-window z-score never divides by zero: a constant window gives zeros, any int16 window gives finite values                                                 | B3     | unit test plus hypothesis property test                                                    | L1       | 2        |
+| R52 | The model ships with its license notice: `heartbeat export` writes `models/heartbeat-v1/NOTICE` (MIT weights, ODC-By 1.0 notice) and `verify` fails without it    | B5, E3 | export unit test; `heartbeat verify` check                                                 | L1, L2   | 5        |
 
 ## 7. Review focus
 

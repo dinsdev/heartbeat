@@ -137,7 +137,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID  | Task                                                                                            | Status  |
 | --- | ----------------------------------------------------------------------------------------------- | ------- |
-| 5.1 | Single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/`                    | Planned |
+| 5.1 | Single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` with its `NOTICE`  | Planned |
 | 5.2 | DS1 parity fixtures and the Python half of the parity chain                                     | Planned |
 | 5.3 | `evaluate-test` refusals and the append-only log writer                                         | Planned |
 | 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; clean-clone reproduction logged | Planned |
@@ -169,7 +169,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID  | Task                                                                                                        | Status  |
 | --- | ----------------------------------------------------------------------------------------------------------- | ------- |
-| 8.1 | Model card and data card: blocks rendered from results, prose finished, model weights license decided (Din) | Planned |
+| 8.1 | Model card and data card: blocks rendered from results, prose finished                                      | Planned |
 | 8.2 | Case study draft with real numbers, crediting de Chazal's Table VI as the exhibit's precedent (PUB-03)      | Planned |
 | 8.3 | G2 stage video; G3 Ask Ottie sources                                                                        | Planned |
 | 8.4 | VoiceOver pass; PhysioNet citation recheck                                                                  | Planned |

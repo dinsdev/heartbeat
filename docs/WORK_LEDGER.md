@@ -885,3 +885,18 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Follow-up decision (Din):** narrow all seven wrangler deny rules (`deploy`, `versions`, `secret`, `login`, `preview`, `rollback`, `delete`) to commands that start with wrangler: `Bash(wrangler <sub>*)`, `Bash(npx wrangler <sub>*)` and `Bash(pnpm * wrangler <sub>*)`. Reason: a deny rule that fires on commit messages trains rewording until a block goes away. Claude Code splits compound commands, so `cd web && wrangler preview` still matches; the guard, which parses argv, stays the catch for other spellings. Side effect: `wrangler versions` with no further argument is now denied too (the old rule needed a trailing argument).
 
 **Verified (follow-up):** `settings.json` parses (49 deny rules); pytest 96 passed; live, `echo` of a line naming both subcommands ran, and `wrangler preview --help` was blocked by the guard.
+
+## 2026-10-29: The model weights license
+
+**Checked (2026-10-29):** the ODC-By 1.0 text (opendatacommons.org, through a summarizing fetch). Section 1.0 defines a Produced Work as a work "resulting from using the whole or a Substantial part" of the database. Section 4.3: publicly using a Produced Work requires a notice telling people the contents came from the database and are available under ODC-By. Section 2.4: the license covers database rights only, so it does not set the license of a Produced Work. Whether trained weights are a Produced Work is unsettled (opinion, not legal advice); treating them as one costs one notice.
+
+**Decision (Din):** lock as proposed, now rather than at task 8.1.
+
+1. The model weights are MIT, like the code, so everything in the repo except the data has one license.
+2. `heartbeat export` writes `models/heartbeat-v1/NOTICE`: MIT for the weights, and the ODC-By 1.0 section 4.3 notice for the training data. It ships beside the model in the demo (DEMO-16) as well as the B5 attribution note beside the demo data, and the model card's license line says so.
+3. No use-restriction license (OpenRAIL-style): not open source, hard to enforce, and the not-medical-advice point already sits in D7's framing and the model card's intended use.
+4. Decided now so Phase 5 builds the notice from the start. New row R52 (Phase 5): export writes the notice and `verify` fails without it.
+
+**Rejected:** CC BY 4.0 for the weights (Creative Commons advises against CC licenses for software, and it would split the repo across two licenses when the notice already carries attribution).
+
+**Applied:** `docs/PRD.md` PUB-07 and DEMO-16; `docs/MODEL_CARD.md` license line; `docs/PLAN.md` Phase 5 builds and exit, Phase 8 builds, R52 row; `docs/TASKS.md` tasks 5.1 and 8.1; `docs/CONVENTIONS.md` rule range R1 to R52. Closes the item carried from the F6 entry.

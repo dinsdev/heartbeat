@@ -27,7 +27,7 @@ A block that reads "Pending" has no run behind it yet. DS1 blocks fill in during
 - **Outputs:** a label (argmax of the weighted model) and a calibrated probability per class (logit adjustment, then one temperature fitted on DS1 out-of-fold predictions). Calibration never changes a label (EVAL-11).
 - **Format:** one ONNX file (opset 20, batch norm folded), with the scaler and calibration as JSON and the freeze record, all under `models/heartbeat-v1/`. The same file runs in Python and in the browser with ONNX Runtime 1.30.0.
 - **Baseline:** multinomial logistic regression on the six RR features only (MODEL-01), tuned on the same folds with the same budget and reported beside the CNN everywhere. It does not ship to the browser.
-- **License:** the code is MIT (`LICENSE`). The training data is the MIT-BIH Arrhythmia Database under ODC-By 1.0 (`DATA_LICENSE.md`), which requires attribution. The license stated for the model weights is decided before launch (Phase 8).
+- **License:** the code is MIT (`LICENSE`). The training data is the MIT-BIH Arrhythmia Database under ODC-By 1.0 (`DATA_LICENSE.md`), which requires attribution. The model weights are MIT, like the code. They were trained on that database, so `models/heartbeat-v1/NOTICE` carries the ODC-By 1.0 notice (section 4.3) and ships with the model.
 
 <!-- card:begin model_details -->
 

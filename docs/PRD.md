@@ -210,7 +210,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 - **DEMO-13 (P0, D6).** Theme follows the system setting by default. The demo accepts `{type: "theme", value}` messages only from the dins.dev origin.
 - **DEMO-14 (P0, D6).** The full demo autoplays on load and the iframe when visible, silent, with a visible pause control. Under reduced motion: no scrolling and no autoplay; fixed 10-second pages with Previous and Next.
 - **DEMO-15 (P0, D7).** The short line "Research demo, not medical advice. Recordings come from a public research database." is always visible under the full demo's controls and inside the iframe. The fuller note appears in the about text.
-- **DEMO-16 (P0, B5).** The demo shows the dataset attribution (in the iframe if it fits, otherwise in the about text), and an attribution note ships beside the demo data files.
+- **DEMO-16 (P0, B5).** The demo shows the dataset attribution (in the iframe if it fits, otherwise in the about text), and an attribution note ships beside the demo data files. The model's `NOTICE` ships beside the model file.
 - **DEMO-17 (P0, C1).** Until the sealed run is logged, the demo uses DS1 recordings only. DS2 demo data is built only from the frozen model after the sealed run.
 
 ### 8.7 Content and publishing (PUB)
@@ -221,7 +221,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 - **PUB-04 (P0, A2, F6).** `docs/MODEL_CARD.md` and `docs/DATA_CARD.md` are filled with real numbers from committed results, including the per-patient table, confusion matrix, calibration figures and data counts (including 15 Q beats). Every number sits in a generated block that `heartbeat cards` renders from `results/`; `heartbeat verify` fails if a block differs from what the results would render, or if a test block is still pending after the sealed run is logged (R50, F6).
 - **PUB-05 (P0, D7, E5).** All published text avoids D7's list ("diagnose", "diagnosis", "detects arrhythmia", "detects heart disease", "clinical-grade", "accurate" as a headline, "AI doctor") and never uses em or en dashes as separators. A wording lint enforces both on the built demo, the case study draft, the README and the model and data cards (cards and README added at F6).
 - **PUB-06 (P0, D1, D7, G2).** A 16:10 stage video recorded from the real demo (patient 200) with the short research-demo line burned in.
-- **PUB-07 (P0, B5, E3).** `LICENSE` (MIT, code), `DATA_LICENSE.md` (ODC-By 1.0, data), and a README stating the code license does not cover the data. Citations as listed in B5, with PhysioNet's requested citation rechecked before publishing.
+- **PUB-07 (P0, B5, E3).** `LICENSE` (MIT, code and model weights), `DATA_LICENSE.md` (ODC-By 1.0, data), `models/heartbeat-v1/NOTICE` (the weights are MIT; the training data's ODC-By 1.0 section 4.3 notice; R52), and a README stating the code license does not cover the data. Citations as listed in B5, with PhysioNet's requested citation rechecked before publishing.
 - **PUB-08 (P0, D1, G4).** The dins.dev changes are handed to that repo: `demo.src` accepts the Heartbeat origin from an allowlist; the case study renders the live demo as an iframe with `loading="lazy"` and a `title`; `frame-src` allows the origin; the site posts its theme to the iframe.
 - **PUB-09 (P1, G3).** Sources for the case study's "Ask Ottie about this project" retrieval.
 
