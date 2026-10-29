@@ -919,3 +919,11 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Decision (Din):** make the dins-projects change from this session. Done in that repo (commit 18b0fc3, local, not pushed): PRD section 7 opens with a line saying it is superseded by this PRD, with Appendix A as the list of differences, and the draft is kept as the slate-level record; PLAN's order-of-work heading calls the December 1 content freeze a best-case target; its ledger records both, plus a correction (left beside, not inside, its 2026-10-22 entry) that the MIT-BIH citations are not in a heartbeat README. Here, Appendix A's intro now says section 7 points here.
 
 **Handoff (2026-10-29):** every open item carried from Phase 0 is settled: Q2 closed (de Chazal full text), the desktop ask-rule check, the z-score floor (R51), hosting and Worker Previews with the guard gap closed, the model weights license (R52), Prettier `proseWrap: "never"`, and this pointer. Still open by design: Q3 (custom domain, at first deploy), Q4 to Q8, the `workers.dev` route question (task 6.6), and the Phase 2 checks recorded above (class totals against Table II, z-score floor hits on DS1). Next: Din creates `dinsdev/heartbeat` and pushes `main`, then Phase 1 on `phase-1-skeleton` with its task plan in PLAN.md section 8.
+
+## 2026-10-29: Phase 0 done, the repo is public
+
+**Done (Din):** `gh repo create dinsdev/heartbeat --public --source /Users/din/Develop/heartbeat --remote origin --push`.
+
+**Verified (Claude):** `git ls-remote origin main` returns 77daee4, the same as local `HEAD`; `gh repo view` reports visibility PUBLIC, default branch `main`, pushed at 2026-10-29T05:29:47Z. That push is the outside timestamp for the pre-registered plan (A3, C4 with its 2026-10-29 clarification, C5, C8) and the card templates. No PDF and no `docs/references/` in the pushed tree.
+
+**Next:** Phase 1 on branch `phase-1-skeleton`, task plan first in PLAN.md section 8. This entry is a local commit on `main`, ahead of `origin/main` until Din's next push.

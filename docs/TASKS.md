@@ -10,6 +10,8 @@ The schedule in `~/Develop/dins-projects/docs/PLAN.md` is a best-case recommenda
 
 ## Phase 0: Planning (no building)
 
+Done 2026-10-29: section F complete and `main` pushed to the public `dinsdev/heartbeat` (Din).
+
 Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENTS.md` and the conventions describe decisions already made.
 
 ### A. Foundations
