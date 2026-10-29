@@ -100,13 +100,13 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer = "14 days"`, `uv.lock`, `heartbeat` CLI skeleton | Planned |
-| 1.2 | Web project in `web/`: pnpm, E2 pins, `minimumReleaseAge`, `allowBuilds` | Planned |
-| 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config (14 days for PyPI, npm and Actions; monthly lock maintenance) | Planned |
-| 1.4 | Wording lint, two tiers: dash rule over every tracked text file; D7 avoid list and Din's buzzword list on published text | Planned |
-| 1.5 | `LICENSE`, `DATA_LICENSE.md`, README, `.gitignore` | Planned |
-| 1.6 | Tool configs per `docs/CONVENTIONS.md` section 1, checked against the pinned versions (including the three settings recalled from memory in the F4 entry) | Planned |
-| 1.7 | Rule-coverage check: every non-manual row in PLAN.md section 6 at or below `current-phase` in `pyproject.toml` has a test carrying its ID; later rows listed as pending | Planned |
+| 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer = "14 days"`, `uv.lock`, `heartbeat` CLI skeleton | Verified locally (2026-10-29): `uv lock`, `uv sync --frozen`, CLI tests, ruff, mypy. CI waits for the push |
+| 1.2 | Web project in `web/`: pnpm, E2 pins, `minimumReleaseAge`, `allowBuilds` | Verified locally (2026-10-29): install under `minimumReleaseAge`; lint, format:check, check, test, build, e2e pass. CI waits for the push |
+| 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config (14 days for PyPI, npm and Actions; monthly lock maintenance) | Implemented: workflow and Renovate config not run until the push (Renovate also needs Din's app install). Verified locally: `scripts/check.sh` (5.2 to 5.7 s warm), R45 and R46 tests |
+| 1.4 | Wording lint, two tiers: dash rule over every tracked text file; D7 avoid list and Din's buzzword list on published text | Verified locally (2026-10-29): R44 tests; planted em dash and planted "diagnose" exit 1; the repo exits 0. CI waits for the push |
+| 1.5 | `LICENSE`, `DATA_LICENSE.md`, README, `.gitignore` | Verified locally (2026-10-29): wording lint and Prettier pass. Content not yet reviewed by Din |
+| 1.6 | Tool configs per `docs/CONVENTIONS.md` section 1, checked against the pinned versions (including the three settings recalled from memory in the F4 entry) | Verified locally (2026-10-29): ruff, mypy, ESLint, svelte-check, Prettier pass; the three recalled settings checked (ledger). CI waits for the push |
+| 1.7 | Rule-coverage check: every non-manual row in PLAN.md section 6 at or below `current-phase` in `pyproject.toml` has a test carrying its ID; later rows listed as pending | Verified locally (2026-10-29): coverage tests; repo-level check finds 0 uncovered rows, 47 pending. CI waits for the push |
 
 ### Phase 2: Data and split
 

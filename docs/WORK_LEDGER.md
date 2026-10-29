@@ -983,3 +983,51 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Drafted (2026-10-29):** PLAN.md section 8, Phase 1: seven tasks, file map, interfaces, test-first cases, commits, review focus. Facts it rests on, checked today: the repo has no em or en dash and no spaced hyphen in Markdown prose; Node 24.21.0 is on the Mac and pnpm is not (a precondition for Din). From Claude's memory, not checked: torch's Linux wheels on PyPI pull CUDA packages, so the plan takes torch on Linux from PyTorch's CPU index; Task 1 confirms both this and that the index works with the 14-day span (stop and ask if not). The writing-plans skill asks for full code in every step; the plan follows PLAN section 1 instead (files, interfaces, concrete test cases, commits).
 
 **Approved (Din, 2026-10-29):** the Phase 1 task plan as committed. Execution is handed to a fresh Opus 5.5 session with a `/goal` condition (under the 4,000-character limit) that ends at the local exit checks and the push command for Din, or at a stated stop-and-ask point; the CI half of the exit waits for Din's push.
+
+## 2026-10-29: Phase 1 built, local checks green; CI waits for Din's push
+
+**Built (branch `phase-1-skeleton`, one Conventional Commit per plan task):**
+
+- Task 1, `423ca0c`: `pyproject.toml` with the E2 pins, `[tool.uv] exclude-newer = "14 days"`, torch on Linux from PyTorch's CPU index, `[tool.heartbeat] current-phase = 1`, ruff, mypy and pytest config; `uv.lock` (68 packages); `heartbeat` CLI with the 14 E4 subcommands as stubs that exit 2 and name their phase; `tests/conftest.py` with the Hypothesis `ci` profile; `.gitignore` extended.
+- Task 2, `1e81e98`: `heartbeat.checks.wording`, the two-tier lint (R44).
+- Task 3, `ba1e342`: `heartbeat.checks.rule_coverage`, the phase-gated coverage check (task 1.7).
+- Task 4, `3d2050f`: `web/` Svelte placeholder with the E2 toolchain; `.node-version`.
+- Task 5, `38ce8d2`: `heartbeat.checks.repo_config` (R45, R46), `.github/workflows/ci.yml`, `renovate.json`, `scripts/check.sh`, and the repo-level coverage test.
+- Task 6, `e74be9b`: `LICENSE`, `DATA_LICENSE.md`, `README.md`.
+- Task 7 (this commit): AGENTS.md Commands, TASKS 1.1 to 1.7, this entry.
+
+**Test first:** for each check the test file was written and run before the module existed, and failed (collection error, module not found): `test_cli.py`, `test_wording.py`, `test_rule_coverage.py`, `test_repo_config.py`. The one later addition, the wording lint's untracked-file case, failed on its own before the code changed. Planted failures seen: svelte-check on a type error; ESLint on a non-exhaustive switch; the wording CLI on a planted em dash and a planted "diagnose" (both exit 1, files in Claude's scratchpad, deleted after).
+
+**The three settings recalled from memory in the F4 draft entry, checked against the pinned versions:**
+
+1. Hypothesis 6.169.0 has `settings(derandomize=True)` (constructed and read back). `tests/conftest.py` registers it as the `ci` profile, loaded when `CI` is set.
+2. `@typescript-eslint/switch-exhaustiveness-check` exists in typescript-eslint 8.71.2: enabled in `web/eslint.config.js` (shown by `eslint --print-config`), and a planted switch over `"N" | "S" | "V" | "F"` with one case was flagged ("Cases not matched"). The file was deleted.
+3. Prettier printing tables wider than the print width compactly: already measured with 3.9.10 on 2026-10-29 (the `proseWrap` entry). Today `pnpm -C web run format:check`, with Prettier from the pinned web install, passes on every Markdown file.
+
+Also from Task 1 step 5: ruff 0.17.0 accepts all 16 selected rule codes (an unknown selector fails at startup, checked with `ZZZ`), and a bare `uv run ruff check` reports `Settings path: pyproject.toml`, so the F5 entry's finding is settled.
+
+**PyTorch CPU index with the 14-day span:** works, with no exemption for torch. `https://download.pytorch.org/whl/cpu` serves upload times (every torch 2.14.1+cpu wheel in `uv.lock` has one, 2026-09-30), so `exclude-newer` applies to it. The lock takes torch 2.14.1+cpu from the CPU index on Linux and 2.14.1 from PyPI elsewhere, and contains no nvidia, cuda or triton package (grep). Not yet checked: whether CI's uv 0.13.0 installs this lock, written by the Mac's uv 0.12.11, with `uv sync --frozen` (the first CI run shows it; review focus 5).
+
+**Action pins (R46), each the newest release at least 14 days old (cutoff 2026-10-15):** `actions/checkout` v7.0.1 (2026-07-20) `3d3c42e5aac5ba805825da76410c181273ba90b1`; `astral-sh/setup-uv` v10.3.0 (2026-10-09; 10.3.1 to 10.3.3 are too new) `1c37ad07a6a961277cf70c0d37d6f313000f5884`; `pnpm/action-setup` v6.1.0 (2026-09-05; an annotated tag, so the pin is the peeled commit) `ea17c68df8912ef543352723c149a84f56e3d413`; `actions/setup-node` v7.1.0 (2026-10-08) `949feb2413d6458794dcd2491c4babbbce0c15c1`. Hashes from `git ls-remote`; dates from the GitHub release pages through a summarizing fetch, which showed day and month only (year read as 2026). Input names checked in each `action.yml` at the pinned commit. Renovate settings checked in its docs: `internalChecksFilter: "strict"` is the setting that holds pull requests until the age passes; `minimumReleaseAgeBehaviour: "timestamp-required"` treats a missing timestamp as too new; `helpers:pinGitHubActionDigests` exists.
+
+**Timings (local Mac, warm):** `scripts/check.sh` 5.7 s, 5.2 s, 5.2 s on the final tree (5.4, 5.1, 5.3 s at Task 5), each exit 0. `uv run pytest`: 290 passed in 2.2 s. `pnpm -C web run e2e`: 2 passed (Chromium and WebKit) in 2.3 s. Playwright browser install: 1 minute 57 seconds. CI wall-clock: not measured yet.
+
+**Deviations from the plan, and why:**
+
+1. `docs/PLAN.md` section 8 told writers to use `"\u2014"` escapes but held a literal U+2014 in that sentence, so the R44 repo test failed on the plan itself. The character was replaced by the escape text in `1e81e98`; no word changed. Flagged for Din because PLAN is locked.
+2. The wording lint's default scan covers tracked files plus new files that are not ignored (the plan said `git ls-files`). Reason: during Task 2 a new file with literal dashes passed the tracked-only scan, and `check.sh` runs before a commit, when new files are untracked. Ignored files are still skipped (tested).
+3. `ruff format` skips `*.md`. Ruff 0.17.0 formats Python blocks inside Markdown and wanted to collapse the aligned comments in CONVENTIONS section 2 and 3 examples; CONVENTIONS section 1 gives Markdown to Prettier.
+4. New build dependency `uv_build==0.13.0` (the build backend matching E2's uv), needed to install the `heartbeat` script; named in `423ca0c`.
+5. Stricter than the plan, all checked by R45: pnpm `minimumReleaseAgeIgnoreMissingTime: false` (its default skips the age check for a package without a publish time); Renovate `minimumReleaseAgeBehaviour: "timestamp-required"`; workflow env `UV_FROZEN: "1"` wherever CI uses `uv run` (otherwise `uv run` may re-lock); no `dangerouslyAllowAllBuilds`; no `pnpm add` in CI. R46 also requires the version comment after each hash, since Renovate reads it to update the pin.
+6. `scripts/check.sh` runs `uv run --locked`, so a stale `uv.lock` fails locally instead of being re-locked.
+7. `web/tsconfig.json` adds `allowJs` and `checkJs` (Svelte's recommended setting): without them svelte-check reports the import of a component with no `<script lang="ts">` as an implicit `any`.
+8. `requires-python = "==3.14.*"`, since torch 2.14.1 has no wheels past cp314 (E1). `readme` and `license-files` joined `pyproject.toml` in Task 6, because the build backend fails while the files are missing.
+9. The Vitest config sets `include: ["src/**/*.test.ts"]`, so Playwright's `e2e/*.spec.ts` files are not picked up by Vitest.
+
+**Toolchain drift, local against CI:** `.node-version` is 24.22.0 (released 2026-10-14, the newest Node 24 patch at least 14 days old, from `nodejs.org/dist/index.json`); the Mac runs 24.21.0. uv is 0.12.11 on the Mac and 0.13.0 in CI. Moving the Mac is Din's call outside the repo.
+
+**Waiting on Din:** the push of `phase-1-skeleton` (then Claude reads the run with `gh run list` and `gh run view`, records its wall-clock time here, and fixes anything red in a new commit); installing the Renovate app on `dinsdev/heartbeat`; reviewing the README and `DATA_LICENSE.md` wording. Phase 1 exits when CI is green in under 10 minutes.
+
+**Noticed, not acted on:** Renovate will propose TypeScript 7 (it breaks svelte-check, E2) and may propose onnxruntime and onnxruntime-web in separate pull requests (they must move together, E1). Both stay proposals until Din merges; a `packageRules` entry could hold TypeScript below 7 and group the two ONNX Runtime packages, which is Din's call.
+
+**Verified:** `uv run pytest` exit 0 (290 passed); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R44, R45, R46 covered; 0 uncovered; 47 rows pending, phases 2 to 7); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 1 on a planted em dash, exit 1 on a planted "diagnose", exit 0 on the repo; `pnpm -C web run` lint, format:check, check, test, build and e2e each exit 0; `scripts/check.sh` exit 0 three times warm (times above).
