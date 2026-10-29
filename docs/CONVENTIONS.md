@@ -121,4 +121,4 @@ x_all = standardize(all_features)            # bad: statistics include validatio
 - Branches: `phase-N-<name>` (F2).
 - Pull requests merge with a merge commit, never squash or rebase. Reason: run folders, the freeze record and R47 refer to commit hashes, and squashing or rebasing rewrites them, so the freeze commit would not be on `main`. This differs from dins.dev's squash-only rule on purpose.
 - Task status in the build phases of `docs/TASKS.md` uses dins.dev's words: Planned, In progress, Implemented, Verified (checks passed), Accepted (Din tried it; only Din sets it), Blocked. Phase 0 rows keep their planning keys.
-- Docs are Markdown formatted by Prettier. Requirement IDs, rule IDs (R1 to R50) and decision IDs (A1 to G4) are how docs and code point at each other; never renumber one.
+- Docs are Markdown formatted by Prettier. Requirement IDs, rule IDs (R1 to R51) and decision IDs (A1 to G4) are how docs and code point at each other; never renumber one.

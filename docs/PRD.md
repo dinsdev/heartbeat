@@ -142,7 +142,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 - **DATA-03 (P0, B1).** The four paced records (102, 104, 107, 217) are excluded. The split lists, exclusions and their reasons live in a committed manifest, not in code.
 - **DATA-04 (P0, B1).** The pipeline must select the MLII lead by signal name, never by channel index (record 114 has its signals reversed).
 - **DATA-05 (P0, B3, D4).** The canonical signal is MLII in millivolts at 360 Hz, filtered once per record with a 0.5 to 40 Hz zero-phase Butterworth bandpass, then rounded to int16 at 200 units per mV. Training, evaluation and the browser all use this rounded signal.
-- **DATA-06 (P0, B3).** Each beat window is 256 samples: 96 before the annotation and 160 after, with no realignment, z-scored per window.
+- **DATA-06 (P0, B3).** Each beat window is 256 samples: 96 before the annotation and 160 after, with no realignment, z-scored per window on the int16 values in float64 as `(x - mean) / max(std, 2)`, population standard deviation. A flat window becomes all zeros; no beat is dropped (R51).
 - **DATA-07 (P0, B3).** Six RR features per beat: pre-RR, post-RR, local average RR (previous 10 beats), long average RR (previous 5 minutes), pre-RR over local average, post-RR over pre-RR. Only post-RR may look ahead, by one beat. RR is computed over every annotated beat, including unscored classes.
 - **DATA-08 (P0, B3).** The first and last beat of each record are dropped. Noisy segments are not excluded.
 - **DATA-09 (P0, B4).** Annotation symbols map to AAMI classes exactly: N = N, L, R, e, j; S = A, a, J, S; V = V, E; F = F; Q = /, f, Q. Non-beat symbols (`!`, `x`, noise and rhythm markers) are not beats. Any unrecognized symbol must make the pipeline fail loudly.

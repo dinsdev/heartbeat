@@ -106,14 +106,14 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 ### Phase 2: Data and split
 
-| ID  | Task                                                                                                                                | Status  |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions                                                 | Planned |
-| 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes                                                      | Planned |
-| 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features; class totals against de Chazal's Table II in the ledger | Planned |
-| 2.4 | Split-enforcing loader; leakage tests on subject IDs                                                                                | Planned |
-| 2.5 | `make-folds` and committed `config/folds.json` (ledger entry)                                                                       | Planned |
-| 2.6 | `rebuild` stage framework with fingerprints and `--from`                                                                            | Planned |
+| ID  | Task                                                                                                                                                                                 | Status  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions                                                                                                  | Planned |
+| 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes                                                                                                       | Planned |
+| 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features; class totals against de Chazal's Table II in the ledger; z-score floor hits per DS1 record in the ledger | Planned |
+| 2.4 | Split-enforcing loader; leakage tests on subject IDs                                                                                                                                 | Planned |
+| 2.5 | `make-folds` and committed `config/folds.json` (ledger entry)                                                                                                                        | Planned |
+| 2.6 | `rebuild` stage framework with fingerprints and `--from`                                                                                                                             | Planned |
 
 ### Phase 3: Evaluation harness and baseline
 

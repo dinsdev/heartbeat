@@ -838,3 +838,18 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Decision (Din):** keep both as ask rules. Reason: the 2026-10-29 check showed ask rules prompt when loaded at session start, so every edit to the guard already reaches Din as a prompt. F5 is unchanged.
 
 **Residual risk, stated:** ask rules added mid-session did not prompt (F5 draft), and an approved prompt is one click. Claude treats any edit to `.claude/` as something to name to Din before making it.
+
+## 2026-10-29: B3 amendment, a floor on the z-score's standard deviation
+
+**Problem:** B3 z-scores each 256-sample window. A flat window (lead-off signal, or near-flat signal that int16 rounding at 200 units/mV makes exactly constant) has standard deviation 0, which gives NaN in training and in the browser. The browser must repeat the arithmetic within 1e-5 (PARITY-03).
+
+**Decision (Din):** lock as proposed.
+
+1. `z = (x - mean) / max(std, 2)` on the window's int16 values in float64, population standard deviation (CONVENTIONS). A flat window becomes all zeros. Two units is 0.01 mV. The z-score is scale-free, so working in int16 units spares TypeScript a millivolt conversion. Estimate, not measured: a normal beat window's standard deviation is around 20 to 60 units, so the floor should only touch near-flat signal.
+2. No beat is dropped. This keeps B3's "no exclusion of noisy segments" and adds no exclusion to the pre-registered scoring.
+3. Phase 2 (task 2.3): `prepare` reports floor hits per record and the smallest standard deviation seen, for DS1 only, and the ledger records them. More than a handful of DS1 hits brings the floor back to Din before any result. DS2's count is not examined before the sealed run (rule 1); `evaluate-test` logs it.
+4. Tests: new row R51 (Phase 2, L1), a constant window gives zeros and a hypothesis property test gives finite values for any int16 window. R30's parity fixtures gain a synthetic flat window.
+
+**Rejected:** `std + eps` on every window (changes every window, so no window is a true z-score); dropping flat beats (a new scoring exclusion that would change the pre-registered plan and make the demo skip beats).
+
+**Applied:** `docs/PRD.md` DATA-06; `docs/PLAN.md` R51 row, R30 fixtures, Phase 2 exit; `docs/CONVENTIONS.md` rule range R1 to R51; `docs/TASKS.md` task 2.3.
