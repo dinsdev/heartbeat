@@ -246,7 +246,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 - **OPS-06 (P0, E6).** Deploys run from GitHub Actions with wrangler: production on `main` after checks pass, Worker Previews on pull requests, served on `workers.dev` only. Deploys never train; demo data is built from the committed frozen model.
 - **OPS-07 (P0, E6).** The repo `dinsdev/heartbeat` is public and pushed at the end of Phase 0, before the sealed run. The freeze record is pushed before `evaluate-test` runs and the test log right after.
 - **OPS-08 (P1, E6).** `scripts/check.sh` runs lint and unit tests locally in under 2 minutes.
-- **OPS-09 (P1, E6).** Renovate with a 14-day minimum release age, a monthly schedule, pull requests only, no automerge.
+- **OPS-09 (P1, E6).** Renovate with a 14-day minimum release age for PyPI, npm and GitHub Actions, a monthly schedule, monthly lock file maintenance, pull requests only, no automerge.
 - **OPS-10 (P1, D2).** A check script flags drift between the vendored brand tokens and fonts and their source commit in the dins.dev repo.
 
 ### 8.9 Stretch (P2, C8)
@@ -282,7 +282,7 @@ Reported timings use Playwright with 4x CPU slowdown, and fast 4G for the phone 
 
 - Response headers: `Content-Security-Policy` with `frame-ancestors` limited to `https://dins.dev` and the site's preview hostnames, and `'wasm-unsafe-eval'` in `script-src`. A test checks the built headers.
 - Theme messages accepted only from the dins.dev origin.
-- Dependencies pinned to the newest stable release at least 14 days old, enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`, covering transitive packages. Install scripts allowed only for esbuild and workerd.
+- Dependencies pinned to the newest stable release at least 14 days old, enforced by uv `exclude-newer = "14 days"` and pnpm `minimumReleaseAge`, both rolling and covering transitive packages. Install scripts allowed only for esbuild and workerd.
 - Third-party GitHub Actions pinned to full commit hashes; read-only workflow permissions by default.
 - No secrets in the repo. The Cloudflare token is a GitHub secret that Din creates; Claude never handles its value.
 

@@ -956,3 +956,22 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Rejected:** PUB-05 literally (both checks on published text only), since docs and comments would rely on review alone.
 
 **Applied:** `docs/CONVENTIONS.md` section 1, Writing row; `docs/TASKS.md` task 1.4.
+
+## 2026-10-29: Phase 1 settling, 3 of 4: uv's `exclude-newer` becomes a rolling 14 days (E2 amendment)
+
+**Problem:** E2 set uv's `exclude-newer` to a fixed date, moved forward deliberately on upgrade. uv's Renovate guide (docs.astral.sh, read 2026-10-29) says to pair `exclude-newer` with Renovate's `minimumReleaseAge`, or Renovate opens pull requests uv cannot lock. Renovate cannot move a fixed date, so every Python update it proposed would fail to lock.
+
+**Measured (2026-10-29, throwaway project in Claude's scratchpad, deleted after):** uv's settings reference lists friendly and ISO 8601 durations for `exclude-newer`. With the Mac's uv 0.12.11, `exclude-newer = "14 days"` locks offline and `uv.lock` records `exclude-newer-span = "P14D"`; `uv lock --check` and `uv sync --frozen` both pass.
+
+**Decision (Din):** option A.
+
+1. `[tool.uv] exclude-newer = "14 days"`, rolling, like pnpm's `minimumReleaseAge: 20160`. Reproducibility still comes from the committed `uv.lock` and `--frozen` installs; the span matters only when something is re-resolved.
+2. Renovate: `minimumReleaseAge: "14 days"` for PyPI, npm and GitHub Actions; monthly schedule; pull requests only; no automerge; monthly `lockFileMaintenance` so transitive packages get refreshed too (added to OPS-09).
+3. Control is unchanged: a Renovate pull request is a proposal and merging it is Din's go. AGENTS now says upgrading a pin or changing the span needs Din's go and a ledger entry.
+4. Side effect: the first lock resolves transitive packages against a 2026-10-15 cutoff rather than E2's 2026-10-13. The direct `==` pins do not move; Phase 1's tests cover the rest.
+
+**Rejected:** keeping the fixed date with Renovate on npm and Actions only, since Python pins would age unless someone remembered to move the date.
+
+**Default noted with this item:** the Mac's uv is 0.12.11 (Homebrew), E2 pinned 0.13.0. CI pins 0.13.0 through `setup-uv`; the repo sets no `required-version`, which would break local runs. Phase 1 checks that a lock written locally passes `uv sync --frozen` under 0.13.0 in CI. Getting 0.13.0 on the Mac is Din's call outside the repo.
+
+**Applied:** `AGENTS.md` dependencies section; `docs/PRD.md` OPS-09 and the dependency constraint; `docs/PLAN.md` section 2; `docs/TASKS.md` tasks 1.1 and 1.3.

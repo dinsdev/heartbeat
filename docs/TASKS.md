@@ -100,9 +100,9 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer`, `uv.lock`, `heartbeat` CLI skeleton | Planned |
+| 1.1 | Python project: `pyproject.toml` with E2 pins and `exclude-newer = "14 days"`, `uv.lock`, `heartbeat` CLI skeleton | Planned |
 | 1.2 | Web project in `web/`: pnpm, E2 pins, `minimumReleaseAge`, `allowBuilds` | Planned |
-| 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config | Planned |
+| 1.3 | CI workflow (SHA-pinned actions, read-only permissions), `scripts/check.sh`, Renovate config (14 days for PyPI, npm and Actions; monthly lock maintenance) | Planned |
 | 1.4 | Wording lint, two tiers: dash rule over every tracked text file; D7 avoid list and Din's buzzword list on published text | Planned |
 | 1.5 | `LICENSE`, `DATA_LICENSE.md`, README, `.gitignore` | Planned |
 | 1.6 | Tool configs per `docs/CONVENTIONS.md` section 1, checked against the pinned versions (including the three settings recalled from memory in the F4 entry) | Planned |

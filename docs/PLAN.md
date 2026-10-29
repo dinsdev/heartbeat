@@ -25,7 +25,7 @@ This plan says in what order Heartbeat gets built, what each phase must prove be
 
 Every phase is bound by these (details in the PRD and ledger):
 
-- Pins: newest stable release at least 14 days old, enforced by uv `exclude-newer` and pnpm `minimumReleaseAge: 20160`; ONNX Runtime 1.30.0 in Python and the browser; Python 3.14; Node 24; TypeScript 6.0.3 (E1, E2).
+- Pins: newest stable release at least 14 days old, enforced by uv `exclude-newer = "14 days"` and pnpm `minimumReleaseAge: 20160`, both rolling; ONNX Runtime 1.30.0 in Python and the browser; Python 3.14; Node 24; TypeScript 6.0.3 (E1, E2).
 - No result appears anywhere until a run produces it (PRD section 5).
 - DS2 is read only by `evaluate-test` with a matching freeze record; demo data is DS1-only until the sealed run is logged (EVAL-04, EVAL-05, DEMO-17).
 - Compute: Mac only; MPS for development numbers, CPU deterministic for frozen models (C7).

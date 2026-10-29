@@ -57,9 +57,9 @@ Code enforces most of these (the rule-to-test table names each test). Don't look
 
 ## Dependencies
 
-- Pins follow the 14-day rule: newest stable release at least 14 days old, enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`. Never bypass either.
+- Pins follow the 14-day rule: newest stable release at least 14 days old, enforced by uv `exclude-newer = "14 days"` and pnpm `minimumReleaseAge`, both rolling. Never bypass either.
 - ONNX Runtime is the same version in Python and the browser (1.30.0). TypeScript stays on 6.0.3 (7 breaks svelte-check). pnpm `allowBuilds` covers esbuild and workerd only.
-- A new dependency needs a one-line reason in the commit. Upgrading a pin or moving the `exclude-newer` date needs Din's go and a ledger entry.
+- A new dependency needs a one-line reason in the commit. Upgrading a pin or changing the `exclude-newer` span needs Din's go and a ledger entry.
 
 ## Testing and done
 
