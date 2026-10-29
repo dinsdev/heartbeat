@@ -72,7 +72,7 @@ Pre-registered in A3, B4 and C4 before any test result existed.
 **Model performance measures:**
 
 - Headline: S and V recall and precision on the 21 DS2 patients; macro F1 over N, S and V, with four-class macro F1 beside it. N, S and V make the headline because DS2's F beats come almost entirely from one patient.
-- False positive rates for S and V, for comparison with published work.
+- False positive rates for S and V, for comparison with published work. Beside de Chazal's numbers, S and V sensitivity, positive predictivity and false positive rate follow AAMI EC57's definitions (de Chazal's Table V).
 - S recall and precision without record 232.
 - A per-patient table of S and V results: raw counts in every cell, a percentage only when the patient has at least 10 beats of that class.
 - A four-by-four confusion matrix (Q test beats noted as not scored), and N and F recall and precision with the F caveat.

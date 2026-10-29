@@ -788,3 +788,35 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 - A second run changes nothing; `prettier --check` passes on all nine files and the config; no em or en dashes.
 
 **Finding for task 1.6:** Prettier pads tables to the widest cell even past the print width (the F4 entry recalled the opposite). Editing one wide cell, such as a status in `docs/TASKS.md`, re-pads its whole table, so status diffs will be noisy. Accepted for now; options (shorter cells, or moving long text out of tables) can come up at task 1.6.
+
+## 2026-10-29: Q2 closed, the de Chazal full text checked
+
+**Source:** de Chazal P, O'Dwyer M, Reilly RB, IEEE Trans Biomed Eng 51(7):1196-1206 (2004), the published version. Din downloaded the PDF from TARA in a browser; Claude read all 11 pages. The file sits in `docs/references/`, which is gitignored: the paper is copyrighted and is never committed.
+
+**Confirmed:**
+
+- DS1 and DS2 record lists (Table II footnote, p. 1197) are exactly the lists in the B1 entry. So 201 (DS1) and 202 (DS2) are on opposite sides in the original paper, not only in transcriptions, and the B1 leak fix stands as recorded.
+- The four paced records excluded are 102, 104, 107 and 217 (same footnote).
+- The AAMI mapping (Table I) is exactly B4's: N = N L R e j, S = A a J S, V = V E, F = F, Q = / f Q.
+- Beat positions come from the database's annotations (Section IV-B), as in B2.
+- Two leads: lead A is MLII in 45 recordings, lead B is mostly V1 (Section III), and the chosen configuration used both (Fig. 2). PUB-03 already covers this.
+- DS2 results (Table VII, gross): S sensitivity 75.9%, positive predictivity 38.5%, false positive rate 4.7%; V 77.7%, 81.9%, 1.2%. These match the PRD's abstract figures. Per-record counts for 202 in Table VII (N 2061, S 55, V 19, F 1) match the B1 entry.
+
+**Found:**
+
+1. Class totals are close, not identical. Table II, DS1: N 45868, S 942, V 3787, F 415, Q 8 (51020 beats). DS2: N 44258, S 1837, V 3221, F 388, Q 7 (49711). The B1 counts from PhysioNet's beat table differ by at most 2 beats per class (DS1 N 45866, S 944, V 3788; DS2 N 44259). The B1 entry's "match" was loose. Cause not known; a guess is beats near record edges or annotation handling. The split is unaffected.
+2. RR features (Section IV-D1, Table III): pre-RR, post-RR, an average RR over the whole recording (the same value for every beat, so it uses future beats) and a local average over the ten RR intervals surrounding the beat. B3 keeps pre- and post-RR, makes both averages causal and adds two ratios. B3 is unchanged; the page says it builds on de Chazal's features.
+3. The paper ran the leakage comparison in 2004 (Table VI): on DS1, configuration I scored 86.1% accuracy with beats assigned to folds at random (DD2) and 79.0% with each fold one recording (DD1), and the authors warn against the beat-level split (Section VI). C5 is a replication with a CNN, not a new idea.
+4. Table V defines the AAMI EC57 measures: V false positives are N or S beats labeled V (F labeled V is not counted); S false positives are N, V or F beats labeled S. C4 item 3 promised false positive rates "for a like-for-like comparison with de Chazal", which needs these definitions.
+
+**Decision (Din):** lock the close-out as proposed.
+
+1. Q2 is closed and removed from the PRD's open questions (other numbers unchanged). AS1 is verified against the full text; AS2 is resolved with the wording in finding 2.
+2. Task 2.3 compares our per-class totals from the real annotation files with Table II and lists every difference in the ledger. A recorded comparison, not a test gate (R11 still checks against PhysioNet's table per record).
+3. Pre-registration clarification to C4 (rule 6: Din's go, dated, before the Phase 7 gate and before any result): wherever S and V results sit beside de Chazal's, sensitivity, positive predictivity and false positive rate use AAMI EC57's definitions as printed in Table V. Q beats are not scored here, so the 7 Q test beats are left out and the comparison says so. The headline keeps plain one-vs-rest definitions. Reason: C4's like-for-like intent was already locked; this makes it true.
+4. PUB-03 gains the credit: the case study names de Chazal's Table VI as the precedent for the leakage exhibit. Reason: presenting C5 as original would be the kind of overclaim the project exists to avoid.
+5. Not done, on purpose: recomputing de Chazal's numbers on our 21 DS2 records from Table VII. It would move de Chazal toward a target, which A3 rejected.
+
+**Applied:** `docs/PRD.md` (domain paragraph cites Tables VI and VII, EVAL-08 item 2, PUB-03, AS1, AS2, Q2 removed); `docs/DATA_CARD.md` (split source line); `docs/MODEL_CARD.md` (FPR definition line); `docs/PLAN.md` (Phase 2 exit, Phase 3 builds, external dependencies); `docs/TASKS.md` (B5 done, tasks 2.3 and 8.2); `.gitignore` (`docs/references/`).
+
+**Verified:** every replacement matched its target exactly once (scratchpad script). Tables re-padded with a scratchpad padder that leaves all nine committed Markdown files unchanged, so it matches Prettier's table output on this repo; Prettier itself was not run (not installed). Grep over every tracked Markdown file found no em or en dashes; grep over both cards found no D7 or buzzword terms. `git status` shows the PDF ignored.

@@ -59,11 +59,11 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 **Builds:** `manifests/` (`mitdb-1.0.0.sha256`, `subjects.toml`, `splits.toml`); the downloader (S3 mirror first, PhysioNet fallback, checksums); `prepare` (MLII by name, filter, int16 rounding, AAMI mapping, beat windows, RR features); the split-enforcing loader; `heartbeat make-folds` and the committed `config/folds.json`; the stage framework for `rebuild` (fingerprints, `--from`) with the stages built so far.
 **Requirements:** DATA-01 to DATA-11, EVAL-01 to EVAL-04, OPS-01 (partial).
 **Depends on:** Phase 1.
-**Exit:** rule-to-test rows R1 to R15 pass in CI, including the real-data layer (download cached by the manifest). Per-record class counts match PhysioNet's table. `folds.json` committed with a ledger entry (a rigor event).
+**Exit:** rule-to-test rows R1 to R15 pass in CI, including the real-data layer (download cached by the manifest). Per-record class counts match PhysioNet's table, and per-class totals are compared with de Chazal's Table II, each difference listed in the ledger. `folds.json` committed with a ledger entry (a rigor event).
 
 ### Phase 3: Evaluation harness and baseline (about 2 days)
 
-**Builds:** metrics (per class, macro F1 over N, S, V and four-class, FPR); the paired patient bootstrap; the per-patient table; calibration (logit adjustment, temperature, equal-mass ECE, reliability data, log loss, Brier); run folders and the `results/` writer; the baseline with C selection on the folds.
+**Builds:** metrics (per class, macro F1 over N, S, V and four-class, FPR, and the AAMI EC57 definitions for the de Chazal comparison); the paired patient bootstrap; the per-patient table; calibration (logit adjustment, temperature, equal-mass ECE, reliability data, log loss, Brier); run folders and the `results/` writer; the baseline with C selection on the folds.
 **Requirements:** EVAL-07 to EVAL-12, MODEL-01, MODEL-07.
 **Depends on:** Phase 2.
 **Why the baseline first:** it is deterministic and trains in seconds, so the harness gets tested on a cheap model before the CNN depends on it.
@@ -126,7 +126,7 @@ Phase 0 (push) -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> (9)
                         -> 6 shell (stand-in model) ---^
 ```
 
-External dependencies: PhysioNet S3 mirror and PhysioNet (Phase 2); GitHub Actions (from Phase 1); Cloudflare token and custom domain (Phase 6); the dins.dev repo accepting G4 (Phase 6 to 8); the de Chazal full text before the case study (Phase 8, PRD Q2).
+External dependencies: PhysioNet S3 mirror and PhysioNet (Phase 2); GitHub Actions (from Phase 1); Cloudflare token and custom domain (Phase 6); the dins.dev repo accepting G4 (Phase 6 to 8).
 
 ## 5. Verification layers
 

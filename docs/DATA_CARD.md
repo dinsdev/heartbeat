@@ -32,7 +32,7 @@ Every count in this card sits in a generated block between `<!-- card:begin NAME
 | Excluded | 102, 104, 107, 217                                                                                           | Paced rhythms (AAMI practice)                                   |
 | Excluded | 202                                                                                                          | Same person as 201, which stays in DS1 (fixes the 201/202 leak) |
 
-Source of truth: `manifests/splits.toml`, with the record-to-person map in `manifests/subjects.toml`. The DS1 and DS2 lists follow de Chazal et al. (2004) as transcribed in secondary sources and checked against PhysioNet's class totals; the check against the paper's full text is still open (PRD Q2).
+Source of truth: `manifests/splits.toml`, with the record-to-person map in `manifests/subjects.toml`. The DS1 and DS2 lists follow de Chazal et al. (2004), checked against the paper's full text (Table II footnote) on 2026-10-29. The only change is record 202, removed from DS2 because it comes from the same person as DS1's record 201.
 
 **Instances:** one instance per annotated beat, except the first and last beat of each record. Each has:
 

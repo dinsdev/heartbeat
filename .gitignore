@@ -3,3 +3,6 @@
 .claude/worktrees/
 __pycache__/
 .vscode/
+
+# Copyrighted papers kept for reference, never committed
+docs/references/
