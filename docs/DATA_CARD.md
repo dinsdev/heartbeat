@@ -84,7 +84,7 @@ _Pending: rendered from the record headers by `prepare` (Phase 2)._
 Run by the `prepare` stage of `heartbeat rebuild` (DATA-04 to DATA-10):
 
 1. **Lead:** MLII, picked by signal name, never by channel position (record 114 has its two signals reversed).
-2. **Filter:** 0.5 to 40 Hz Butterworth bandpass, zero-phase (forward and backward), once per record, at the native 360 Hz.
+2. **Filter:** 0.5 to 40 Hz Butterworth bandpass of order 4, zero-phase (forward and backward), once per record, at the native 360 Hz. The first seconds of each record carry the filter's start-up transient; the first beat is dropped anyway (B3).
 3. **Rounding:** the filtered signal is rounded to int16 at 200 units per mV (5 microvolt steps). Training, evaluation and the browser all use this rounded signal, so Python and the browser see identical inputs.
 4. **Windows:** 256 samples per beat around the annotation as given, with no realignment; z-scored per window.
 5. **RR features:** computed over every annotated beat, including unscored classes, so a skipped beat never creates a false long interval. Only post-RR looks ahead, by one beat.

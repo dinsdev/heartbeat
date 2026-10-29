@@ -1060,3 +1060,23 @@ Also from Task 1 step 5: ruff 0.17.0 accepts all 16 selected rule codes (an unkn
 **Decision (Din):** Claude writes `manifests/` in the planning session, before the Phase 2 task plan is locked: `mitdb-1.0.0.sha256` (copied from PhysioNet's `SHA256SUMS.txt`), `subjects.toml`, `splits.toml`, and the expected per-record beat counts by annotation symbol that R11 tests against (copied from PhysioNet's beat table). Din reviews them with the plan. The goal agent treats `manifests/` as read-only. Reason: they are rigor inputs reviewed like code (rule 4); ask prompts for `manifests/` edits would stall the `/goal` run; and the agent building `prepare` never writes the expected values its own tests check.
 
 **Rejected:** the goal agent writing them as task 2.1, approving each Edit prompt during the run.
+
+## 2026-10-29: Phase 2 settling, 2: the filter's order and implementation (B3 clarification)
+
+**Gap:** B3 and DATA-05 say "0.5 to 40 Hz zero-phase Butterworth bandpass" without an order or implementation. The filtered int16 trace is the canonical signal for training, evaluation and the browser, so this has to be fixed before `prepare` exists.
+
+**Measured (scratchpad, scipy 1.18.1, `butter(..., output="sos")` with `sosfiltfilt`; zero-phase squares the magnitude, so both band edges sit at -6 dB):**
+
+| Order | 1 Hz | 30 Hz | 60 Hz | 100 Hz | Synthetic QRS peak kept (Gaussian, sigma 6 / 10 ms) | Largest ripple 28 to 200 ms from the peak |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | -0.5 dB | -2.2 dB | -17.5 dB | -41.7 dB | 0.819 / 0.929 | -0.030 mV |
+| 3 | -0.1 dB | -1.2 dB | -24.9 dB | -62.4 dB | 0.836 / 0.947 | -0.026 mV |
+| 4 | 0.0 dB | -0.7 dB | -32.8 dB | -83.2 dB | 0.843 / 0.953 | -0.021 mV |
+
+Impulse-response energy more than 1 s from the center was below 3e-4 of the total for every order. Not measured: behavior on real baseline wander (needs data; Phase 2 may look at DS1 only).
+
+**Decision (Din):** order 4, second-order sections, `scipy.signal.sosfiltfilt` with its default (odd) padding, in float64; then `np.rint` (round half to even) to int16 at 200 units per mV; a value outside the int16 range raises, never clips. Reason: order 4 was better or equal to orders 2 and 3 on every measured axis (flattest QRS band, 60 Hz mains down 33 dB, no more ringing). The default padding is short next to the 0.5 Hz time constant, so the first seconds of each record carry a start-up transient; the first beat is dropped anyway (B3) and the data card says so.
+
+**Rejected:** order 2 (gentler and common, but loses 2.2 dB at 30 Hz and only 17.5 dB at 60 Hz); a longer custom padding (one more parameter for an effect limited to a record's first seconds).
+
+**Applied:** `docs/PRD.md` DATA-05; `docs/DATA_CARD.md` preprocessing step 2. Scratchpad scripts deleted after this entry.
