@@ -250,7 +250,7 @@ Added here when each phase starts (see section 1).
 
 **Preconditions (Din):** pnpm 12.12.1 on the Mac (not installed today; Node 24.21.0 is); approval to install the locked dependencies with uv and pnpm and Playwright's Chromium and WebKit for the pinned `@playwright/test` 1.64.0; installing the Renovate GitHub app on `dinsdev/heartbeat` (an org setting, Din's); each push.
 
-**Global constraints:** everything in section 2 above, plus: exact `==` pins (Python) and exact versions (web) for every direct dependency, copied from the E2 entry; no dependency outside E2 without a one-line reason in the commit; Conventional Commits (CONVENTIONS section 6); every file passes the wording lint's dash tier, including test files (write planted dashes as `"—"` escapes, never literal characters).
+**Global constraints:** everything in section 2 above, plus: exact `==` pins (Python) and exact versions (web) for every direct dependency, copied from the E2 entry; no dependency outside E2 without a one-line reason in the commit; Conventional Commits (CONVENTIONS section 6); every file passes the wording lint's dash tier, including test files (write planted dashes as `"\u2014"` escapes, never literal characters).
 
 #### File map
 
