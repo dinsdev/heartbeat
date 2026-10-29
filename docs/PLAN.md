@@ -239,3 +239,113 @@ Failure modes the requirements imply but no row above tests yet. Each gets a tes
 ## 8. Phase task plans
 
 Added here when each phase starts (see section 1).
+
+### Phase 1: Skeleton and CI (task plan, 2026-10-29)
+
+**Goal:** a repo where every later phase can add code and tests that CI and `scripts/check.sh` already run, with the three Phase 1 rule rows (R44, R45, R46) and the rule-coverage check enforced from the first push.
+
+**Approach:** Python checks (wording lint, rule coverage, dependency and workflow config) live in `src/heartbeat/checks/` as plain functions with a `python -m` entry point, and pytest runs them over the repo, so CI needs no extra steps for them. The web project is a placeholder Svelte page with the full toolchain wired. Test first throughout: each check's planted-failure tests are written and seen failing before the check exists.
+
+**Settled for this phase (ledger, 2026-10-29, "Phase 1 settling" 1 to 4):** the coverage check is gated by `[tool.heartbeat] current-phase`; the wording lint has two tiers; uv's `exclude-newer = "14 days"` is rolling and Renovate covers PyPI, npm and Actions; this plan was written for Din's review before the build.
+
+**Preconditions (Din):** pnpm 12.12.1 on the Mac (not installed today; Node 24.21.0 is); approval to install the locked dependencies with uv and pnpm and Playwright's Chromium and WebKit for the pinned `@playwright/test` 1.64.0; installing the Renovate GitHub app on `dinsdev/heartbeat` (an org setting, Din's); each push.
+
+**Global constraints:** everything in section 2 above, plus: exact `==` pins (Python) and exact versions (web) for every direct dependency, copied from the E2 entry; no dependency outside E2 without a one-line reason in the commit; Conventional Commits (CONVENTIONS section 6); every file passes the wording lint's dash tier, including test files (write planted dashes as `"—"` escapes, never literal characters).
+
+#### File map
+
+| Path | Responsibility |
+| --- | --- |
+| `pyproject.toml` | Project metadata, E2 pins, dev group, `[tool.uv]` (`exclude-newer = "14 days"`, PyTorch CPU index for Linux only), `[tool.heartbeat] current-phase = 1`, ruff, mypy, pytest config |
+| `uv.lock` | Written by `uv lock`; records `exclude-newer-span = "P14D"` |
+| `.python-version`, `.node-version` | `3.14`; the newest Node 24 patch at least 14 days old |
+| `src/heartbeat/__init__.py`, `paths.py` | Package; `REPO_ROOT` and other paths resolved from the repo root (CONVENTIONS section 2) |
+| `src/heartbeat/cli.py` | `heartbeat` command with the E4 subcommands as stubs |
+| `src/heartbeat/checks/wording.py` | R44: dash tier and published-text tier |
+| `src/heartbeat/checks/rule_coverage.py` | Task 1.7: PLAN section 6 rows against rule IDs in tests |
+| `src/heartbeat/checks/repo_config.py` | R45 (14-day enforcement in config and CI) and R46 (actions pinned to commit hashes) |
+| `tests/conftest.py` | Hypothesis `ci` profile (`derandomize=True`, loaded when `CI` is set) |
+| `tests/unit/test_cli.py`, `test_wording.py`, `test_rule_coverage.py`, `test_repo_config.py` | The tests below |
+| `web/` | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `tsconfig.json`, `vite.config.ts`, `svelte.config.js`, `eslint.config.js`, `.prettierrc.json`, `playwright.config.ts`, `index.html`, `src/main.ts`, `src/App.svelte`, `e2e/smoke.spec.ts` |
+| `.github/workflows/ci.yml` | One workflow, two parallel jobs (`python`, `web`) |
+| `scripts/check.sh` | Lint and unit tests, both toolchains, under 2 minutes |
+| `renovate.json` | OPS-09 as amended |
+| `LICENSE`, `DATA_LICENSE.md`, `README.md` | PUB-07 |
+| `.gitignore` | Adds `data/`, `runs/`, `web/public/data/`, `.venv/`, `web/node_modules/`, `web/dist/`, tool caches, Playwright output, `.env*`, `.dev.vars*` |
+
+#### Task 1: Python project and CLI stubs (TASKS 1.1, 1.6 Python half)
+
+**Interfaces produced:** `heartbeat.paths.REPO_ROOT: Path`; `heartbeat.cli.main(argv: Sequence[str] | None = None) -> int`; `heartbeat.cli.SUBCOMMANDS: Mapping[str, int]` (name to the phase that builds it): download 2, prepare 2, make-folds 2, check-folds 2, rebuild 2, cross-validate 3, select 4, exhibit 4, train-final 4, export 5, evaluate-test 5, verify 5, cards 5, build-demo-data 6. `rebuild` accepts `--from <stage>` and `--exact`.
+
+1. Write `pyproject.toml`: runtime pins torch 2.14.1, numpy 2.5.4, scipy 1.18.1, scikit-learn 1.9.1, pandas 3.0.6, wfdb 4.3.1, onnx 1.23.2, onnxscript 0.7.2, onnxruntime 1.30.0, matplotlib 3.11.2; dev group pytest 9.1.1, hypothesis 6.169.0, ruff 0.17.0, mypy 2.4.0. Torch on Linux comes from PyTorch's CPU wheel index through `[tool.uv.sources]` with a `sys_platform == 'linux'` marker and an `explicit = true` index, so CI does not pull CUDA wheels; macOS uses PyPI. Ruff: the CONVENTIONS section 1 rule set, Google docstrings, per-file ignores `D` for `tests/**` and `.claude/hooks/test_*.py`, `T20` for `src/heartbeat/cli.py`. mypy `strict = true` over `src` and `tests`. pytest: `testpaths = ["tests", ".claude/hooks"]`, `--strict-markers`, markers `rule(id)` and `realdata`, `filterwarnings = ["error"]`.
+2. `uv lock`, then `uv sync --frozen`. Stop and ask Din if any E2 pin fails to resolve under the 14-day span, or if the CPU index cannot be used with `exclude-newer` (do not exempt torch from the span on your own).
+3. Write `tests/unit/test_cli.py` first: every name in `SUBCOMMANDS` appears in `heartbeat --help`; each stub returns exit code 2 and writes `heartbeat <name>: not built yet (Phase N)` to stderr; an unknown subcommand exits non-zero; `rebuild --from prepare --exact` parses. Call `main([...])` in process (the shell forms of `evaluate-test` and `make-folds` are denied by F5). See it fail.
+4. Write `paths.py` and `cli.py` (argparse, no new dependency) until the tests pass. Run `uv run ruff check`, `uv run ruff format --check`, `uv run mypy`, `uv run pytest`; the existing 96 guard tests must still pass under the new config.
+5. Task 1.6 checks, recorded for the ledger: Hypothesis 6.169.0 has `settings(derandomize=True)`; ruff 0.17.0 accepts every selected rule code; a bare `uv run ruff check` now uses this config (the F5 entry's finding). Add `tests/conftest.py` with the `ci` profile.
+6. Extend `.gitignore`; commit `feat(cli): Python project with E2 pins and CLI stubs`.
+
+#### Task 2: Wording lint (TASKS 1.4, R44)
+
+**Interfaces produced:** `Finding(path: Path, line: int, rule: str, excerpt: str)` (frozen dataclass); `check_dashes(path: Path, text: str) -> list[Finding]`; `check_published(path: Path, text: str) -> list[Finding]`; `scan(root: Path, paths: Sequence[Path] | None = None) -> list[Finding]` (default: tracked files from `git ls-files`); `PUBLISHED_PATHS = ("README.md", "docs/MODEL_CARD.md", "docs/DATA_CARD.md")`; `main(argv) -> int` for `python -m heartbeat.checks.wording [paths]`, exit 1 on any finding, one `path:line: rule: excerpt` line each.
+
+1. Write `tests/unit/test_wording.py` first, each case one test, all `@pytest.mark.rule("R44")`:
+   - Dash tier fails on: U+2014 anywhere (prose, code span, fenced block, `.py` comment); U+2013 anywhere; in Markdown prose (outside code spans and fences), a hyphen with a space on each side mid-line, a spaced double hyphen, and `&mdash;`, `&ndash;`, `&#8212;` or `&#8211;`; the same entities anywhere in `.html` and `.svelte`.
+   - Dash tier passes: list markers (`- item`, `  - item`, `- [ ] task`), Prettier table separators (`| --- |`), front matter fences, hyphenated words, negative numbers, a spaced hyphen or an entity inside a Markdown code span or fenced block, the same characters in `uv.lock`, `web/pnpm-lock.yaml` and `web/vendor/brand/`, and `x - y` in a `.py` or `.ts` file (only Markdown prose gets the spaced-hyphen rule).
+   - Published tier fails (case-insensitive, word-bounded) on: diagnose, diagnosis, diagnostic, diagnosed; "detects arrhythmia", "detect arrhythmias"; "detects heart disease"; "clinical-grade" and "clinical grade"; "AI doctor"; "accurate" in a Markdown heading, an HTML `h1` to `h6` and `<title>`; elevate, seamless, unleash, journey, tapestry; a negation ("not for diagnosis").
+   - Published tier passes: "accurate" in body text, "accuracy" anywhere; the D7 words in files outside `PUBLISHED_PATHS` (for example a test file or `docs/PRD.md`).
+   - Exit criterion cases: `main` returns 1 on a temporary README with a planted em dash, and 1 on one with a planted "diagnose".
+   - Repo test: `scan(REPO_ROOT)` returns no findings.
+2. See them fail; implement `wording.py` (stdlib `re` only, no Markdown library) until they pass; ruff, mypy, pytest clean. Commit `feat(checks): two-tier wording lint (R44)`.
+
+#### Task 3: Rule-coverage check (TASKS 1.7)
+
+**Interfaces produced:** `Row(rule_id: str, layers: tuple[str, ...], phase: int)`; `parse_rule_table(plan_md: str) -> list[Row]` (reads PLAN section 6; the phase is the first integer in the Phase column, so "1 onward" is 1); `collect_rule_ids(root: Path) -> set[str]` (Python: `pytest.mark.rule("Rn")` in `tests/**/*.py`; web: test titles starting `Rn:` in `web/**/*.test.ts` and `web/e2e/**/*.ts`); `current_phase(pyproject: Path) -> int`; `uncovered(rows, ids, phase) -> list[Row]` and `pending(rows, ids, phase) -> list[Row]` (both skip rows whose only layer is MAN); `main(argv) -> int`, exit 1 when anything is uncovered, pending rows printed with their phase.
+
+1. Tests first in `tests/unit/test_rule_coverage.py`, on small synthetic tables and temporary trees: R4 is not covered by an R44 marker, and R1 not by R10; a row with layers `L1, L2` is covered by one test in either; MAN-only rows are never required; a row at phase 2 is pending when `current-phase` is 1 and uncovered when it is 2; "1 onward" parses as 1; a malformed table row (missing Phase cell) raises with the row text in the message; a Vitest title `"R29: parity"` and a Playwright title count; a marker inside a string in a non-test file does not.
+2. Implement until green. The repo-level test (`uncovered(...)` on the real PLAN and tests is empty at phase 1) is written in Task 5, once R45 and R46 have tests. Commit `feat(checks): phase-gated rule-coverage check`.
+
+#### Task 4: Web project (TASKS 1.2, 1.6 web half)
+
+1. `web/package.json`: `private`, `"type": "module"`, `"packageManager": "pnpm@12.12.1"`, engines Node 24; exact versions from E2: svelte 5.57.2, vite 8.3.4, @sveltejs/vite-plugin-svelte 7.3.1, typescript 6.0.3, svelte-check 4.7.6, vitest 5.0.4, @playwright/test 1.64.0, @axe-core/playwright 4.13.0, eslint 10.12.0, typescript-eslint 8.71.2, eslint-plugin-svelte 3.23.1, prettier 3.9.10, prettier-plugin-svelte 4.1.1, onnxruntime-web 1.30.0. Wrangler 4.149.0 waits for the deploy workflow (task 6.6): only deploys use it. Scripts: `build`, `check` (`svelte-check --fail-on-warnings`), `lint`, `format:check`, `test` (`vitest run`), `e2e`.
+2. `web/pnpm-workspace.yaml`: `minimumReleaseAge: 20160`; `allowBuilds` for esbuild and workerd only (check the pnpm 12 key names in its docs; E2 measured the behavior).
+3. `tsconfig.json` with every CONVENTIONS section 1 option; ESLint flat config with `recommendedTypeChecked`, `stylisticTypeChecked`, `@typescript-eslint/switch-exhaustiveness-check` (confirm the rule name exists in 8.71.2: the third recalled setting) and `eslint-plugin-svelte` recommended; Prettier with `prettier-plugin-svelte`.
+4. Placeholder page: heading "Heartbeat" and one line, "In development." (the D7 short line waits for Q6). Vitest gets `passWithNoTests: true` for Phase 1 only, with a comment that Phase 6 removes it once real tests exist; there is nothing to test yet and a fake test would be worse.
+5. `e2e/smoke.spec.ts`: title starts `smoke:`; the built page (`vite preview`) shows the heading in Chromium and WebKit.
+6. `pnpm -C web install`, then every script passes; svelte-check catches a planted type error (then remove it). Commit `feat(web): Svelte placeholder with the E2 toolchain`.
+
+#### Task 5: Dependency and workflow checks, CI, Renovate, check script (TASKS 1.3, R45, R46)
+
+**Interfaces produced:** `check_release_age(root: Path) -> list[str]` (R45; empty means pass) and `check_action_pins(root: Path) -> list[str]` (R46), with `main(argv) -> int` for `python -m heartbeat.checks.repo_config`.
+
+1. Tests first in `tests/unit/test_repo_config.py`.
+   - R45 (`@pytest.mark.rule("R45")`), each a failure when broken in a temporary copy: `pyproject.toml` lacks `exclude-newer = "14 days"`; `uv.lock` lacks `exclude-newer-span = "P14D"`; `web/pnpm-workspace.yaml` lacks `minimumReleaseAge: 20160` or allows builds for anything but esbuild and workerd; `renovate.json` lacks `minimumReleaseAge` of 14 days or sets automerge; a CI step runs `uv sync` without `--frozen` or `pnpm install` without `--frozen-lockfile`. Then the real repo passes.
+   - R46 (`@pytest.mark.rule("R46")`): rejects `uses: actions/checkout@v5`, a quoted tag ref, a 7-character SHA, an uppercase SHA, `docker://image:tag`, and a reusable workflow `owner/repo/.github/workflows/x.yml@main`; accepts a 40-character lowercase SHA with a `# vX.Y.Z` comment, `./local-action`, and `docker://image@sha256:<64 hex>`. Then the real workflow passes.
+   - Coverage (Task 3): `uncovered(...)` on the real PLAN and tests is empty at phase 1.
+2. `.github/workflows/ci.yml`: on push and pull_request; top-level `permissions: contents: read`; concurrency cancels superseded runs; `timeout-minutes: 15` per job. Job `python`: checkout, `astral-sh/setup-uv` with uv 0.13.0 and its cache, `uv sync --frozen`, ruff check, ruff format check, mypy, pytest (this runs the wording lint, coverage and config checks). Job `web`: checkout, `pnpm/action-setup`, `actions/setup-node` with `.node-version` and the pnpm cache, `pnpm -C web install --frozen-lockfile`, lint, Prettier (web files and every Markdown file in the repo), svelte-check, Vitest, build, `playwright install --with-deps chromium webkit`, e2e. Each action pinned to the full commit hash of its newest release at least 14 days old, with the version in a comment. Resolve hashes with `git ls-remote` and release dates from the release pages; `gh api` is an ask rule and prompts Din.
+3. `renovate.json`: `config:recommended`, `minimumReleaseAge: "14 days"` (with the internal checks setting that holds PRs until the age passes; confirm the name in Renovate's docs), monthly schedule, monthly `lockFileMaintenance`, no automerge, action digests pinned.
+4. `scripts/check.sh` (`set -euo pipefail`): ruff check, ruff format check, mypy, `pytest -m "not realdata"`, web lint, Prettier (web and Markdown), svelte-check, Vitest. No Playwright, no build. Time three warm runs; all under 2 minutes.
+5. Commit `ci: workflow, Renovate and check script with R45 and R46 checks`.
+
+#### Task 6: Licenses and README (TASKS 1.5, PUB-07)
+
+1. `LICENSE`: MIT, "Copyright (c) 2026 Dinesh Dawonauth", covering code and model weights.
+2. `DATA_LICENSE.md`: the MIT-BIH Arrhythmia Database 1.0.0 (Moody and Mark, PhysioNet) is under ODC-By 1.0 (`https://opendatacommons.org/licenses/by/1-0/`, linked, not copied); what in this repo derives from it (demo traces and beats, parity fixtures, the model's `NOTICE`); the B5 citations, page ranges with plain hyphens.
+3. `README.md`: what the project does in D7-safe words ("labels heartbeats", "on patients it never saw"); a research demo, not medical advice; status: in development, no results yet, and numbers appear only once a committed run produces them (rigor rule 2); the commands that work today; license split (the code license does not cover the data); citations.
+4. `uv run pytest -k wording` passes now that the README exists. Commit `docs: licenses and README`.
+
+#### Task 7: Verification and handoff
+
+1. `scripts/check.sh` and full `uv run pytest` green; record warm timings.
+2. Update `AGENTS.md` Commands: drop "Phase 0 is planning only", list the commands that exist now with single-test forms (`uv run pytest tests/unit/test_wording.py::<name>`, `pnpm -C web exec vitest run <file>`, `pnpm -C web exec playwright test <file>`), and mark the rest as arriving in their phases.
+3. `docs/TASKS.md`: tasks 1.1 to 1.7 to Implemented, or Verified where a named check passed locally; the CI half waits for the push. Ledger entry: what was built, the three recalled settings checked, the CPU index result, timings, anything that deviated from this plan and why.
+4. Commit, then give Din the push command for `phase-1-skeleton`. After Din pushes, read the run with `gh run list` and `gh run view` (read-only), record its wall-clock time in the ledger, fix anything red with a new commit, and ask for the next push. Phase 1 exits when CI is green under 10 minutes; Din then decides on the pull request and merge.
+
+#### Review focus
+
+Each line has its test in the named task.
+
+1. Ways to dodge the dash rule (HTML entities, a spaced or double hyphen in prose): Task 2.
+2. Lint false positives on ordinary Markdown (list markers, checkboxes, table separators, code spans and fences, hyphenated words): Task 2.
+3. Rule ID prefix collisions (R4 and R44, R1 and R10): Task 3.
+4. Workflow pins that look pinned but are not (quoted tags, short or uppercase SHAs, Docker tags, reusable workflows by branch): Task 5.
+5. Local and CI toolchains drifting (a lock written by uv 0.12.11 installed by 0.13.0; torch's Linux wheels pulling CUDA): Task 1 step 2 and the first CI run, recorded in the ledger.

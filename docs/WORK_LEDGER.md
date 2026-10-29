@@ -975,3 +975,9 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Default noted with this item:** the Mac's uv is 0.12.11 (Homebrew), E2 pinned 0.13.0. CI pins 0.13.0 through `setup-uv`; the repo sets no `required-version`, which would break local runs. Phase 1 checks that a lock written locally passes `uv sync --frozen` under 0.13.0 in CI. Getting 0.13.0 on the Mac is Din's call outside the repo.
 
 **Applied:** `AGENTS.md` dependencies section; `docs/PRD.md` OPS-09 and the dependency constraint; `docs/PLAN.md` section 2; `docs/TASKS.md` tasks 1.1 and 1.3.
+
+## 2026-10-29: Phase 1 settling, 4 of 4: the task plan is written before the hand-off
+
+**Decision (Din):** option A. Claude writes the Phase 1 task plan in PLAN.md section 8 in this session for Din's review, and the `/goal` prompt for a fresh agent points at it. Reason: the agent starts from a plan Din has read, the prompt stays short, and the plan lives in the repo. **Rejected:** the goal agent writing and executing its own plan (skips PLAN section 1's review), or writing it and stopping (two hand-offs).
+
+**Drafted (2026-10-29):** PLAN.md section 8, Phase 1: seven tasks, file map, interfaces, test-first cases, commits, review focus. Facts it rests on, checked today: the repo has no em or en dash and no spaced hyphen in Markdown prose; Node 24.21.0 is on the Mac and pnpm is not (a precondition for Din). From Claude's memory, not checked: torch's Linux wheels on PyPI pull CUDA packages, so the plan takes torch on Linux from PyTorch's CPU index; Task 1 confirms both this and that the index works with the 14-day span (stop and ask if not). The writing-plans skill asks for full code in every step; the plan follows PLAN section 1 instead (files, interfaces, concrete test cases, commits). Waiting for Din's review.
