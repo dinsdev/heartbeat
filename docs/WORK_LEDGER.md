@@ -1055,7 +1055,7 @@ Also from Task 1 step 5: ruff 0.17.0 accepts all 16 selected rule codes (an unkn
 
 **Verified:** `uv lock --check` passes (the lock is unchanged; `requires-python` stays `==3.14.*`); `uv sync --frozen` and `uv run python --version` report 3.14.7; `scripts/check.sh` exit 0. CI's interpreter is confirmed on the next run.
 
-## 2026-10-30: Phase 2 settling, 1: the manifests are written during planning
+## 2026-10-29: Phase 2 settling, 1: the manifests are written during planning
 
 **Decision (Din):** Claude writes `manifests/` in the planning session, before the Phase 2 task plan is locked: `mitdb-1.0.0.sha256` (copied from PhysioNet's `SHA256SUMS.txt`), `subjects.toml`, `splits.toml`, and the expected per-record beat counts by annotation symbol that R11 tests against (copied from PhysioNet's beat table). Din reviews them with the plan. The goal agent treats `manifests/` as read-only. Reason: they are rigor inputs reviewed like code (rule 4); ask prompts for `manifests/` edits would stall the `/goal` run; and the agent building `prepare` never writes the expected values its own tests check.
 
