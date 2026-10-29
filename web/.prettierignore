@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+dist/
+test-results/
+playwright-report/
+blob-report/
+vendor/brand/
+public/data/

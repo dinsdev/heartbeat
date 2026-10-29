@@ -1,0 +1,11 @@
+# E2 as amended 2026-10-29: newest stable release at least 14 days old (20160
+# minutes), rolling. A package with no publish time fails instead of passing.
+minimumReleaseAge: 20160
+minimumReleaseAgeIgnoreMissingTime: false
+
+# E2: only esbuild and workerd run install scripts (they fetch their binaries).
+# protobufjs stays blocked: its script only checks versions.
+allowBuilds:
+  esbuild: true
+  workerd: true
+  protobufjs: false
