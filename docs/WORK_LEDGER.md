@@ -1107,3 +1107,17 @@ Stored raw, in seconds and plain ratios. The log of the two ratios is taken in t
 **Rejected:** preparing all 44 records with DS2 in a separate folder the loader refuses (simpler to describe, but DS2-derived arrays and floor hits would exist from Phase 2 on).
 
 **Consistent with:** EVAL-04, OPS-01 and OPS-02 as written (the `prepare` stage of `rebuild` covers DS1 until a freeze exists); no requirement text changes.
+
+## 2026-10-29: Phase 2 settling, 5: how the folds are made and protected
+
+**Decision (Din):**
+
+1. `heartbeat make-folds` runs `StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=20261026)` on DS1's scored beats (N, S, V, F, after the first and last beat of each record are dropped), with the AAMI class as the label and the subject ID as the group. The fold seed 20261026 (the C1 lock date) is fixed here, before any fold exists, and lives in `config/default.toml`; it is independent of the training seeds (C6).
+2. It writes `config/folds.json`: fold seed, scikit-learn version, the SHA256 of `manifests/splits.toml` and `manifests/subjects.toml`, subject to fold, and per-fold class counts (DS1 only).
+3. Din runs it once (F5 denies it to Claude). No re-roll, whatever the folds look like; F concentrated in 208 is known and reported, not engineered around (C1).
+4. The file's SHA256 is then pinned in `manifests/folds.sha256`, with Din's go and a ledger entry (rule 4).
+5. `check-folds` (and `rebuild`) verify the pinned hash, the schema, every DS1 subject in exactly one fold, no DS2 or excluded subject, and no subject on both sides of any fold. It never calls the splitter. R14's test changes one byte of a copy and expects a failure.
+
+**Reason:** a structural check alone passes a swapped but valid fold file, so R14 would catch only broken ones; a hash in `manifests/` means changing the folds takes two protected files and Din's go.
+
+**Rejected:** structural check only; recomputing the folds in `check-folds` and comparing (regeneration in disguise, against C1, and a scikit-learn upgrade that changed the shuffle would break rebuilds).
