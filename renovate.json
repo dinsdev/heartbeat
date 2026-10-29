@@ -1,0 +1,13 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "schedule": ["* 0-3 1 * *"],
+  "automerge": false,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 0-3 1 * *"]
+  }
+}

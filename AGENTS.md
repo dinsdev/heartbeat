@@ -16,19 +16,37 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 ## Commands
 
-Phase 0 is planning only: none of this exists yet. Phase 1 builds it; update this section then with the exact single-test commands.
+Working today (Phase 1):
 
 | What | Command |
 | --- | --- |
 | Install (Python) | `uv sync --frozen` |
 | Install (web) | `pnpm -C web install --frozen-lockfile` |
-| Lint and unit tests, under 2 minutes; run before every commit | `scripts/check.sh` |
-| Quick integrity check: manifests, checksums, frozen-model parity, results against the test log | `uv run heartbeat verify` |
-| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch) | `uv run heartbeat rebuild` |
-| Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
-| Web build (reads demo data from the rebuild) | `pnpm -C web build` |
+| Playwright browsers, once per machine | `pnpm -C web exec playwright install chromium webkit` |
+| Lint and unit tests, both toolchains, under 2 minutes (about 5 s warm); run before every commit | `scripts/check.sh` |
+| Every Python test (includes the guard hook tests) | `uv run pytest` |
+| One Python test | `uv run pytest tests/unit/test_wording.py::test_repo_is_clean` |
+| Python lint, format, types | `uv run ruff check`, `uv run ruff format --check`, `uv run mypy` |
+| Wording lint (R44); `--root DIR` and paths check other files | `uv run python -m heartbeat.checks.wording` |
+| Rule-to-test coverage, with pending rows | `uv run python -m heartbeat.checks.rule_coverage` |
+| 14-day rule and action pins (R45, R46) | `uv run python -m heartbeat.checks.repo_config` |
+| Subcommands (stubs that exit 2 and name their phase) | `uv run heartbeat --help` |
+| Web lint, format (web files and every Markdown file), types, unit tests | `pnpm -C web run lint`, `pnpm -C web run format:check`, `pnpm -C web run check`, `pnpm -C web run test` |
+| One Vitest file | `pnpm -C web exec vitest run <file>` |
+| Web build | `pnpm -C web run build` |
+| Browser tests on the built page, Chromium and WebKit | `pnpm -C web run e2e` |
+| One Playwright file | `pnpm -C web exec playwright test <file>` |
 
-Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI runs all of them on every push; see `.github/workflows/`.
+Arriving in their phases (stubs today):
+
+| What | Command | Phase |
+| --- | --- | --- |
+| Quick integrity check: manifests, checksums, frozen-model parity, results against the test log | `uv run heartbeat verify` | 5 |
+| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch) | `uv run heartbeat rebuild` | 2 to 5 |
+| Rerun from one stage | `uv run heartbeat rebuild --from <stage>` | 2 |
+| Web build with demo data from the rebuild | `pnpm -C web run build` | 6 |
+
+Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job and a `web` job; `scripts/check.sh` skips the build and Playwright.
 
 Long jobs: cross-validation takes about 1 hour on MPS, `train-final` 30 minutes to 2 hours on CPU, `rebuild --exact` about 15 hours. Run long jobs in the background and say how long they should take.
 
@@ -57,9 +75,9 @@ Code enforces most of these (the rule-to-test table names each test). Don't look
 
 ## Dependencies
 
-- Pins follow the 14-day rule: newest stable release at least 14 days old, enforced by uv `exclude-newer` and pnpm `minimumReleaseAge`. Never bypass either.
+- Pins follow the 14-day rule: newest stable release at least 14 days old, enforced by uv `exclude-newer = "14 days"` and pnpm `minimumReleaseAge`, both rolling. Never bypass either.
 - ONNX Runtime is the same version in Python and the browser (1.30.0). TypeScript stays on 6.0.3 (7 breaks svelte-check). pnpm `allowBuilds` covers esbuild and workerd only.
-- A new dependency needs a one-line reason in the commit. Upgrading a pin or moving the `exclude-newer` date needs Din's go and a ledger entry.
+- A new dependency needs a one-line reason in the commit. Upgrading a pin or changing the `exclude-newer` span needs Din's go and a ledger entry.
 
 ## Testing and done
 
