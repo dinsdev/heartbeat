@@ -1127,3 +1127,16 @@ Stored raw, in seconds and plain ratios. The log of the two ratios is taken in t
 **Decision (Din):** Phase 2 runs as two `/goal` prompts, both written in this planning session, each under 4,000 characters. Goal A builds everything except the committed folds (downloader, `prepare`, loader, `make-folds` and `check-folds` code tested in process on temporary files, the stage framework, the CI real-data step, the Table II comparison and DS1 floor hits in the ledger) and ends by giving Din the `make-folds` command. Din runs it. Goal B pins `manifests/folds.sha256` (Din approves the edit prompt), adds the real-file R13 test, writes the folds ledger entry, runs the full verification and ends with the push command. Reason: `make-folds` needs `prepare`'s output and only Din runs it (F5), so one goal would sit waiting; a written second prompt keeps the finish as reviewed as the start.
 
 **Rejected:** one goal ending at the `make-folds` command, with the rest done by hand from a checklist.
+
+## 2026-10-29: Phase 2 manifests and default config written (for Din's review with the plan)
+
+**Written (settling 1 and 5):** `manifests/mitdb-1.0.0.sha256`, `manifests/splits.toml`, `manifests/subjects.toml`, `manifests/mitdb-beat-counts.toml`, `config/default.toml`. Not yet written, by design: `manifests/folds.sha256` (Goal B, after Din runs `make-folds`).
+
+**Sources (fetched 2026-10-29 with `curl` into a fresh scratchpad folder, Din approving each prompt):**
+
+1. `SHA256SUMS.txt` from the S3 mirror and from `physionet.org/files/mitdb/1.0.0/`: byte-identical (704 lines each). The manifest is the 132 lines for `.hea`, `.dat` and `.atr` of the 44 non-paced records (DS1, DS2 and 202), in PhysioNet's line format, compared byte for byte with the generated text (`cmp`).
+2. PhysioNet's "Table of beat types (entire records)" (`archive.physionet.org/physiobank/database/html/mitdbdir/tables.htm`), parsed by a scratchpad script. Its column headings `.`, `P` and `p` are written as the `.atr` symbols `N`, `/` and `x`, per the same directory's symbol list (`intro.htm`: `/` paced beat, `x` non-conducted P wave). Inferred, then checked two ways: the paced records carry the large `P` column, and R11 compares these counts with the real `.atr` files, so a wrong mapping fails loudly. Only the 44 downloaded records are listed.
+
+**Checked (scratchpad script reading the committed files with `tomllib`):** DS1 22 and DS2 21 records, disjoint, the five excluded records in neither; 48 records map to 47 subjects, 201 and 202 to one; no subject on both sides of DS1 and DS2; the counts equal the parsed table for every listed record; the checksum file names exactly the 132 files; AAMI totals from the counts equal PRD Appendix C (DS1 N 45866, S 944, V 3788, F 415, Q 8; DS2 N 42198, S 1782, V 3202, F 387, Q 7); the record 201 and 202 counts equal the B1 entry. Wording lint passes on all five files.
+
+**`config/default.toml`:** cache and prepared-data folders, the two download sources in order, and the fold seed 20261026 (settling 5).

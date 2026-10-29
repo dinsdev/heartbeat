@@ -1,0 +1,20 @@
+# Run settings (CONVENTIONS section 2), read with tomllib into frozen
+# dataclasses and written into each run folder (C6). Values fixed by a
+# planning decision that no run varies live as constants in
+# src/heartbeat/constants.py instead.
+
+[data]
+# Gitignored cache and prepared-data folders, relative to the repo root.
+raw_dir = "data/raw/mitdb/1.0.0"
+prepared_dir = "data/prepared"
+# Tried in order (B5 amendment). The pinned checksums make the source
+# irrelevant to trust.
+sources = [
+  "https://physionet-open.s3.amazonaws.com/mitdb/1.0.0/",
+  "https://physionet.org/files/mitdb/1.0.0/",
+]
+
+[folds]
+# Phase 2 settling 5: fixed on 2026-10-29, before any fold exists (the C1 lock
+# date). Independent of the training seeds (C6). Read only by make-folds.
+seed = 20261026
