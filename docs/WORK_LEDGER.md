@@ -820,3 +820,13 @@ Also locked with the plan: the phase order, the Phase 7 gate checklist, phase-le
 **Applied:** `docs/PRD.md` (domain paragraph cites Tables VI and VII, EVAL-08 item 2, PUB-03, AS1, AS2, Q2 removed); `docs/DATA_CARD.md` (split source line); `docs/MODEL_CARD.md` (FPR definition line); `docs/PLAN.md` (Phase 2 exit, Phase 3 builds, external dependencies); `docs/TASKS.md` (B5 done, tasks 2.3 and 8.2); `.gitignore` (`docs/references/`).
 
 **Verified:** every replacement matched its target exactly once (scratchpad script). Tables re-padded with a scratchpad padder that leaves all nine committed Markdown files unchanged, so it matches Prettier's table output on this repo; Prettier itself was not run (not installed). Grep over every tracked Markdown file found no em or en dashes; grep over both cards found no D7 or buzzword terms. `git status` shows the PDF ignored.
+
+## 2026-10-29: F5 desktop ask-rule check settled
+
+**Measured (2026-10-29):** a new desktop session (Code tab, bypass mode), with `.claude/settings.json` unchanged since 2026-10-27, so the rules were loaded at session start. Claude ran `curl --version`, which matches the `Bash(curl *)` ask rule. Din saw a permission prompt and approved it.
+
+**Conclusion:** ask rules prompt in the desktop app in bypass mode when they are loaded at session start, as the docs say and as the headless CLI run showed. The F5 draft's "ask rules did not prompt" result came from rules added mid-session. Deny-first stands unchanged, since deny holds either way and doesn't depend on Din reading a prompt.
+
+**Applied:** `CLAUDE.md` F5 note reworded to match. No settings change in this entry; whether to move the guard's own files from ask to deny is put to Din separately (it changes locked F5).
+
+**Verified:** one command, one observation, by Din. Not checked: Manual mode, and Edit-tool ask rules (`Edit(/.claude/**)`, `Edit(/manifests/**)`) in a fresh session.
