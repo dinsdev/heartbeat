@@ -20,13 +20,13 @@ Order of attack: A, then B and C, then D, then E, then F. F comes last so `AGENT
 
 ### B. Data
 
-| ID  | Item                                                                                                                                                                                                                                                          | State                      | Status |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | ------ |
-| B1  | Records and exclusions: 44 records (four paced out), MLII picked by signal name, 202 dropped from DS2 to fix the 201/202 leak                                                                                                                                 | decided                    | done   |
-| B2  | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace                                                                                                                    | decided                    | done   |
-| B3  | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, int16 rounding at 200 units/mV (D4 amendment), per-window z-score, causal RR features plus post-RR                                                                              | decided                    | done   |
-| B4  | Class mapping: AAMI symbols, strict; four scored classes N, S, V, F; Q out of training and scoring, kept for RR; F caveat; A3 addendum (S without 232, per-patient table)                                                                                     | decided                    | done   |
-| B5  | Download, caching, checksums, attribution and citations: 132 files from the PhysioNet S3 mirror first, PhysioNet as fallback (E2 amendment), pinned SHA256 manifest, gitignored cache. de Chazal full text checked 2026-10-29: DS lists and mapping confirmed | decided                    | done   |
+| ID  | Item                                                                                                                                                                                                                                                          | State   | Status |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ |
+| B1  | Records and exclusions: 44 records (four paced out), MLII picked by signal name, 202 dropped from DS2 to fix the 201/202 leak                                                                                                                                 | decided | done   |
+| B2  | Beat locations: reference annotations in core, stated in the limits section and model card; the browser gets beat positions with the trace                                                                                                                    | decided | done   |
+| B3  | Preprocessing: 0.5 to 40 Hz zero-phase bandpass at 360 Hz, 256-sample window, int16 rounding at 200 units/mV (D4 amendment), per-window z-score, causal RR features plus post-RR                                                                              | decided | done   |
+| B4  | Class mapping: AAMI symbols, strict; four scored classes N, S, V, F; Q out of training and scoring, kept for RR; F caveat; A3 addendum (S without 232, per-patient table)                                                                                     | decided | done   |
+| B5  | Download, caching, checksums, attribution and citations: 132 files from the PhysioNet S3 mirror first, PhysioNet as fallback (E2 amendment), pinned SHA256 manifest, gitignored cache. de Chazal full text checked 2026-10-29: DS lists and mapping confirmed | decided | done   |
 
 ### C. Modeling and evaluation
 
@@ -167,10 +167,10 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 ### Phase 8: Content and launch
 
-| ID  | Task                                                                                                        | Status  |
-| --- | ----------------------------------------------------------------------------------------------------------- | ------- |
-| 8.1 | Model card and data card: blocks rendered from results, prose finished                                      | Planned |
-| 8.2 | Case study draft with real numbers, crediting de Chazal's Table VI as the exhibit's precedent (PUB-03)      | Planned |
-| 8.3 | G2 stage video; G3 Ask Ottie sources                                                                        | Planned |
-| 8.4 | VoiceOver pass; PhysioNet citation recheck                                                                  | Planned |
-| 8.5 | Din's preview review; first production deploy (Din's go)                                                    | Planned |
+| ID  | Task                                                                                                   | Status  |
+| --- | ------------------------------------------------------------------------------------------------------ | ------- |
+| 8.1 | Model card and data card: blocks rendered from results, prose finished                                 | Planned |
+| 8.2 | Case study draft with real numbers, crediting de Chazal's Table VI as the exhibit's precedent (PUB-03) | Planned |
+| 8.3 | G2 stage video; G3 Ask Ottie sources                                                                   | Planned |
+| 8.4 | VoiceOver pass; PhysioNet citation recheck                                                             | Planned |
+| 8.5 | Din's preview review; first production deploy (Din's go)                                               | Planned |

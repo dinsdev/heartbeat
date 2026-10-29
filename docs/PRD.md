@@ -408,14 +408,14 @@ Detailed phases belong to `docs/PLAN.md` (F2). The order the requirements impose
 
 ## 18. Open questions
 
-| #   | Question                                                                                                                           | Why it matters                                                                        | Owner                                      | Resolve by                  |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------- |
-| Q3  | Does the free plan cover the `heartbeat.dins.dev` custom domain?                                                                   | Hosting (AS4).                                                                        | Claude, at first deploy                    | First production deploy     |
-| Q4  | Should the demo or case study measure usage in any way, given "nothing here uses your data"?                                       | Decides whether reader outcome can be measured at all. Current reading: no analytics. | Din                                        | G1                          |
-| Q5  | Is Firefox worth adding to the Playwright matrix?                                                                                  | Firefox users are untested today.                                                     | Din                                        | F2                          |
-| Q6  | What are the exact stage line and summary wording?                                                                                 | The 10-second read (G1).                                                              | Din                                        | G1 and G2                   |
-| Q7  | Which dins.dev preview hostnames go in `frame-ancestors`?                                                                          | The case study iframe in site previews.                                               | Claude                                     | Build time                  |
-| Q8  | Do the INCART resampling, lead and annotation-offset choices hold up?                                                              | Stretch 1 only.                                                                       | Claude drafts, Din locks                   | INCART design note          |
+| #   | Question                                                                                     | Why it matters                                                                        | Owner                    | Resolve by              |
+| --- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------ | ----------------------- |
+| Q3  | Does the free plan cover the `heartbeat.dins.dev` custom domain?                             | Hosting (AS4).                                                                        | Claude, at first deploy  | First production deploy |
+| Q4  | Should the demo or case study measure usage in any way, given "nothing here uses your data"? | Decides whether reader outcome can be measured at all. Current reading: no analytics. | Din                      | G1                      |
+| Q5  | Is Firefox worth adding to the Playwright matrix?                                            | Firefox users are untested today.                                                     | Din                      | F2                      |
+| Q6  | What are the exact stage line and summary wording?                                           | The 10-second read (G1).                                                              | Din                      | G1 and G2               |
+| Q7  | Which dins.dev preview hostnames go in `frame-ancestors`?                                    | The case study iframe in site previews.                                               | Claude                   | Build time              |
+| Q8  | Do the INCART resampling, lead and annotation-offset choices hold up?                        | Stretch 1 only.                                                                       | Claude drafts, Din locks | INCART design note      |
 
 ## Appendix A: Changes from the dins-projects draft (section 7)
 
