@@ -4,13 +4,25 @@ A missing cache fails with the command that fills it; real-data tests never
 skip (Phase 2 plan, approach).
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from heartbeat.config import Settings, load_settings
-from heartbeat.data.manifests import Splits, load_checksums, load_splits
-from heartbeat.paths import CHECKSUM_MANIFEST, DEFAULT_CONFIG, SPLITS_MANIFEST
+from heartbeat.data.manifests import (
+    Splits,
+    load_checksums,
+    load_splits,
+    load_subjects,
+)
+from heartbeat.data.prepare import PrepareReport, prepare_ds1
+from heartbeat.paths import (
+    CHECKSUM_MANIFEST,
+    DEFAULT_CONFIG,
+    SPLITS_MANIFEST,
+    SUBJECTS_MANIFEST,
+)
 
 HERE = Path(__file__).parent
 
@@ -44,3 +56,22 @@ def raw_dir(settings: Settings) -> Path:
             pytrace=False,
         )
     return raw
+
+
+@pytest.fixture(scope="session")
+def subjects() -> dict[str, str]:
+    return dict(load_subjects(SUBJECTS_MANIFEST))
+
+
+@pytest.fixture(scope="session")
+def prepared_ds1(
+    tmp_path_factory: pytest.TempPathFactory,
+    settings: Settings,
+    splits: Splits,
+    subjects: dict[str, str],
+    raw_dir: Path,
+) -> tuple[Path, PrepareReport]:
+    """DS1 prepared from the real cache into a temporary folder (DS1 only)."""
+    folder = tmp_path_factory.mktemp("prepared")
+    local = replace(settings, data=replace(settings.data, prepared_dir=folder))
+    return folder, prepare_ds1(local, splits, subjects)

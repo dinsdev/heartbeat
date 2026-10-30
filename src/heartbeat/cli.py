@@ -7,10 +7,17 @@ from collections.abc import Callable, Mapping, Sequence
 from types import MappingProxyType
 
 from heartbeat.config import load_settings
+from heartbeat.constants import FLOOR_HIT_LIMIT
 from heartbeat.data import download as download_module
-from heartbeat.data.download import ChecksumMismatchError, DownloadError
-from heartbeat.data.manifests import load_checksums
-from heartbeat.paths import CHECKSUM_MANIFEST, DEFAULT_CONFIG
+from heartbeat.data.download import ChecksumMismatchError, DownloadError, check_cache
+from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
+from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
+from heartbeat.paths import (
+    CHECKSUM_MANIFEST,
+    DEFAULT_CONFIG,
+    SPLITS_MANIFEST,
+    SUBJECTS_MANIFEST,
+)
 
 # PLAN.md section 8, Phase 1, Task 1: subcommand name to the phase that builds it.
 SUBCOMMANDS: Mapping[str, int] = MappingProxyType(
@@ -57,8 +64,38 @@ def _download(args: argparse.Namespace) -> int:
     return 0
 
 
+def _prepare(args: argparse.Namespace) -> int:
+    settings = load_settings(DEFAULT_CONFIG)
+    # DATA-02: every run checks the cache before using it.
+    try:
+        status = check_cache(settings.data.raw_dir, load_checksums(CHECKSUM_MANIFEST))
+    except ChecksumMismatchError as error:
+        print(f"heartbeat prepare: {error}", file=sys.stderr)
+        return 1
+    if not status.ok:
+        print(
+            f"heartbeat prepare: {len(status.missing)} cached files missing; "
+            "run `uv run heartbeat download`",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        report = prepare_ds1(
+            settings, load_splits(SPLITS_MANIFEST), load_subjects(SUBJECTS_MANIFEST)
+        )
+    except FloorHitLimitError as error:
+        print(f"heartbeat prepare: {error}", file=sys.stderr)
+        return 1
+    print(
+        f"heartbeat prepare: prepared {len(report.records)} DS1 records into "
+        f"{settings.data.prepared_dir}; floor hits {report.total_hits} "
+        f"(limit {FLOOR_HIT_LIMIT})"
+    )
+    return 0
+
+
 HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
-    {"download": _download}
+    {"download": _download, "prepare": _prepare}
 )
 
 

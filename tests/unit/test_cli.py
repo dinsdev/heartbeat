@@ -42,7 +42,7 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
 
 
 # Subcommands built so far in Phase 2; each has its own tests.
-BUILT = {"download"}
+BUILT = {"download", "prepare"}
 
 
 @pytest.mark.parametrize(
@@ -125,3 +125,59 @@ def test_download_exits_1_naming_the_file_on_a_mismatch(
     monkeypatch.setattr(download_module, "fetch_url", lambda url: b"wrong")
     assert main(["download"]) == 1
     assert "100.hea" in capsys.readouterr().err
+
+
+def _fake_prepare(total_hits: int) -> object:
+    from heartbeat.data.prepare import FloorHitLimitError, FloorHits, PrepareReport
+
+    def prepare(settings: Settings, splits: object, subjects: object) -> PrepareReport:
+        if total_hits > 5:
+            raise FloorHitLimitError(f"{total_hits} DS1 windows hit the z-score floor")
+        return PrepareReport(
+            records=("101", "106"),
+            floor_hits={"101": FloorHits(total_hits, 1.5), "106": FloorHits(0, 30.0)},
+            total_hits=total_hits,
+        )
+
+    return prepare
+
+
+def _cache_ok(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from heartbeat.data.download import CacheStatus
+
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    monkeypatch.setattr(cli, "check_cache", lambda *_: CacheStatus(ok=True, missing=()))
+
+
+def test_prepare_prints_the_floor_hit_total(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _cache_ok(monkeypatch, tmp_path)
+    monkeypatch.setattr(cli, "prepare_ds1", _fake_prepare(2))
+    assert main(["prepare"]) == 0
+    out = capsys.readouterr().out
+    assert "prepared 2 DS1 records" in out
+    assert "floor hits 2 (limit 5)" in out
+
+
+def test_prepare_exits_1_over_the_floor_hit_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _cache_ok(monkeypatch, tmp_path)
+    monkeypatch.setattr(cli, "prepare_ds1", _fake_prepare(9))
+    assert main(["prepare"]) == 1
+    assert "9 DS1 windows" in capsys.readouterr().err
+
+
+def test_prepare_exits_1_on_an_incomplete_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    assert main(["prepare"]) == 1
+    assert "heartbeat download" in capsys.readouterr().err
