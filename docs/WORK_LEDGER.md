@@ -1729,3 +1729,13 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Verified (local, at this commit's parent `32fa004` plus these doc edits):** `scripts/check.sh` exit 0 (773 passed, 106 real-data deselected); `CI=1 uv run pytest` exit 0 (879 passed, real-data layer included); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R22 to R24 covered); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored.
 
 **Not verified:** CI on these commits (waits for Din's push). **Not accepted:** only Din sets Accepted.
+
+## 2026-10-30: Phase 4 CI, first run red; exhibit tests moved to CPU (rule 3, Din's go)
+
+**Run:** Din pushed `phase-4-cnn` at `9fbaf27`. CI run 41110852250 (push), read with `gh run view 41110852250 --log-failed` (read-only), concluded failure after 1 minute 25 seconds wall clock (18:54:25Z to 18:55:50Z). The `web` job passed. The `python` job ran 879 tests: 872 passed, 7 failed, all in `tests/unit/test_exhibit.py`, each with `DeviceUnavailableError: mps is not available on this machine`. The pull-request run for the same commit, 41111021128, runs the same code and fails the same way.
+
+**Cause:** the exhibit tests' `_run` helper passed `device="mps"`. The CI runner is Linux without MPS, and `configure_torch` refuses an unavailable device by design (Phase 4 stop condition 7). On the Mac MPS exists, so `scripts/check.sh` and `CI=1 uv run pytest` passed locally. A test bug, not a results bug: `results/exhibit.json` comes from the real exhibit on MPS (run 20261030T092237Z-3b1116c-exhibit) and is unchanged.
+
+**Decision (Din, 2026-10-30):** the exhibit tests run on CPU. Two lines change in `tests/unit/test_exhibit.py`: the helper's device becomes `"cpu"`, and the expected `data` label of the beat-side CNN row becomes "DS1 out-of-fold, CPU" (was "DS1 out-of-fold, MPS"). This is a change to a test's expected value, so it needed Din's go (rule 3). Rejected: skipping the tests without MPS (rule 3 forbids skips) and a silent CPU fallback in the code (breaks stop condition 7). What the exhibit test no longer shows: that the CNN row's label follows the CV device rather than the baseline's CPU label. `test_cnn_cv.py::test_the_data_label_names_the_device` still checks the label against the device.
+
+**Verified (local):** `uv run pytest tests/unit/test_exhibit.py` 9 passed in 7.7 s; `scripts/check.sh` exit 0 (773 passed, 106 real-data deselected); the wording lint exit 0. **Not verified:** CI on the fix (waits for Din's push).

@@ -84,7 +84,7 @@ def _run(
         folds_sha256="ab" * 32,
         cv_runs=cv_runs,
         cnn=spec,
-        device="mps",
+        device="cpu",
         root=repo / "runs",
         repo=repo,
         n_epochs=N_EPOCHS,
@@ -114,7 +114,7 @@ def test_both_models_on_both_sides(
     for row in payload["rows"]:
         assert set(row["metrics"]) >= {"macro_f1_nsv", "S_recall", "V_fpr"}
         assert row["metrics"]["macro_f1_nsv"]["draws"] == 40
-    assert _row(payload, "beat", "epochs")["data"] == "DS1 out-of-fold, MPS"
+    assert _row(payload, "beat", "epochs")["data"] == "DS1 out-of-fold, CPU"
     assert _row(payload, "beat", "baseline")["data"] == "DS1 out-of-fold, CPU"
 
 
