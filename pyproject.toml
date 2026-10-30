@@ -84,10 +84,10 @@ mypy_path = "src:tests"
 # from mypy_path name them conftest and data.conftest.
 explicit_package_bases = true
 
-# scipy and wfdb ship no type information; stubs would be a new dependency
+# scipy, scikit-learn and wfdb ship no type information; stubs would be a new dependency
 # (Phase 2 plan: none), so its imports are typed Any at the boundary.
 [[tool.mypy.overrides]]
-module = ["scipy", "scipy.*", "wfdb", "wfdb.*"]
+module = ["scipy", "scipy.*", "sklearn", "sklearn.*", "wfdb", "wfdb.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

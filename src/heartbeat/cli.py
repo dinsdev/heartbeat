@@ -1,23 +1,32 @@
 """The `heartbeat` command (E4). Each subcommand is a stub until its phase builds it."""
 
 import argparse
+import hashlib
 import logging
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
 from types import MappingProxyType
 
 from heartbeat.config import load_settings
-from heartbeat.constants import FLOOR_HIT_LIMIT
+from heartbeat.constants import FLOOR_HIT_LIMIT, N_FOLDS
 from heartbeat.data import download as download_module
 from heartbeat.data.download import ChecksumMismatchError, DownloadError, check_cache
+from heartbeat.data.folds import FoldCheckError, check_folds, make_folds, write_folds
+from heartbeat.data.loader import load_ds1
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
     DEFAULT_CONFIG,
+    FOLDS_JSON,
+    FOLDS_PIN,
     SPLITS_MANIFEST,
     SUBJECTS_MANIFEST,
 )
+
+# Phase 2 settling 5: the manifests whose hashes the fold file records.
+FOLD_MANIFESTS = (SPLITS_MANIFEST, SUBJECTS_MANIFEST)
 
 # PLAN.md section 8, Phase 1, Task 1: subcommand name to the phase that builds it.
 SUBCOMMANDS: Mapping[str, int] = MappingProxyType(
@@ -94,8 +103,60 @@ def _prepare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _make_folds(args: argparse.Namespace) -> int:
+    # Phase 2 settling 5: Din runs this once; F5 denies it to Claude.
+    settings = load_settings(DEFAULT_CONFIG)
+    splits = load_splits(SPLITS_MANIFEST)
+    subjects = load_subjects(SUBJECTS_MANIFEST)
+    out = Path(args.out) if args.out is not None else FOLDS_JSON
+    if out.exists():
+        print(
+            f"heartbeat make-folds: {out} exists; folds are made once", file=sys.stderr
+        )
+        return 1
+    beats = load_ds1(settings.data.prepared_dir, splits, subjects)
+    folds = make_folds(beats, settings.folds.seed, manifest_paths=FOLD_MANIFESTS)
+    try:
+        write_folds(folds, out)
+    except FileExistsError as error:
+        print(f"heartbeat make-folds: {error}", file=sys.stderr)
+        return 1
+    for fold in range(N_FOLDS):
+        members = sorted(s for s, f in folds.subject_fold.items() if f == fold)
+        counts = ", ".join(f"{c} {n}" for c, n in folds.class_counts[str(fold)].items())
+        print(f"fold {fold}: {len(members)} subjects ({' '.join(members)}); {counts}")
+    digest = hashlib.sha256(out.read_bytes()).hexdigest()
+    print(f"heartbeat make-folds: wrote {out} (seed {folds.seed})")
+    print(f"sha256 {digest}")
+    return 0
+
+
+def _check_folds(args: argparse.Namespace) -> int:
+    try:
+        folds = check_folds(
+            FOLDS_JSON,
+            FOLDS_PIN,
+            load_splits(SPLITS_MANIFEST),
+            load_subjects(SUBJECTS_MANIFEST),
+            manifest_paths=FOLD_MANIFESTS,
+        )
+    except FoldCheckError as error:
+        print(f"heartbeat check-folds: {error}", file=sys.stderr)
+        return 1
+    print(
+        f"heartbeat check-folds: ok, {len(folds.subject_fold)} subjects in "
+        f"{N_FOLDS} folds, {FOLDS_JSON} matches its pin"
+    )
+    return 0
+
+
 HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
-    {"download": _download, "prepare": _prepare}
+    {
+        "download": _download,
+        "prepare": _prepare,
+        "make-folds": _make_folds,
+        "check-folds": _check_folds,
+    }
 )
 
 
@@ -109,6 +170,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.required = True
     for name, phase in SUBCOMMANDS.items():
         sub = subparsers.add_parser(name, help=f"(arrives in Phase {phase})")
+        if name == "make-folds":
+            sub.add_argument(
+                "--out",
+                metavar="PATH",
+                help="where to write the folds (default config/folds.json)",
+            )
         if name == "rebuild":
             sub.add_argument(
                 "--from",

@@ -42,7 +42,7 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
 
 
 # Subcommands built so far in Phase 2; each has its own tests.
-BUILT = {"download", "prepare"}
+BUILT = {"download", "prepare", "make-folds", "check-folds"}
 
 
 @pytest.mark.parametrize(
