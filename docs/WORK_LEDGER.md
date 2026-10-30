@@ -1559,3 +1559,31 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Rejected:** standard deviation 0.1 (about 0.034 mV on a median beat, closer to visible EMG noise); noise in mV before the z-score (heavier on small-amplitude records for no stated reason); rolling or edge padding for the shift.
 
 **Applied:** `docs/PRD.md` MODEL-03.
+
+## 2026-10-30: Phase 4 settling, 5: MPS determinism and what "within tolerance" means (C7, E4 clarification)
+
+**Gap:** C7 and E4 say MPS cross-validation and exhibit numbers "reproduce within tolerance", but no tolerance was ever set, and whether MPS repeats itself was not known.
+
+**Measured (throwaway script in the session scratchpad, synthetic data the size of one training fold, about 41,000 beats, a C3-shaped network at width 1, C3's class weights, AdamW 1e-3, batch 256, 2 epochs, no augmentation; PyTorch 2.14.1, 4 threads, Apple M5; no MIT-BIH data read; deleted after):**
+
+| Comparison | Result |
+| --- | --- |
+| MPS against MPS, same seed | weights and logits bit-identical |
+| MPS with `torch.use_deterministic_algorithms(True)` | runs without error; identical to plain MPS |
+| CPU against CPU, deterministic, same seed | bit-identical (35 s for the 2 epochs) |
+| MPS against CPU, same seed | max weight difference 0.355, max logit difference 2.92; labels 100% equal on this easy synthetic task |
+
+**Reading:** on this Mac MPS repeats itself, while MPS and CPU take different training paths within 2 epochs, so after 40 epochs a CPU run behaves like another seed rather than a rounding error away. A tolerance of the 1e-5 kind between devices was never realistic.
+
+**Decision (Din):**
+
+1. Every training run, MPS or CPU, runs with `torch.use_deterministic_algorithms(True)` and `torch.set_num_threads(4)`; the run folder records both and the device.
+2. Committed MPS results must reproduce exactly on the same Mac. Phase 4 reruns one cross-validation run (width 1, fold 0, seed 0) and requires bit-identical weights and out-of-fold logits before the full 45-run job. Any difference stops the run (as Phase 3's stop 3).
+3. MPS against CPU is measured and reported, not gated: the same configuration trained on CPU for the 40 epochs (about 12 minutes from C7's 17.9 s per epoch). The ledger records both epoch curves, that fold's macro F1 over N, S and V and label agreement, beside the spread across seeds 0 to 2 for that fold. A device gap larger than the seed spread is flagged to Din (assumption AS3), not a stop.
+4. The cross-machine tolerance is set at the start of Phase 5, where it is first used (task 5.4's clean-clone check), with item 3's measurement in hand. It governs a reproduction check, not a reported result, so setting it after this measurement does not tilt any number.
+
+**Rejected:** a numeric device tolerance now (for example fold macro F1 within 0.02): a guess that would either fail on seed-level noise or be too loose to mean anything.
+
+**Caveat:** the probe ran 2 epochs on synthetic data without augmentation; item 2 is the real-data confirmation.
+
+**Applied:** no requirement text changes (OPS-03 and the PRD's reproducibility line hold: the default mode on this Mac is now expected to be exact, which is stricter than "within tolerance").
