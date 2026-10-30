@@ -1,6 +1,7 @@
 """The `heartbeat` command: every E4 subcommand exists as a stub until its phase."""
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -41,11 +42,15 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-# The five Phase 2 subcommands are built and have their own tests here and in
-# test_folds.py and test_stages.py; the rest stay stubs until their phase.
+# The Phase 2 subcommands and cross-validate are built and have their own
+# tests here and in test_folds.py and test_stages.py; the rest stay stubs until
+# their phase.
+BUILT = {n for n, p in EXPECTED_PHASES.items() if p == 2} | {"cross-validate"}
+
+
 @pytest.mark.parametrize(
     ("name", "phase"),
-    sorted((n, p) for n, p in EXPECTED_PHASES.items() if p > 2),
+    sorted((n, p) for n, p in EXPECTED_PHASES.items() if n not in BUILT),
 )
 def test_stub_exits_2_and_says_when_it_arrives(
     name: str, phase: int, capsys: pytest.CaptureFixture[str]
@@ -174,3 +179,71 @@ def test_prepare_exits_1_on_an_incomplete_cache(
     monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
     assert main(["prepare"]) == 1
     assert "heartbeat download" in capsys.readouterr().err
+
+
+def _patch_cross_validate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    from cv_support import synthetic_beats, synthetic_folds
+
+    beats = synthetic_beats()
+    folds_json = tmp_path / "folds.json"
+    folds_json.write_text("{}\n", encoding="utf-8")
+    runs = tmp_path / "runs"
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    monkeypatch.setattr(cli, "check_folds", lambda *a, **k: synthetic_folds(beats))
+    monkeypatch.setattr(cli, "load_ds1", lambda *a, **k: beats)
+    monkeypatch.setattr(cli, "FOLDS_JSON", folds_json)
+    monkeypatch.setattr(cli, "RUNS_DIR", runs)
+    return runs, folds_json
+
+
+def test_cross_validate_writes_a_run_folder_and_no_results(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runs, folds_json = _patch_cross_validate(tmp_path, monkeypatch)
+    assert main(["cross-validate", "--model", "baseline"]) == 0
+    out = capsys.readouterr().out
+    (run,) = runs.iterdir()
+    assert run.name.endswith("-cv-baseline")
+    assert {p.name for p in run.iterdir()} == {
+        "config.json",
+        "provenance.json",
+        "log.txt",
+        "metrics.json",
+        "oof.npz",
+        "model.npz",
+    }
+    metrics = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
+    assert (
+        metrics["folds_sha256"] == hashlib.sha256(folds_json.read_bytes()).hexdigest()
+    )
+    assert f"chosen C {metrics['chosen_c']}" in out
+    assert str(run) in out
+    assert not (tmp_path / "results").exists()
+
+
+def test_cross_validate_exits_1_on_a_fold_check_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from heartbeat.data.folds import FoldCheckError
+
+    runs, _ = _patch_cross_validate(tmp_path, monkeypatch)
+
+    def failing(*args: object, **kwargs: object) -> None:
+        raise FoldCheckError("pin differs")
+
+    monkeypatch.setattr(cli, "check_folds", failing)
+    assert main(["cross-validate"]) == 1
+    assert "pin differs" in capsys.readouterr().err
+    assert not runs.exists()
+
+
+def test_cross_validate_rejects_an_unknown_model() -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        main(["cross-validate", "--model", "cnn"])
+    assert exit_info.value.code != 0
