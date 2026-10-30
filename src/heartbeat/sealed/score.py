@@ -7,13 +7,21 @@ Both take the same inputs as training (the RR model inputs from
 the scoring path is the pipeline's own.
 """
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 import numpy as np
+import onnxruntime as ort
 from numpy.typing import NDArray
 
 from heartbeat.constants import RR_FEATURE_NAMES, SCORED_CLASSES
 from heartbeat.models.inputs import RRScaler, apply_rr_scaler, rr_model_inputs
+
+# Design call 3: the exported model's input and output names.
+INPUT_NAMES = ("window", "rr")
+OUTPUT_NAME = "logits"
 
 
 @dataclass(frozen=True)
@@ -58,3 +66,88 @@ def baseline_logits(
     x = apply_rr_scaler(scaler, rr_model_inputs(rr_s))
     logits: NDArray[np.float64] = x @ params.coefficients.T + params.intercepts
     return logits
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    payload: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return payload
+
+
+def _check_classes(path: Path, payload: dict[str, Any]) -> None:
+    if payload.get("classes") != list(SCORED_CLASSES):
+        raise ValueError(
+            f"{path}: classes {payload.get('classes')}, expected {list(SCORED_CLASSES)}"
+        )
+
+
+def load_baseline(path: Path) -> BaselineParams:
+    """Read `baseline.json` (settling 1).
+
+    Raises:
+        ValueError: If its class order is not `SCORED_CLASSES`.
+    """
+    payload = _read_json(path)
+    _check_classes(path, payload)
+    return BaselineParams(
+        coefficients=np.array(payload["coefficients"], dtype=np.float64),
+        intercepts=np.array(payload["intercepts"], dtype=np.float64),
+        scaler_mean=np.array(payload["scaler"]["mean"], dtype=np.float64),
+        scaler_std=np.array(payload["scaler"]["std"], dtype=np.float64),
+        log_class_weights=np.array(payload["log_class_weights"], dtype=np.float64),
+        temperature=float(payload["temperature"]),
+    )
+
+
+@dataclass(frozen=True)
+class Calibration:
+    """One CNN seed's `calibration.json`: logit adjustment and temperature.
+
+    Attributes:
+        log_class_weights: Log of the training class weights, `(4,)`.
+        temperature: The seed's DS1 out-of-fold temperature.
+    """
+
+    log_class_weights: NDArray[np.float64]
+    temperature: float
+
+
+def load_calibration(path: Path) -> Calibration:
+    """Read a seed's `calibration.json`.
+
+    Raises:
+        ValueError: If its class order is not `SCORED_CLASSES`.
+    """
+    payload = _read_json(path)
+    _check_classes(path, payload)
+    return Calibration(
+        log_class_weights=np.array(payload["log_class_weights"], dtype=np.float64),
+        temperature=float(payload["temperature"]),
+    )
+
+
+def onnx_session(model: Path | bytes) -> ort.InferenceSession:
+    """An ONNX Runtime session on CPU with one thread, so runs repeat exactly."""
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1
+    options.inter_op_num_threads = 1
+    source = str(model) if isinstance(model, Path) else model
+    return ort.InferenceSession(
+        source, sess_options=options, providers=["CPUExecutionProvider"]
+    )
+
+
+def onnx_logits(
+    session: ort.InferenceSession,
+    windows: NDArray[np.float32],
+    rr: NDArray[np.float32],
+) -> NDArray[np.float32]:
+    """Raw logits `(n, 4)` from z-scored windows `(n, 1, 256)`, scaled RR `(n, 6)`."""
+    assert windows.dtype == np.float32, windows.dtype
+    assert rr.dtype == np.float32, rr.dtype
+    if windows.shape[0] == 0:
+        return np.zeros((0, len(SCORED_CLASSES)), dtype=np.float32)
+    (logits,) = session.run(
+        [OUTPUT_NAME], {INPUT_NAMES[0]: windows, INPUT_NAMES[1]: rr}
+    )
+    out: NDArray[np.float32] = np.asarray(logits, dtype=np.float32)
+    return out
