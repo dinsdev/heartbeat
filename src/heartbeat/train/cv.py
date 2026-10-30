@@ -64,6 +64,8 @@ log = logging.getLogger(__name__)
 
 # Phase 3 settling 4: every DS1 calibration number carries this label.
 CALIBRATION_LABEL = "temperature fitted on these predictions"
+# Settling 4 as amended (Din, option 2): reported beside the in-sample block.
+CROSS_FIT_LABEL = "per-fold temperatures fitted on the other four folds"
 
 # EVAL-07: the spread across folds, for each headline metric (EVAL-08 items 1, 2).
 HEADLINE_METRICS = (
@@ -255,6 +257,34 @@ def _spread(values: NDArray[np.float64]) -> dict[str, Any]:
     }
 
 
+def cross_fitted_calibration(
+    adjusted: NDArray[np.float64], y_true: NDArray[np.str_], fold: NDArray[np.int64]
+) -> dict[str, Any]:
+    """Log loss and S and V ECE with each fold's temperature fitted on the others.
+
+    Strictly out of sample; the shipped temperature stays the pooled fit
+    (EVAL-11; settling 4 as amended).
+    """
+    temperatures = [
+        fit_temperature(adjusted[fold != k], y_true[fold != k]) for k in range(N_FOLDS)
+    ]
+    row_t = np.array(temperatures)[fold]
+    # Per-row temperature: one temperature per row is the same as dividing the
+    # row's logits by it, so the shared functions apply with T = 1.
+    scaled = adjusted / row_t[:, np.newaxis]
+    probs = calibrated_probs(scaled, 1.0)
+    ece: dict[str, float] = {}
+    for cls in ("S", "V"):
+        k = SCORED_CLASSES.index(cls)
+        ece[cls] = ece_equal_mass(probs[:, k], y_true == cls)
+    return {
+        "label": CROSS_FIT_LABEL,
+        "temperatures": temperatures,
+        "log_loss": log_loss_from_logits(scaled, 1.0, y_true),
+        "ece": ece,
+    }
+
+
 def cv_summary(
     chosen: BaselineCV,
     beats: BeatTable,
@@ -289,6 +319,7 @@ def cv_summary(
         k = SCORED_CLASSES.index(cls)
         calibration["ece"][cls] = ece_equal_mass(chosen.probs[:, k], y == cls)
         calibration["reliability"][cls] = reliability_data(chosen.probs[:, k], y == cls)
+    calibration["cross_fitted"] = cross_fitted_calibration(chosen.adjusted, y, fold)
     return {
         "model": chosen.result.model,
         "data": "DS1 out-of-fold, CPU",

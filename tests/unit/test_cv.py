@@ -15,11 +15,17 @@ import numpy as np
 import pytest
 from cv_support import subset_rows, synthetic_beats, synthetic_folds
 from numpy.typing import NDArray
+from scipy.special import log_softmax, softmax
 
 from heartbeat.constants import BASELINE_C_GRID, SCORED_CLASSES
 from heartbeat.data.folds import Folds
 from heartbeat.data.loader import BeatTable
-from heartbeat.evaluate.calibration import adjust_logits
+from heartbeat.evaluate.calibration import (
+    adjust_logits,
+    ece_equal_mass,
+    fit_temperature,
+)
+from heartbeat.evaluate.metrics import class_indices
 from heartbeat.models.baseline import BASELINE
 from heartbeat.models.inputs import fit_rr_scaler, rr_model_inputs
 from heartbeat.models.spec import ModelSpec
@@ -27,6 +33,7 @@ from heartbeat.paths import PACKAGE_DIR
 from heartbeat.train import cv as cv_module
 from heartbeat.train.cv import (
     CALIBRATION_LABEL,
+    CROSS_FIT_LABEL,
     cross_validate,
     cv_summary,
     fold_indices,
@@ -290,3 +297,34 @@ def test_summary_has_no_nan_and_carries_the_calibration_label(
 
 def test_default_grid_is_the_locked_one() -> None:
     assert BASELINE_C_GRID == (0.01, 0.1, 1.0, 10.0, 100.0)
+
+
+def test_summary_reports_a_cross_fitted_calibration_block(
+    beats: BeatTable, folds: Folds
+) -> None:
+    # Settling 4 as amended (Din, option 2): per-fold temperatures beside the
+    # in-sample one, which stays the shipped temperature.
+    chosen = select_baseline_c(beats, folds, grid=SMALL_GRID)
+    summary = cv_summary(chosen, beats, folds_sha256="ab" * 32, n_draws=50)
+    calibration = summary["calibration"]
+    assert calibration["temperature"] == chosen.temperature
+    block = calibration["cross_fitted"]
+    assert block["label"] == CROSS_FIT_LABEL
+    assert CROSS_FIT_LABEL == "per-fold temperatures fitted on the other four folds"
+    y = chosen.y_true
+    fold = chosen.result.fold
+    expected_t = [
+        fit_temperature(chosen.adjusted[fold != k], y[fold != k]) for k in range(5)
+    ]
+    assert block["temperatures"] == expected_t
+    scaled = chosen.adjusted / np.array(expected_t)[fold][:, np.newaxis]
+    rows = np.arange(y.size)
+    nll = -log_softmax(scaled, axis=1)[rows, class_indices(y)]
+    assert block["log_loss"] == pytest.approx(float(nll.mean()), rel=1e-12)
+    probs = softmax(scaled, axis=1)
+    for cls in ("S", "V"):
+        k = SCORED_CLASSES.index(cls)
+        assert block["ece"][cls] == pytest.approx(
+            ece_equal_mass(probs[:, k], y == cls), rel=1e-12
+        )
+    json.dumps(summary, allow_nan=False)
