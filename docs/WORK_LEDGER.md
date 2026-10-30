@@ -1355,3 +1355,9 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 This agrees with the 2026-10-29 Q2 entry, which named the false positives only; the FN and TN cells are added here for the Phase 3 task plan.
 
 **Applied:** `docs/PRD.md` EVAL-09.
+
+## 2026-10-29: Phase 3 task plan drafted, for Din's review
+
+**Drafted:** `docs/PLAN.md` section 8, Phase 3: eight tasks on branch `phase-3-harness` (metrics, bootstrap, per-patient table, calibration, run folders and the results writer, the CV driver and baseline, the `cross-validate` stage with the real run, the hand-off), file map, interfaces, test-first cases for R16 to R21, eight stop-and-ask conditions, review focus. It rests on Phase 3 settling 1 to 5 and seven design calls listed in the plan (bootstrap seed 20261029, shared RR scaler instead of an sklearn `Pipeline`, explicit balanced-weight dict, float64 baseline, convergence warnings as errors, summaries only in `results/`, committed results must be clean and on `HEAD`'s history). One goal run, since no step needs Din before the push.
+
+**Checked while drafting (scikit-learn 1.9.1, the pinned version, `uv run python -W error -c`, nothing written):** `brier_score_loss` accepts multiclass probabilities with `labels` and `scale_by_half=False`; `LogisticRegression(solver="lbfgs", class_weight=dict, max_iter=10000)` fits a four-class problem with no warning, and its `classes_` come out sorted (F, N, S, V), so the plan reorders logits to `SCORED_CLASSES` and tests the column order.

@@ -483,3 +483,125 @@ Never edit a manifest, a test's expected value or a tolerance to get past one of
 3. DS2 reaching `prepare` or the loader by any path, including a stray `.npz` in the prepared folder: Task 5.
 4. A fold file that is valid but different from the pinned one: Task 6.
 5. A stage skipped although its code changed, because the code sits outside the folders the stage declares: Task 7 declares download as `data/`, prepare as `data/` and `signal/`, check-folds as `data/`, each plus `constants.py`, `config.py` and `paths.py`; Din's review of this plan is the check that the lists are complete.
+
+### Phase 3: Evaluation harness and baseline (task plan, 2026-10-29)
+
+**Goal:** every metric, interval and calibration number the pre-registered report needs exists as tested code; run folders and a `results/` writer exist; the baseline is cross-validated on the committed folds with C chosen by pooled out-of-fold macro F1 over N, S and V; `rebuild` runs a `cross-validate` stage that writes `results/cv_baseline.json`; R16 to R21 pass locally and, after Din's push, in CI.
+
+**Approach:** metrics are pure functions of a 4 by 4 confusion matrix (rows the expert label, columns the model label, order `SCORED_CLASSES`), so pooled, per-fold, per-patient and bootstrap numbers all come from one code path. The bootstrap sums per-patient confusion matrices with draw counts, so 10,000 draws are one matrix product. One model-agnostic cross-validation driver owns the folds, the class weights, the selection metric and calibration; a model supplies only `fit` and `logits`. The baseline is its first model and the CNN plugs into the same driver in Phase 4, which is what makes R21 structural. Test first throughout, as in Phase 2.
+
+**Settled for this phase (ledger, 2026-10-29, "Phase 3 settling" 1 to 5):** selection on macro F1 over N, S and V, including Phase 4's epoch curves; the zero-denominator rule (skip per metric and count, F1 = 2TP / (2TP + FP + FN), "undefined" never 0); per-patient percentages gated on each cell's own denominator; DS1 calibration with the in-sample temperature, labeled, plus one throwaway cross-fit check; 95% percentile intervals. Table V's EC57 counts are written out in settling 5.
+
+**Design calls for Din's review (made by Claude while planning, approved with this plan):**
+
+1. Bootstrap seed `BOOTSTRAP_SEED = 20261029` (today, distinct from the fold seed), a constant in `constants.py`, since no run varies it. Patients are ordered by sorted subject ID; draws depend only on the seed and the number of patients, so every model scored on one patient set shares one draw matrix. The without-232 line draws again with the same seed over its 20 patients.
+2. The RR scaler is the shared `fit_rr_scaler` and `apply_rr_scaler` (CONVENTIONS section 3), not scikit-learn's `StandardScaler` inside a `Pipeline` as the C2 entry words it. Same math (population standard deviation); one implementation that the CNN and the TypeScript parity code will also use. A test checks it equals `StandardScaler` on random data.
+3. Balanced class weights come from one function, `n_beats / (4 * count_c)` over the training part of the fold, passed to scikit-learn as an explicit dict (same math as `class_weight="balanced"`, checked against `compute_class_weight`).
+4. The baseline runs in float64 (it never ships; CONVENTIONS' float32 rule is for the model path).
+5. lbfgs gets `max_iter=10_000`; a `ConvergenceWarning` is an error (pytest already sets `filterwarnings = ["error"]`; the CLI escalates it too). Any non-convergence stops the run (stop condition 1). A C tie keeps the smaller C.
+6. `results/` holds summaries only (`cv_baseline.json`); out-of-fold predictions stay in the run folder. No figures in Phase 3: reliability data is written as numbers, and figures come with the pages that use them.
+7. The `cross-validate` CLI writes a run folder only; `results/` is written only by the `rebuild` stage (rule 5). A committed results file must record `"dirty": false` and a commit that is an ancestor of `HEAD`, checked by a test.
+
+**Preconditions:** Phase 2 merged (`5643163`); the MIT-BIH cache downloaded and DS1 prepared (`uv run heartbeat rebuild`); settling 1 to 5 committed on `main`.
+
+**Global constraints:** section 2 and the Phase 1 and 2 constraints. No new dependency (numpy, scipy and scikit-learn cover everything; torch is not imported in Phase 3). DS1 only: no code path in this phase touches DS2, and the bootstrap and per-patient code are tested on synthetic patients. Numbers quoted in the ledger name `results/cv_baseline.json` or the run folder and say "DS1 out-of-fold, CPU".
+
+**The current-phase bump:** the first commit on branch `phase-3-harness` sets `current-phase = 3`; the coverage test is red until R16 to R21 each have a test, and each commit that leaves it red names the rows remaining.
+
+#### File map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/heartbeat/constants.py` | Adds `HEADLINE_CLASSES = ("N", "S", "V")`, `BASELINE_C_GRID = (0.01, 0.1, 1.0, 10.0, 100.0)` (C2), `BASELINE_MAX_ITER = 10_000`, `BOOTSTRAP_DRAWS = 10_000`, `BOOTSTRAP_SEED = 20261029`, `INTERVAL_PERCENTILES = (2.5, 97.5)` (settling 5), `ECE_BINS = 10`, `PER_PATIENT_MIN_BEATS = 10` (C4), `TEMPERATURE_BOUNDS = (0.05, 20.0)` |
+| `src/heartbeat/evaluate/metrics.py` | Confusion matrix, one-vs-rest and EC57 metrics, macro F1, `selection_score` (EVAL-08, R16) |
+| `src/heartbeat/evaluate/bootstrap.py` | Draws, per-patient confusions, batched metrics, intervals, skip counts, paired differences (EVAL-09, R17, R18) |
+| `src/heartbeat/evaluate/per_patient.py` | The per-patient S and V table with the count rule (EVAL-08 item 4, R19) |
+| `src/heartbeat/evaluate/calibration.py` | Labels, logit adjustment, temperature, ECE, reliability data, log loss, Brier (EVAL-11, EVAL-12, R20) |
+| `src/heartbeat/models/inputs.py` | `rr_model_inputs` (log of the two ratios), `fit_rr_scaler`, `apply_rr_scaler` (C2, C3) |
+| `src/heartbeat/models/baseline.py` | Multinomial logistic regression as a `ModelSpec` (MODEL-01) |
+| `src/heartbeat/train/weights.py` | `balanced_class_weights` (C2, C3) |
+| `src/heartbeat/train/cv.py` | Fold indices from `Folds`, the CV driver, C selection, calibration of the chosen model, the summary payload (EVAL-07, R21) |
+| `src/heartbeat/runs.py` | Run folders and provenance (MODEL-07, C6) |
+| `src/heartbeat/results.py` | Canonical, atomic `results/` writer (rule 5) |
+| `src/heartbeat/stages.py`, `cli.py` | `cross-validate` stage and subcommand |
+| `tests/unit/` | `test_metrics.py`, `test_bootstrap.py`, `test_per_patient.py`, `test_calibration.py`, `test_inputs.py`, `test_weights.py`, `test_baseline.py`, `test_cv.py`, `test_runs.py`, `test_results.py`, `test_results_committed.py`; `test_stages.py` and `test_cli.py` updated |
+| `tests/data/` | `test_cv_baseline_real.py` |
+
+#### Task 1: Phase bump, constants, metrics (TASKS 3.1)
+
+**Interfaces produced:** `confusion_matrix(y_true, y_pred) -> NDArray[np.int64]` `(4, 4)`, labels as class strings, anything outside `SCORED_CLASSES` raises; `class_metrics(cm) -> dict[str, ClassMetrics]` with `recall`, `precision`, `f1`, `fpr` per class (`float`, NaN when undefined; F1 = 2TP / (2TP + FP + FN)); `macro_f1(cm, classes) -> float` (mean over the classes; NaN only if one of them is undefined); `ec57_metrics(cm) -> dict[str, EC57Metrics]` for S and V with `se`, `ppv`, `fpr` from the Table V counts in the settling 5 entry; `selection_score(cm) = macro_f1(cm, HEADLINE_CLASSES)`; `summarize(cm) -> dict` (everything above, NaN written as `None`). Batched variants take `(..., 4, 4)` arrays so the bootstrap reuses them.
+
+1. Commit `chore: start Phase 3 (current-phase = 3)` on `phase-3-harness`.
+2. Tests first, `test_metrics.py`, R16: recall, precision and F1 per class equal scikit-learn's `precision_recall_fscore_support(labels=SCORED_CLASSES, zero_division=np.nan)` and `f1_score`, on hand cases and a hypothesis property over random label pairs (compare with `equal_nan`); macro F1 over all four equals `f1_score(average="macro")` when every class is defined; a hand 4 by 4 case for EC57 where Fv is non-zero and is excluded from V's FP and TN, and Qs-style cells do not exist; FPR on a hand case; no predicted S gives S precision NaN and S F1 0; a class absent from labels and predictions gives F1 NaN; batched equals looped.
+3. Implement until green. Commit `feat(evaluate): confusion-matrix metrics with EC57 definitions`.
+
+#### Task 2: Paired patient bootstrap (TASKS 3.1)
+
+**Interfaces produced:** `patient_confusions(y_true, y_pred, subject_id, patients) -> NDArray[np.int64]` `(n_patients, 4, 4)`; `draw_counts(n_patients, n_draws=BOOTSTRAP_DRAWS, seed=BOOTSTRAP_SEED) -> NDArray[np.int64]` `(n_draws, n_patients)` (`np.random.default_rng(np.random.SeedSequence(seed))`, patients drawn with replacement, counts per row sum to `n_patients`); `bootstrap(confusions_by_model: Mapping[str, NDArray], counts) -> BootstrapResult` with, per model and metric, the point estimate on the full set, the 95% interval (`np.percentile` over defined draws, default linear method) and the skip count; `paired_difference(result, a, b, metric)` with its own skip count. Draws with no defined value at all give a `None` interval, never an error.
+
+1. Tests first, `test_bootstrap.py`. R17: every draw is a multiset of whole patients (a planted patient with a unique label pattern contributes all or none of its beats per copy); the same seed gives the same counts; two models scored in one call use one counts matrix (a spy on `draw_counts` sees one call); the draw-sum equals recomputing the confusion matrix from the resampled beats on a small case. R18: a draw where no patient has predicted S is skipped for S precision only, S recall and macro F1 still use it, and the skip count equals the number of such draws (constructed exactly); a paired difference skips draws where either side is undefined. Interval percentiles on a known vector.
+2. Implement. Commit `feat(evaluate): paired patient bootstrap with skip counts`.
+
+#### Task 3: Per-patient table (TASKS 3.1)
+
+**Interfaces produced:** `per_patient_table(confusions, patients) -> list[PatientRow]` with, for S and V, `recall_cell` and `precision_cell`, each `Cell(numerator, denominator, percent: float | None, note: str | None)`; `percent` only when the cell's own denominator is at least `PER_PATIENT_MIN_BEATS`; zero flagged beats gives `note="none flagged"`; zero true beats gives `note="none present"`.
+
+1. Tests first, `test_per_patient.py`, R19: 9 true S beats gives counts and no percent; 10 gives a percent; precision with 50 true S and 2 flagged gives no percent (the settling 3 case); 12 flagged gives a percent; 0 flagged gives "none flagged"; counts always present.
+2. Implement. Commit `feat(evaluate): per-patient table with the count rule`.
+
+#### Task 4: Calibration (TASKS 3.2)
+
+**Interfaces produced:** `predict_labels(logits) -> NDArray[np.str_]` (argmax of the raw weighted-model logits; takes nothing else, so calibration cannot reach it); `adjust_logits(logits, class_weights) -> NDArray` (subtract `log w_c`, per row's own fold weights when given an array); `fit_temperature(adjusted, y_true) -> float` (minimize mean log loss over `log T` with `scipy.optimize.minimize_scalar(method="bounded")` inside `TEMPERATURE_BOUNDS`; raises if the optimum is within 1% of a bound); `calibrated_probs(adjusted, temperature)`; `ece_equal_mass(prob_k, is_k, n_bins=ECE_BINS) -> float` (stable sort by probability, `np.array_split` into 10 bins, sum of `n_b / N * |mean p_b - mean y_b|`); `reliability_data(...)` (per bin: count, mean probability, observed rate, lowest and highest probability); `log_loss_from_logits(adjusted, temperature, y_true)` via `scipy.special.log_softmax`; `brier(probs, y_true)` (mean over beats of the squared distance to the one-hot label summed over the four classes).
+
+1. Tests first, `test_calibration.py`, R20: labels from `predict_labels` are identical before and after adjustment and any temperature (property test), and calibrated probabilities' argmax may differ, which is allowed and documented; logit adjustment on a hand case equals `logits - log(w)`; a model whose logits are a known multiple of true log-odds recovers that temperature within 1e-3; equal-mass bins differ in size by at most one beat and ECE matches a hand case; ties in probability split by original order deterministically; log loss equals scikit-learn's `log_loss(labels=...)` on the calibrated probabilities; Brier on a hand case and against scikit-learn's `brier_score_loss(labels=..., scale_by_half=False)` (checked while planning: scikit-learn 1.9.1 accepts multiclass probabilities there).
+2. Implement. Commit `feat(evaluate): logit adjustment, temperature and calibration metrics`.
+
+#### Task 5: Run folders and the results writer (TASKS 3.3)
+
+**Interfaces produced:** `create_run(name, settings, extra_config, root=RUNS_DIR) -> RunFolder` making `runs/<UTC %Y%m%dT%H%M%SZ>-<short commit>-<name>/` with `config.json` (resolved settings plus `extra_config`), `provenance.json` (commit, dirty flag, SHA256 of `git diff HEAD`, Python version, versions of numpy, scipy, scikit-learn and wfdb from `importlib.metadata`, `uv.lock` and `config/folds.json` SHA256, device `"cpu"`, `os.cpu_count()` and any `*_NUM_THREADS` variables) and `log.txt` (a logging file handler); `RunFolder.write_json(name, payload)`, `RunFolder.write_arrays(name, **arrays)` (`.npz`, `allow_pickle=False`); `write_result(name, payload, run, results_dir=RESULTS_DIR)` writing `results/<name>.json` as canonical JSON (sorted keys, two-space indent, trailing newline, `allow_nan=False`, so NaN must already be `None`), atomic, with `run`, `commit` and `dirty` copied from the run's provenance. `RUNS_DIR` and `RESULTS_DIR` join `paths.py`.
+
+1. Tests first, `test_runs.py` and `test_results.py` (temporary git repos and folders): provenance fields present and the dirty flag true after an uncommitted edit; a NaN in a payload raises; output is byte-stable for one payload; a failed write leaves the old file; an import-graph test (AST over `src/heartbeat`) finds `write_result` imported only by `stages.py`. `test_results_committed.py`: every committed `results/*.json` other than `test_runs.jsonl` has `"dirty": false` and a commit that is an ancestor of `HEAD` (passes vacuously until Task 7 commits one).
+2. Implement. Commit `feat(cli): run folders and the results writer`.
+
+#### Task 6: Inputs, weights, the CV driver and the baseline (TASKS 3.4)
+
+**Interfaces produced:** `rr_model_inputs(rr_s) -> NDArray[np.float64]` `(n, 6)`, with `log` of `pre_over_local` and `post_over_pre` (a non-positive ratio raises); `RRScaler(mean, std)`, `fit_rr_scaler(x_train)`, `apply_rr_scaler(scaler, x)` (population std; a zero std raises); `balanced_class_weights(y_train) -> dict[str, float]`; `fold_indices(beats: BeatTable, folds: Folds) -> list[tuple[NDArray, NDArray]]` (validation fold k is the beats whose subject is in fold k; raises on a subject missing from the folds); `ModelSpec(name, fit(x_train, y_train, class_weight, params) -> fitted, logits(fitted, x) -> (n, 4))`; `BASELINE: ModelSpec` (`LogisticRegression(solver="lbfgs", C=params["C"], class_weight=dict, max_iter=BASELINE_MAX_ITER)` on scaled `rr_model_inputs`; logits are `decision_function` reordered from scikit-learn's sorted `classes_` (F, N, S, V, checked while planning) to `SCORED_CLASSES` order); `cross_validate(spec, beats, folds, params) -> CVResult` (out-of-fold raw logits, fold per beat, each fold's class weights and scaler); `select_baseline_c(beats, folds, grid=BASELINE_C_GRID) -> BaselineCV` (one `CVResult` per C, pooled `selection_score` per C, chosen C with ties to the smaller, then for the chosen C: labels, adjusted logits with each fold's own weights, temperature, calibrated probabilities); `cv_summary(result, subject_id) -> dict` (the payload below).
+
+The payload: model and chosen C; per C, pooled macro F1 over N, S and V and four-class beside it; for the chosen C, the pooled confusion matrix and `summarize`, EC57 S and V, per-fold `summarize` with min and max across folds for each headline metric (EVAL-07's spread), bootstrap intervals over the 22 DS1 subjects with skip counts, and calibration (temperature, S and V ECE, reliability data, log loss, Brier) under a key that carries the label `"temperature fitted on these predictions"` (settling 4); patient order and draw settings; the folds SHA256.
+
+1. Tests first: `test_inputs.py` (log columns, scaler equals `StandardScaler` on random data, scaler fitted on train never sees validation rows: a validation-only outlier leaves it unchanged); `test_weights.py` (equals scikit-learn's `compute_class_weight("balanced")`); `test_baseline.py` (fit and logits shapes on a synthetic separable set; column k of the logits belongs to `SCORED_CLASSES[k]`, shown by a set where only S is separable; a `ConvergenceWarning` raises); `test_cv.py`: R21, `cross_validate` gets its folds only through `fold_indices`, its weights only through `balanced_class_weights` and its selection metric only through `selection_score` (spies, and an AST check that `models/` never imports `data.folds` or computes weights), and the baseline is run through `cross_validate`, so Phase 4 extends this test with the CNN spec; every beat gets exactly one out-of-fold prediction and its fold matches its subject; C tie keeps the smaller; the summary has no NaN.
+2. Implement. CLI `heartbeat cross-validate --model baseline` (reads the prepared DS1 and the checked folds, writes a run folder with `metrics.json`, `oof.npz` (record, subject, sample, true class, fold, raw logits and calibrated probabilities for the chosen C) and `model.npz` (each fold's coefficients, intercepts and scaler), prints the chosen C and the run folder; never writes `results/`). Commit `feat(train): CV driver and the logistic regression baseline`.
+
+#### Task 7: The `cross-validate` stage, the real run, and its checks (TASKS 3.3, 3.4)
+
+1. Tests first: `test_stages.py`, the `cross-validate` stage (upstream prepare and check-folds; code folders `data`, `signal`, `models`, `train`, `evaluate` plus `runs.py`, `results.py` and the shared files; inputs the folds, its pin and the two manifests; output `results/cv_baseline.json`) reruns when any of those change and is skipped otherwise; `rebuild` now stops after it and names `select` (Phase 4). `tests/data/test_cv_baseline_real.py` (`realdata`): baseline CV on real DS1 at one C gives one prediction per scored beat, only N, S, V, F, folds equal `config/folds.json`, and no record outside DS1.
+2. Implement the stage. Update `test_cli.py`: `cross-validate` leaves the stub list.
+3. Commit the code, then on that clean tree run `uv run heartbeat rebuild` (all stages up to cross-validate; record the wall-clock time) and commit `results/cv_baseline.json` alone as `feat(train): baseline out-of-fold results`. Run `rebuild --from cross-validate` once more: the metrics in the new file must equal the committed ones exactly (determinism on CPU); restore nothing by hand, just confirm `git diff` shows only `run`, `commit` or `dirty` changes, or none.
+4. Settling 4's check, in a throwaway script in Claude's scratchpad that reads the run folder's `oof.npz`: fit a temperature per fold on the other four folds' adjusted logits, apply it to that fold, and compare log loss and S and V ECE with the in-sample numbers. Record both in the ledger. Stop and ask Din if log loss differs by more than 1e-3 nats per beat or either ECE by more than 0.01. Delete the script.
+
+#### Task 8: Docs and the hand-off to Din
+
+1. `scripts/check.sh`, `uv run pytest` (real-data layer included), `rule_coverage` (R16 to R21 covered), `repo_config` and the wording lint all green.
+2. `AGENTS.md` Commands: `cross-validate` and the `rebuild` stage move to "Working today". `docs/TASKS.md` 3.1 to 3.4 Verified (locally) with commands. Ledger entry: what was built, commits, deviations and why, timings, the chosen C, the pooled DS1 out-of-fold headline numbers with their intervals and the temperature, each naming `results/cv_baseline.json` and the run folder, labeled "DS1 out-of-fold, CPU", and settling 4's comparison. Commit `docs: Phase 3 verification and hand-off`.
+3. Give Din the push command for `phase-3-harness`. After the push, read the run with `gh run list` and `gh run view`, record its wall-clock time, and fix anything red in a new commit. Phase 3 exits when R16 to R21 pass in CI and `results/cv_baseline.json` is committed.
+
+#### Stop and ask Din
+
+Never change a test's expected value, a tolerance, the C grid or a seed to get past one of these:
+
+1. lbfgs fails to converge at any C, even at `max_iter=10_000`.
+2. A metric disagrees with scikit-learn on a case where both are defined.
+3. Two `rebuild --from cross-validate` runs give different metrics on the same commit.
+4. Settling 4's cross-fit check exceeds its threshold.
+5. A fitted temperature lands within 1% of a bound.
+6. Anything needs a new dependency, a pin change, or an edit to `manifests/`, `config/folds.json` or `.claude/`.
+7. Any DS2 signal, label or prediction seen by accident (rule 1).
+8. The chosen C is 0.01 or 100 (the edge of the locked grid): not a stop, but say so in the ledger and the hand-off, since widening the grid is Din's call.
+
+#### Review focus
+
+1. Undefined metrics turning into 0 anywhere (scikit-learn defaults, `np.nanmean` over a NaN that should propagate, JSON writing): Tasks 1, 2 and 5.
+2. Calibration leaking into labels: Task 4's property test, and the CV driver taking labels from raw logits only.
+3. Out-of-fold logits adjusted with the wrong fold's weights: Task 6 tests a case where folds have different weights.
+4. The scaler or weights fitted on validation rows: Task 6.
+5. A results file written from a dirty tree or by hand: Task 5's committed-results test and the guard hook.
