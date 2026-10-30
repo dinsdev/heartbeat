@@ -1444,3 +1444,28 @@ EC57 (Table V definitions): S Se 0.2450, +P 0.0825, FPR 0.0514; V Se 0.4820, +P 
 **Rejected:** option 1 (in-sample only, the DS1 log loss stays optimistic by about 5%); option 3 (cross-fitted only, two temperatures with no pooled one for the shipped model's numbers).
 
 **Applied:** made before any DS2 result and before the Phase 7 gate (rule 6). No requirement text changes; EVAL-11 and EVAL-12 hold as written.
+
+## 2026-10-29: Phase 3 verified locally after the settling 4 amendment; CI waits for Din's push
+
+**Built after the stop:** `aa1700f` (the amendment entry), `27b1250` (`cross_fitted_calibration` in `train/cv.py`; its test in `test_cv.py` was written first and failed at collection on the missing `CROSS_FIT_LABEL`), `58105d9` (`results/cv_baseline.json` alone), and this commit (TASKS 3.3 and 3.4, this entry).
+
+**The run (`/usr/bin/time -p uv run heartbeat rebuild` on a clean tree at `27b1250`, 4.82 s):** cross-validate reran (its code changed), download and prepare were skipped, run `runs/20261030T023341Z-27b1250-cv-baseline`. The results file's diff against `13ea660` is the new `calibration.cross_fitted` block plus `run` and `commit`; every other number is unchanged, so the tables in the "Phase 3 built" entry above hold for this file too. It records `"dirty": false` and commit `27b1250`.
+
+**Reproduction (`uv run heartbeat rebuild --from cross-validate` at `58105d9`, 4.77 s):** run `runs/20261030T023352Z-58105d9-cv-baseline`; the diff is only `run` and `commit`; the two runs' `metrics.json` are byte-identical and every array in `oof.npz` and `model.npz` is equal. The reproduction's copy is kept in `stash@{0}` (the first reproduction's in `stash@{1}`); Din may drop both.
+
+**Calibration (`results/cv_baseline.json` at `58105d9`, run `20261030T023341Z-27b1250-cv-baseline`; DS1 out-of-fold, CPU):**
+
+|  | In-sample, "temperature fitted on these predictions" | Cross-fitted, "per-fold temperatures fitted on the other four folds" |
+| --- | --- | --- |
+| Temperature | 1.3829 (shipped, EVAL-11) | 1.1758, 1.4432, 1.3769, 1.4313, 1.4562 (folds 0 to 4) |
+| Log loss, nats per beat | 0.3357 | 0.3534 |
+| ECE S | 0.0163 | 0.0155 |
+| ECE V | 0.0309 | 0.0278 |
+
+Brier (0.1173) and reliability data are in-sample only. The cross-fitted values equal the deleted scratchpad check's to six decimals.
+
+**Chosen C:** 0.01, the lower edge of the locked grid (stop condition 8, reported; widening the grid is Din's call).
+
+**Verified (local, this commit):** `scripts/check.sh` exit 0 (649 passed, 105 real-data deselected); `CI=1 uv run pytest` exit 0 (real-data layer included); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R16 to R21 covered, 0 uncovered); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout.
+
+**Not verified:** CI on these commits. **Waiting on Din:** the push, then CI; the C grid edge; dropping `stash@{0}` and `stash@{1}`.
