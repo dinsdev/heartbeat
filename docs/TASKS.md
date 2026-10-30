@@ -144,7 +144,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 | 5.1 | Frozen baseline on every DS1 row (settling 1); single-file ONNX export of all three seeds (settling 2), scaler and calibration JSON, `models/heartbeat-v1/` with its `NOTICE` | Planned |
 | 5.2 | DS1 parity fixtures and the Python half of the parity chain | Planned |
 | 5.3 | `evaluate-test` refusals, the append-only log writer, and the DS1 rehearsal of the success path (settling 3) | Planned |
-| 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; clean-clone reproduction logged | Planned |
+| 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; `--exact` built, not run; clean-clone reproduction, exact on this Mac (settling 4), logged | Planned |
 | 5.5 | `heartbeat cards` renderer for the card blocks, and its `verify` check (R50) | Planned |
 
 ### Phase 6: Demo on DS1

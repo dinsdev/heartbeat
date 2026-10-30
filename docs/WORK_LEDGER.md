@@ -1820,3 +1820,22 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Rejected:** refusal tests only (the success path's first run would be the sealed run); a synthetic-only rehearsal (skips `prepare_record` on real recordings and real ONNX scoring, where shape and dtype bugs hide).
 
 **Applied:** `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.3.
+
+## 2026-10-30: Phase 5 settling, 4: reproduction is exact on this Mac, with no cross-machine number (C6, E4, OPS-03 amendment)
+
+**Gap:** Phase 5's exit asked for a clean-clone `rebuild` that reproduces `results/` "within tolerance", and Phase 4 settling 5 left that tolerance to the start of Phase 5. C6 and the PRD's reproducibility line also claimed retraining reproduces "within tolerance elsewhere".
+
+**Measured (throwaway script in the session scratchpad, deleted after):** a width-1 `HeartbeatCNN` (seeded random weights, no MIT-BIH data) exported with torch 2.14.1, `dynamo=True`, opset 20, single file, twice in one process and once more from a fresh process in another folder: all three files byte-identical (235,390 bytes, SHA256 beginning `b4cbafa3`); the file name is not embedded. With the earlier measurements (MPS same-seed runs bit-identical, Phase 4 settling 5 and Task 9; CPU same-seed bit-identical, R22 and the three `train-final` checksums; baseline and `select` reproduce exactly, Phases 3 and 4), every stage through export is exact on this Mac.
+
+**Decision (Din):**
+
+1. The clean-clone check (task 5.4) is exact, with no numeric tolerance. `results/` files must be equal once a fixed list of volatile keys is removed (run names, commit, run-folder paths, wall times, timestamps); the list is one constant with its own test. Every final checkpoint, every file in `models/heartbeat-v1/` and every parity fixture must match by SHA256. Any difference stops the goal and goes to Din.
+2. The clone is made in the session scratchpad from the local repo, downloads the 132 pinned files fresh, and runs `rebuild` in the background (about 110 minutes, from Phase 4's measured stages plus export).
+3. No cross-machine tolerance: C7 gives one Mac, so any number would be an untested claim. Off this Mac, the claim is that the committed ONNX models reproduce the reported metrics (ONNX Runtime differences near 1e-7 sit inside the 1e-5 parity rule, labels exact). Retraining elsewhere is not claimed to match; the model card says MPS cross-validation on other hardware may differ by about the seed spread (Phase 4 device checks).
+4. E4's default-mode check after the freeze (OPS-03, Phase 7) is exact on this Mac by the same rule. `--exact` stays the all-CPU bit-for-bit mode: built in Phase 5, run only with Din's go.
+
+**Reason:** exact is stricter than any tolerance and matches what was measured; a looser rule would only give a real regression room to hide.
+
+**Rejected:** a numeric tolerance such as fold macro F1 within 0.02 (unneeded on this Mac, untestable elsewhere); keeping C6's "elsewhere" wording (a promise nobody can check).
+
+**Applied:** `docs/PRD.md` OPS-03 and the reproducibility line; `docs/PLAN.md` Phase 5 exit; `docs/TASKS.md` 5.4. C6 is not part of the pre-registered plan (A3, C4, C5, C8); this is a dated amendment made before any DS2 result. AS3 stays as written: it is about MPS against CPU, which the Phase 4 device checks measured.

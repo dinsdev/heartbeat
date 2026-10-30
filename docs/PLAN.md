@@ -97,7 +97,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 **Depends on:** Phase 4.
 
-**Exit:** rows R25 to R28, R41, R42, R50 and R52 pass; `rebuild` from a clean clone reproduces `results/` within tolerance (default mode) and logs the result in the ledger.
+**Exit:** rows R25 to R28, R41, R42, R50 and R52 pass; `rebuild` from a clean clone on this Mac reproduces `results/` exactly apart from the volatile keys, with every checkpoint, exported model file and parity fixture equal by SHA256 (default mode, settling 4), and logs the result in the ledger.
 
 ### Phase 6: Demo on DS1 (about 5 to 7 days)
 

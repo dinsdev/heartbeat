@@ -240,7 +240,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 
 - **OPS-01 (P0, E4).** `uv run heartbeat rebuild` runs every stage (download, prepare, check-folds, cross-validate, select, exhibit, train-final, export, reproduce-test after the freeze only, build-demo-data), skipping stages whose input fingerprint is unchanged; `--from <stage>` forces a rerun.
 - **OPS-02 (P0, E4).** Before a freeze record exists, `rebuild` stops after export and builds DS1-only demo data.
-- **OPS-03 (P0, E4).** After the sealed run, `rebuild` retrains and checks against the freeze record (default mode: metrics within tolerance; `--exact`: model checksum bit for bit), evaluates DS2 with the committed frozen model, and requires results equal to the logged ones. This is logged as a reproduction, a separate entry type. Mismatches fail loudly.
+- **OPS-03 (P0, E4).** After the sealed run, `rebuild` retrains and checks against the freeze record (default mode: results exact on this Mac apart from a fixed list of volatile keys, checkpoints and exported files equal by SHA256; `--exact`: everything on CPU, model checksum bit for bit; Phase 5 settling 4, 2026-10-30), evaluates DS2 with the committed frozen model, and requires results equal to the logged ones. This is logged as a reproduction, a separate entry type. Mismatches fail loudly.
 - **OPS-04 (P0, E4).** `heartbeat verify` checks manifests and checksums, frozen-model parity on the fixtures, and consistency of result files with the test log, in minutes, without training.
 - **OPS-05 (P0, E6).** One GitHub Actions workflow runs on every push and pull request: ruff, mypy, Python unit and real-data tests, a smoke training run, the Python parity half, ESLint, Prettier, svelte-check, Vitest, the web build with size gates, Playwright in Chromium and WebKit, and the wording lint.
 - **OPS-06 (P0, E6).** Deploys run from GitHub Actions with wrangler: production on `main` after checks pass, Worker Previews on pull requests, served on `workers.dev` only. Deploys never train; demo data is built from the committed frozen model.
@@ -290,7 +290,7 @@ Reported timings use Playwright with 4x CPU slowdown, and fast 4G for the phone 
 
 **Platform.** Current Chromium and WebKit browsers on desktop and phone, tested in CI. Requires WebAssembly and Web Workers for live labels; without them the labeled fallback runs. Firefox is not in the automated matrix (E5); see Q5.
 
-**Reproducibility (C6, C7, E4).** Bit-for-bit retraining on the same machine and setup with `--exact`; within tolerance elsewhere. Inference with the shipped ONNX model reproduces the reported metrics exactly.
+**Reproducibility (C6, C7, E4).** Retraining reproduces exactly on this Mac in both modes (default mode: MPS cross-validation and exhibit, CPU final models; `--exact`: all CPU). No numeric claim is made for retraining on other hardware, where MPS cross-validation may differ by about the seed spread (Phase 4 device checks). Inference with the committed ONNX models reproduces the reported metrics on any machine (Phase 5 settling 4, 2026-10-30).
 
 **Cost.** Zero recurring cost: Cloudflare Workers free plan with static assets; GitHub Actions on a public repo; training on Din's Mac.
 
