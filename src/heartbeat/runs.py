@@ -33,6 +33,9 @@ PROVENANCE_PACKAGES = ("numpy", "scipy", "scikit-learn", "wfdb")
 
 _PACKAGE_LOGGER = "heartbeat"
 
+# Git pathspecs for the dirty flag and diff hash: everything but `results/`.
+_TRACKED_INPUTS = (":(top)", ":(top,exclude)results/")
+
 
 def canonical_json(payload: Any) -> str:
     """Sorted keys, two-space indent, trailing newline; NaN is an error.
@@ -84,13 +87,17 @@ def provenance(repo: Path, now: datetime) -> dict[str, Any]:
     """What a run's numbers depend on besides its config.
 
     The tree is dirty when `git status` shows any change, untracked files
-    included (ignored files are not).
+    included (ignored files are not), outside the top-level `results/`.
+    `rebuild` writes each stage's results file before the next stage starts,
+    so counting `results/` would mark every later stage of a clean-tree
+    rebuild dirty; those files carry their own run and provenance.
     """
-    status = _git(repo, "status", "--porcelain")
+    status = _git(repo, "status", "--porcelain", "--", *_TRACKED_INPUTS)
+    diff = _git(repo, "diff", "HEAD", "--", *_TRACKED_INPUTS)
     return {
         "commit": _git(repo, "rev-parse", "HEAD").decode().strip(),
         "dirty": bool(status.strip()),
-        "diff_sha256": hashlib.sha256(_git(repo, "diff", "HEAD")).hexdigest(),
+        "diff_sha256": hashlib.sha256(diff).hexdigest(),
         "python": platform.python_version(),
         "packages": {
             name: importlib.metadata.version(name) for name in PROVENANCE_PACKAGES

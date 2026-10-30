@@ -81,6 +81,27 @@ def test_an_untracked_file_makes_the_tree_dirty(repo: Path) -> None:
         assert run.provenance["dirty"] is True
 
 
+def test_results_written_earlier_in_a_rebuild_leave_the_tree_clean(
+    repo: Path,
+) -> None:
+    (repo / "results").mkdir()
+    (repo / "results" / "cv_baseline.json").write_text("{}\n", encoding="utf-8")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "results")
+    with _run(repo, "clean") as clean:
+        pass
+    (repo / "results" / "cv_baseline.json").write_text('{"a": 1}\n', encoding="utf-8")
+    (repo / "results" / "selection.json").write_text("{}\n", encoding="utf-8")
+    with _run(repo, "after") as after:
+        pass
+    assert after.provenance["dirty"] is False
+    assert after.provenance["diff_sha256"] == clean.provenance["diff_sha256"]
+    (repo / "docs" / "results").mkdir(parents=True)
+    (repo / "docs" / "results" / "notes.md").write_text("x\n", encoding="utf-8")
+    with _run(repo, "nested") as nested:
+        assert nested.provenance["dirty"] is True
+
+
 def test_thread_variables_are_recorded(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
