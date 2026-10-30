@@ -1839,3 +1839,20 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Rejected:** a numeric tolerance such as fold macro F1 within 0.02 (unneeded on this Mac, untestable elsewhere); keeping C6's "elsewhere" wording (a promise nobody can check).
 
 **Applied:** `docs/PRD.md` OPS-03 and the reproducibility line; `docs/PLAN.md` Phase 5 exit; `docs/TASKS.md` 5.4. C6 is not part of the pre-registered plan (A3, C4, C5, C8); this is a dated amendment made before any DS2 result. AS3 stays as written: it is about MPS against CPU, which the Phase 4 device checks measured.
+
+## 2026-10-30: Phase 5 settling, 5: the cards render every DS1-backed block, the exhibit included (F6 clarification)
+
+**Conflict:** `docs/MODEL_CARD.md` (F6) says DS1 blocks fill in during development, which includes the `exhibit` block, while PLAN.md's Phase 4 exit says exhibit numbers stay out of public text until the case study, and R44 counts the cards as published text. `results/exhibit.json` is already committed in the public repo, so the embargo can only govern which prose quotes the numbers.
+
+**Decision (Din):**
+
+1. Phase 5 renders every DS1-backed block: `dev_selection`, `calibration_fit`, `exhibit` and `model_details` in the model card (the freeze commit and date read "Pending (Phase 7)" until a freeze record exists); `data_counts`, `data_counts_per_record` and `data_demographics` in the data card.
+2. Every `test_*` block stays pending until the sealed run is logged (R50), and `shipped_data` waits for Phase 6.
+3. The data card's DS2 rows come from sources that are not DS2 signals: class counts from the committed expected-count manifest (PhysioNet's published per-record table, already checked by R11), age and sex from the `.hea` headers. A rebuild stage writes them into a committed `results/` file, so the cards render from `results/` only. Rule 1 is unaffected: no DS2 signal is read, and no DS2 label is used beyond published counts.
+4. The embargo is clarified: no hand-written text (README, demo UI, card prose, commit messages, posts) quotes an exhibit number until the case study in Phase 8. The generated card block is exempt, since it is the results file rendered verbatim with its source named.
+
+**Reason:** R50 stays one rule (every block equals what `cards` renders) with no special state; it matches F6's template; and holding back a block whose source is public protects nothing.
+
+**Rejected:** a renderer hold list keeping `exhibit` pending until Phase 8 (a special state in R50 and `verify` to delay a file anyone can read).
+
+**Applied:** `docs/PLAN.md` Phase 4 exit (clarification) and Phase 5 builds; `docs/TASKS.md` 5.5.
