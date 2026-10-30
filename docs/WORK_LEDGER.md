@@ -1501,3 +1501,23 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Cost:** Phase 4's first task changes the constant, updates `tests/unit/test_cv.py`'s grid assertion (approved here, rule 3), reruns `uv run heartbeat rebuild` (about 5 s) and recommits `results/cv_baseline.json`. Every baseline number in the "Phase 3 built" entry is superseded by that file if the chosen C changes; the Phase 3 entries stay as the record of the five-value run.
 
 **Applied:** `docs/PRD.md` MODEL-01; `docs/TASKS.md` C2 row. Made before any DS2 result and before the Phase 7 gate (rule 6; C2 is not part of the pre-registered plan, but is a locked decision).
+
+## 2026-10-30: Phase 4 settling, 2: the epoch cap and the selection rule (C3, MODEL-04 clarification)
+
+**Gap:** MODEL-04 and EVAL-07 fix the epoch count "from averaged validation curves" on the seed mean, but name no cap, no exact rule and no edge behavior. No CNN result exists yet, so this is fixed before any curve is seen (rule 6).
+
+**Decision (Din):**
+
+1. Cap: 40 epochs per run, the C7 budget (45 runs in about 1 hour on MPS, measured on synthetic data of one fold's size). Whether 40 is enough is a guess, checked by item 4.
+2. Every epoch is scored on the held-out fold in eval mode (no dropout, batch norm running statistics). For each width w and epoch e: pool the 5 folds' validation predictions per seed, compute macro F1 over N, S and V, and average over seeds 0, 1 and 2. This gives one curve of 40 points per width.
+3. Selection: the joint argmax of that seed mean over width and epoch (120 candidates), no smoothing. Ties go to the smaller width, then the fewer epochs. The final models train for exactly that many epochs (C1).
+4. Edge: if the chosen epoch is 36 to 40, the run stops and asks Din, since the curve may still be rising and raising the cap is Din's call.
+5. `results/selection.json` carries the three seed-mean curves, each seed's curve, the four-class macro F1 beside each point, and the best point per width.
+
+**Reason:** one rule with nothing extra to tune; the seed mean already averages 3 seeds x 5 folds x about 51,000 beats. The edge stop mirrors the C grid rule (settling 1) but stops instead of noting, because a short cap is cheap to fix before final training and costly after.
+
+**Cost, stated:** an argmax over 120 points biases the chosen point's out-of-fold score upward slightly. DS1 numbers at the chosen point are labeled "at the selected width and epoch"; DS2 is the unbiased answer.
+
+**Rejected:** argmax of a centered 5-epoch moving average (more robust to jumpy curves, at the price of one more parameter and an edge rule); early stopping (excluded by C1).
+
+**Applied:** `docs/PRD.md` MODEL-04.
