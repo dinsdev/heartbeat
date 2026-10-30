@@ -1150,3 +1150,60 @@ Stored raw, in seconds and plain ratios. The log of the two ratios is taken in t
 **Noted for Din:** the R4 real-data test names record 100 (DS2) in PLAN section 6; the plan reads only its header (`wfdb.rdheader`, lead names), never its signal, to stay inside rule 1. Phase 1's stub test changes in Task 7 to cover only subcommands not yet built; that follows the behavior change and drops no check.
 
 **Approved (Din, 2026-10-29):** the Phase 2 task plan as committed in `48fd140`, and the two `/goal` prompts drafted in the planning session (Goal A 2,908 characters, Goal B 2,270, both under the 4,000-character limit and clean under the wording lint). Execution is handed to a fresh Opus 5.5 session at high effort: Goal A ends at Din's `make-folds` command or at a stop-and-ask condition; Goal B starts after Din's one `make-folds` run and ends at the push command.
+
+## 2026-10-29: Phase 2 Goal A built, local checks green; `make-folds` waits for Din
+
+**Built (branch `phase-2-data`, one Conventional Commit per plan task):**
+
+- Task 1, `3c7a36b` and `a8ec611`: `current-phase = 2`; `constants.py` (decision IDs in comments), `config.load_settings` into frozen dataclasses, `paths.py` additions, `data/manifests.py` readers (R3, R12).
+- Task 2, `ab3e6b4`: `signal/filter.py`, `signal/windows.py`, `signal/rr.py` (R5 to R9, R51).
+- Task 3, `bd589e5`: `data/aami.py` (R10), `data/records.py` (`select_lead`, `read_record`, `read_annotations`; R4), real-data fixtures in `tests/data/conftest.py` (every test there is marked `realdata`; a missing cache fails with the download command).
+- Task 4, `49745a3`: `data/download.py` and `heartbeat download` (R1, review focus 1), R2 on the real cache.
+- Task 5, `74a2178`: `data/prepare.py`, `data/npz.py`, `data/loader.py`, `heartbeat prepare` (R9, R15), real-data tests for R11, the DS1 window range and the loader.
+- Task 6, `7fe48a1`: `data/folds.py`, `heartbeat make-folds [--out PATH]` and `heartbeat check-folds` (R13, R14), tested in process on temporary files only.
+- Task 7, `42fc823`: `stages.py` and `heartbeat rebuild` (download, prepare, check-folds; the later stages named with their phases).
+- Task 8, `3a595b1` and this commit: the CI cache and download step; AGENTS.md Commands; TASKS 2.1 to 2.6; this entry.
+
+**Test first:** for every task the test file was written and run before the module existed, and failed at collection (`ModuleNotFoundError` or `ImportError`): `test_manifests.py`, `test_filter.py`, `test_windows.py`, `test_rr.py`, `test_aami.py`, `test_records.py`, `test_download.py`, `test_prepare.py`, `test_loader.py`, `test_folds.py`, `test_stages.py`. The new CLI tests for `download` and `prepare` failed (`AttributeError`) before the handlers existed. The real-data tests failed with "132 cached MIT-BIH files missing; run `uv run heartbeat download`" before the download. One slip, in a test, not the code: the 5-minute exclusion case in `test_rr.py` first expected 109,001 samples for an interval of 108,001; the test was corrected before its first commit and the code did not change.
+
+**Download (`time uv run heartbeat download`, local Mac):** 132 files fetched, all from the S3 mirror (no fallback, no warning), 82 MB (`du -sh data/raw/mitdb/1.0.0`), 1 minute 10 seconds wall clock. A second run skipped all 132 after checking their hashes, in 0.08 s.
+
+**Floor hits (`uv run heartbeat prepare`, which wrote `data/prepared/floor_hits.json`; 1.4 s wall clock):** 0 hits in all 22 DS1 records, under the limit of 5 (B3 amendment). Smallest window standard deviation per record, in int16 units: 101 27.16, 106 30.53, 108 16.05, 109 39.89, 112 26.84, 114 19.66, 115 33.47, 116 2.75, 118 46.97, 119 62.25, 122 57.72, 124 40.63, 201 15.98, 203 12.11, 205 8.08, 207 20.13, 208 2.44, 209 26.16, 215 24.09, 220 49.62, 223 26.09, 230 44.28. The smallest is 2.44 (record 208), then 2.75 (116): above the floor of 2.0, but closer than the B3 amendment's guess of 20 to 60 units for a normal window. Noted, not acted on.
+
+**Table II comparison (annotation counts only, read with `read_annotations` by a throwaway scratchpad script, deleted after; no DS2 signal read):** our AAMI totals minus de Chazal's Table II.
+
+| Set | Counted | N | S | V | F | Q |
+| --- | --- | --- | --- | --- | --- | --- |
+| DS1 | all beats (45866, 944, 3788, 415, 8) | -2 | +2 | +1 | 0 | 0 |
+| DS1 | first and last beat of each record dropped (45824, 943, 3788, 414, 8) | -44 | +1 | +1 | -1 | 0 |
+| DS2 with 202 | all beats (44259, 1837, 3221, 388, 7) | +1 | 0 | 0 | 0 | 0 |
+| DS2 with 202 | first and last beat dropped (44218, 1836, 3219, 388, 7) | -40 | -1 | -2 | 0 | 0 |
+
+The dropped first and last beats are 42 N, 1 S and 1 F in DS1, and 41 N, 2 V and 1 S in DS2 with 202. With all beats counted, the differences are at most 2 per class; neither counting matches the paper exactly. Our totals with all beats equal PRD Appendix C and the manifest (DS1 and DS2 without 202; `tests/data/test_counts.py`), so the differences are against the paper's table only. The scored DS1 beats that `make-folds` will see are N 45824, S 943, V 3788, F 414.
+
+**R11 and the stop conditions, from `uv run pytest -m realdata` (98 passed):** every one of the 44 records' `.atr` counts equals `mitdb-beat-counts.toml` exactly (stop 1 clear); no symbol outside DATA-09 and `NON_BEAT_SYMBOLS` in any record (stop 2 clear, now also a real-data R10 test); every kept DS1 beat has a full window, MLII exists and the rate is 360 Hz (stop 3 clear; `read_record` checks rate, units and lead); 0 floor hits (stop 4 clear); the download matched on the first source (stop 5 clear); no new dependency, pin change, `manifests/` or `.claude/` edit (stop 6 clear); no DS2 signal, feature or prediction was read or produced: DS2 was downloaded, checksummed and its annotations counted, and record 100 was read through `wfdb.rdheader` only (stop 7 clear). Stop 8 belongs to Goal B.
+
+**`rebuild` on real data (`/usr/bin/time -p uv run heartbeat rebuild`, twice):** the first run ran download, prepare and check-folds (1.7 s); the second skipped download and prepare and ran check-folds (1.2 s). Both exit 1 at check-folds, because `manifests/folds.sha256` does not exist yet. That is expected until Goal B pins Din's fold file. `rebuild --from nope` exits 2.
+
+**Action pin (R46):** `actions/cache` v6.1.0, `55cc8345863c7cc4c66a329aec7e433d2d1c52a9`, the newest tag from `git ls-remote --tags` (a lightweight tag, so the hash is the commit). The release page shows 26 June with no year; the commit, fetched by hash into a scratchpad clone (deleted after), is dated 2026-06-23, so the release is far older than the 14-day cutoff (2026-10-15). Inputs `path` and `key` checked in its `action.yml`. The CI step caches `data/raw/mitdb/1.0.0` keyed on `hashFiles('manifests/mitdb-1.0.0.sha256')`, then runs `uv run heartbeat download`, which checks every cached file.
+
+**Deviations from the plan, and why:**
+
+1. `read_record(raw_dir, record_id, lead)` takes the lead name, read from `splits.toml`, so `"MLII"` lives in the manifest only.
+2. New module `data/npz.py` holds `PreparedRecord`, `save_prepared` and `load_prepared` (re-exported from `data/prepare.py`). Reason: `prepare` uses the loader's `require_ds1`, and the loader reads prepared files, so one module each way would be an import cycle; it also keeps the loader from importing the module that reads signals.
+3. mypy: scipy, scikit-learn and wfdb ship no type information, so their imports are `ignore_missing_imports` (stub packages would be new dependencies). `mypy_path = "src:tests"` with `explicit_package_bases`, because `tests/conftest.py` and `tests/data/conftest.py` share a file name.
+4. `make_folds` and `check_folds` take `manifest_paths` (default: the splits and subjects manifests), so tests use temporary manifests. `manifest_sha256` is keyed by file name (`splits.toml`, `subjects.toml`).
+5. Stricter than the plan (review focus 3): `load_ds1` fails on any non-DS1 `.npz` in the prepared folder, and `load_prepared` fails when the record inside a file differs from its name (a renamed DS2 file).
+6. Stricter than the plan: `check_folds` also checks that the fold file's manifest hashes equal today's manifests, and rejects a repeated JSON key (the way a subject in two folds would be planted; plain `json.loads` keeps the last one silently).
+7. The download stage hashes the cached files as inputs. Reason: DATA-02 says every run checks the cache, and a skipped stage would not; a changed file changes the fingerprint, the stage reruns, and its checksum check stops the run.
+8. `rebuild` exit codes: 2 for an unknown `--from` or one naming a stage not built yet (it says which phase), 1 when a stage fails. `--exact` parses and prints that it has no effect on the Phase 2 stages.
+9. `test_cli.py`'s stub test lost each subcommand as its task built it (Tasks 4 to 7), not all at once in Task 7; it now covers the phase 3 and later subcommands, as planned. Its `rebuild --from prepare --exact` stub case moved to `test_stages.py`, where the real command parses both.
+10. A window counts as a floor hit when its standard deviation is strictly below 2.0 (at exactly 2.0 the floor changes nothing).
+
+**Timings (local Mac, warm):** `scripts/check.sh` 8.1 s, 7.4 s, 7.3 s, each exit 0 (522 passed, 98 real-data tests deselected). `CI=1 uv run pytest`: 620 passed in 5.7 s.
+
+**Verified (local, this commit):** `scripts/check.sh` exit 0; `CI=1 uv run pytest` exit 0 (620 passed, real-data layer included); `uv run pytest -m realdata` 98 passed; `uv run python -m heartbeat.checks.rule_coverage` exit 0 (0 uncovered at current-phase 2, 31 rows pending, phases 3 to 7); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0; `pnpm -C web run format:check` exit 0 (part of `check.sh`).
+
+**Not verified:** CI on these commits (waits for Din's push after Goal B), including the cache step and the download time in CI.
+
+**Waiting on Din:** one run of `uv run heartbeat make-folds` (F5 denies it to Claude). It reads `data/prepared/` (already written by `prepare`) and the seed 20261026, writes `config/folds.json` (untracked) and prints the subjects and class counts per fold and the file's SHA256. Goal B then pins it.

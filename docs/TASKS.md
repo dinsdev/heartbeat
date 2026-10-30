@@ -112,12 +112,12 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions | In progress (2026-10-29): four manifests and `config/default.toml` written in planning and cross-checked (ledger); R3, R11, R12 tests in Goal A; `folds.sha256` in Goal B |
-| 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes | Planned |
-| 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features; class totals against de Chazal's Table II in the ledger; z-score floor hits per DS1 record in the ledger | Planned |
-| 2.4 | Split-enforcing loader; leakage tests on subject IDs | Planned |
-| 2.5 | `make-folds` and committed `config/folds.json` (ledger entry) | Planned |
-| 2.6 | `rebuild` stage framework with fingerprints and `--from` | Planned |
+| 2.1 | `manifests/`: checksums, subjects (201 and 202 one subject), splits with exclusions | In progress (2026-10-29): four manifests and `config/default.toml` written in planning; readers and their R3 and R12 tests Verified (local `uv run pytest`); R11 Verified on all 44 records against the real `.atr` files; `folds.sha256` waits for Goal B |
+| 2.2 | Downloader: S3 mirror first, PhysioNet fallback, checksum check, atomic writes | Verified (2026-10-29): R1 unit tests and R2 on the real cache pass locally; 132 files fetched from the S3 mirror; CI half waits for the push |
+| 2.3 | `prepare`: MLII by name, filter, int16, AAMI mapping, windows, RR features; class totals against de Chazal's Table II in the ledger; z-score floor hits per DS1 record in the ledger | Verified (2026-10-29): R4 to R11 and R51 pass locally; floor hits (0) and the Table II comparison in the ledger; CI half waits for the push |
+| 2.4 | Split-enforcing loader; leakage tests on subject IDs | Verified (2026-10-29): R12 and R15 (unit and real data) pass locally; CI half waits for the push |
+| 2.5 | `make-folds` and committed `config/folds.json` (ledger entry) | In progress (2026-10-29): `make-folds` and `check-folds` built, R13 and R14 pass on planted files; Din runs `make-folds` once, then Goal B pins and commits the file |
+| 2.6 | `rebuild` stage framework with fingerprints and `--from` | Implemented (2026-10-29): stage tests pass locally; the real `rebuild` runs download and prepare and skips them on a second run, then stops at check-folds until the folds are pinned (Goal B) |
 
 ### Phase 3: Evaluation harness and baseline
 
