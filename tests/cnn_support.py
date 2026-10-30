@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 from heartbeat.constants import WINDOW_AFTER_SAMPLES
 from heartbeat.data.loader import BeatTable
 from heartbeat.models.spec import ModelSpec, epochs_only
+from heartbeat.signal.rr import rr_features
 from heartbeat.signal.windows import extract_windows
 
 MARGIN_SAMPLES = 200
@@ -101,3 +102,38 @@ def epoch_spec(calls: list[dict[str, Any]] | None = None) -> ModelSpec:
         logits=logits,
         fit_epochs=fit_epochs,
     )
+
+
+def annotated_beats_with_traces(
+    n_subjects: int = 10, per_subject: int = 160, seed: int = 4
+) -> tuple[BeatTable, dict[str, NDArray[np.int16]], dict[str, NDArray[np.int64]]]:
+    """Beats whose times, RR features, windows and traces agree, as prepare's do.
+
+    Each record's annotated beats are the kept beats plus one on each side
+    (DATA-08), at irregular intervals; the RR features come from those times
+    and the windows are cut from the trace. Returns the beats, the traces and
+    record to every annotated beat sample.
+    """
+    base = synthetic_beats(n_subjects, per_subject, seed)
+    rng = np.random.default_rng(seed + 1)
+    sample = np.empty_like(base.sample)
+    rr = np.empty_like(base.rr_s)
+    windows = np.empty_like(base.window_adu)
+    traces: dict[str, NDArray[np.int16]] = {}
+    annotated: dict[str, NDArray[np.int64]] = {}
+    for record in dict.fromkeys(base.record_id.tolist()):
+        rows = np.flatnonzero(base.record_id == record)
+        steps = rng.integers(150, 600, size=rows.size + 2)
+        times = (MARGIN_SAMPLES + np.cumsum(steps)).astype(np.int64)
+        trace = rng.normal(0.0, 30.0, int(times[-1]) + WINDOW_AFTER_SAMPLES + 50)
+        for row, s in zip(rows.tolist(), times[1:-1].tolist(), strict=True):
+            trace[s - 5 : s + 5] += 200 + CLASS_BUMP[str(base.beat_class[row])]
+        traces[record] = np.round(trace).astype(np.int16)
+        annotated[record] = times
+        sample[rows] = times[1:-1]
+        rr[rows] = rr_features(times)
+        windows[rows] = extract_windows(traces[record], times[1:-1])
+    beats = BeatTable(
+        base.record_id, base.subject_id, sample, base.beat_class, windows, rr
+    )
+    return beats, traces, annotated

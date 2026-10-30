@@ -7,20 +7,24 @@ from typing import Any
 
 import numpy as np
 import pytest
-from cnn_support import beats_with_traces
+from cnn_support import annotated_beats_with_traces
+from numpy.typing import NDArray
 from run_support import make_repo
 from run_support import settings as run_settings
 
 from heartbeat.constants import RR_FEATURE_NAMES, SCORED_CLASSES
 from heartbeat.data.loader import BeatTable
+from heartbeat.data.manifests import Splits
+from heartbeat.export.build import export_models
 from heartbeat.export.bundle import (
+    ATTRIBUTION_NOTICE,
     NOTICE_TEXT,
     SeedModel,
     bundle_files,
-    export_models,
     write_bundle,
 )
-from heartbeat.export.onnx import ExportError
+from heartbeat.export.fixtures import fixture_parity
+from heartbeat.export.onnx import ExportError, ParityError
 from heartbeat.runs import canonical_json
 from heartbeat.sealed.score import load_baseline, load_calibration
 from heartbeat.train.final import final_payload, train_final, train_final_baseline
@@ -186,12 +190,16 @@ def test_seeds_must_include_the_shipped_seed(tmp_path: Path) -> None:
 # export_models: checkpoints from train-final to the bundle and its record.
 
 
+Trained = tuple[Path, BeatTable, dict[str, Any], dict[str, NDArray[np.int64]]]
+SPLITS = Splits(
+    ds1=tuple(f"s{k:02d}" for k in range(10)), ds2=("100",), excluded={}, lead="MLII"
+)
+
+
 @pytest.fixture(scope="module")
-def trained(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> tuple[Path, BeatTable, dict[str, Any]]:
+def trained(tmp_path_factory: pytest.TempPathFactory) -> Trained:
     repo = make_repo(tmp_path_factory.mktemp("export"))
-    beats, traces = beats_with_traces(n_subjects=4, per_subject=160)
+    beats, traces, annotated = annotated_beats_with_traces()
     models = [
         train_final(
             run_settings(repo.parent),
@@ -215,15 +223,26 @@ def trained(
         repo=repo,
     )
     payload = final_payload(models, width=0.5, epochs=1, baseline=baseline, repo=repo)
-    return repo, beats, payload
+    return repo, beats, payload, annotated
 
 
-def test_export_models_writes_the_bundle_and_its_record(
-    trained: tuple[Path, BeatTable, dict[str, Any]],
-) -> None:
-    repo, beats, final = trained
-    folder = repo / "models" / "heartbeat-v1"
-    record = export_models(final, beats, folder, repo)
+def _export(trained: Trained, final: dict[str, Any], name: str) -> dict[str, Any]:
+    repo, beats, _, annotated = trained
+    return export_models(
+        final,
+        beats,
+        annotated,
+        SPLITS,
+        repo / name / "models" / "heartbeat-v1",
+        repo / name / "fixtures" / "parity",
+        repo,
+    )
+
+
+def test_export_models_writes_the_bundle_and_its_record(trained: Trained) -> None:
+    repo, beats, final, _ = trained
+    folder = repo / "main" / "models" / "heartbeat-v1"
+    record = _export(trained, final, "main")
     json.dumps(record, allow_nan=False)
     assert record["opset"] == 20
     assert record["size_limit_bytes"] == 1_000_000
@@ -241,40 +260,59 @@ def test_export_models_writes_the_bundle_and_its_record(
         assert mine["parity_max_abs_diff"] <= 1e-5
         facts = next(f for f in record["files"] if f["path"] == mine["path"])
         assert facts["bytes"] < 1_000_000
-    assert by_seed[0]["path"] == "models/heartbeat-v1/model.onnx"
-    assert by_seed[2]["path"] == "models/heartbeat-v1/seeds/seed-2/model.onnx"
-    assert record["baseline"]["path"] == "models/heartbeat-v1/baseline.json"
+    assert by_seed[0]["path"] == "main/models/heartbeat-v1/model.onnx"
+    assert by_seed[2]["path"] == "main/models/heartbeat-v1/seeds/seed-2/model.onnx"
+    assert record["baseline"]["path"] == "main/models/heartbeat-v1/baseline.json"
+    fixtures = repo / "main" / "fixtures" / "parity" / "fixtures.json"
+    assert record["fixtures"]["path"] == "main/fixtures/parity/fixtures.json"
+    assert record["fixtures"]["bytes"] == fixtures.stat().st_size
+    assert record["fixtures"]["beats"] == 50
+    stored = json.loads(fixtures.read_text("utf-8"))
+    assert stored["notice"] == ATTRIBUTION_NOTICE
+    assert ATTRIBUTION_NOTICE in " ".join(NOTICE_TEXT.split())
     assert record["baseline"]["C"] == 0.1
     for name in ("run", "commit", "dirty"):
         assert name not in record
 
 
-def test_export_models_twice_gives_the_same_bytes(
-    trained: tuple[Path, BeatTable, dict[str, Any]],
-) -> None:
-    repo, beats, final = trained
-    first = export_models(final, beats, repo / "a" / "heartbeat-v1", repo)
-    second = export_models(final, beats, repo / "b" / "heartbeat-v1", repo)
+@pytest.mark.rule("R26")
+def test_the_committed_files_reproduce_the_fixture_logits(trained: Trained) -> None:
+    repo = trained[0]
+    _export(trained, trained[2], "parity")
+    models = repo / "parity" / "models" / "heartbeat-v1"
+    path = repo / "parity" / "fixtures" / "parity" / "fixtures.json"
+    payload = json.loads(path.read_text("utf-8"))
+    diffs = fixture_parity(models, payload)
+    assert sorted(diffs) == ["baseline", "seed-0", "seed-1", "seed-2"]
+    assert all(d <= 1e-5 for d in diffs.values())
+    payload["beats"][3]["seeds"]["1"]["logits"][2] += 2e-5
+    with pytest.raises(ParityError, match="seed-1"):
+        fixture_parity(models, payload)
+    payload["beats"][3]["seeds"]["1"]["logits"][2] -= 2e-5
+    payload["beats"][0]["baseline"]["logits"][0] += 1.0
+    with pytest.raises(ParityError, match="baseline"):
+        fixture_parity(models, payload)
+
+
+def test_export_models_twice_gives_the_same_bytes(trained: Trained) -> None:
+    final = trained[2]
+    first = _export(trained, final, "a")
+    second = _export(trained, final, "b")
     assert [f["sha256"] for f in first["files"]] == [
         f["sha256"] for f in second["files"]
     ]
+    assert first["fixtures"]["sha256"] == second["fixtures"]["sha256"]
 
 
-def test_export_models_refuses_a_changed_checkpoint(
-    trained: tuple[Path, BeatTable, dict[str, Any]],
-) -> None:
-    repo, beats, final = trained
-    changed = json.loads(json.dumps(final))
+def test_export_models_refuses_a_changed_checkpoint(trained: Trained) -> None:
+    changed = json.loads(json.dumps(trained[2]))
     changed["models"][1]["sha256"] = "0" * 64
     with pytest.raises(ExportError, match="seed-1"):
-        export_models(changed, beats, repo / "c" / "heartbeat-v1", repo)
+        _export(trained, changed, "c")
 
 
-def test_export_models_refuses_seeds_with_different_scalers(
-    trained: tuple[Path, BeatTable, dict[str, Any]],
-) -> None:
-    repo, beats, final = trained
-    changed = json.loads(json.dumps(final))
+def test_export_models_refuses_seeds_with_different_scalers(trained: Trained) -> None:
+    changed = json.loads(json.dumps(trained[2]))
     changed["models"][2]["scaler"]["mean"][0] += 1.0
     with pytest.raises(ExportError, match="scaler"):
-        export_models(changed, beats, repo / "d" / "heartbeat-v1", repo)
+        _export(trained, changed, "d")

@@ -10,43 +10,26 @@ rerun writes the same bytes. `freeze.json` is written only by
 """
 
 import hashlib
-import importlib.metadata
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-import numpy as np
-
-from heartbeat.constants import (
-    MODEL_SIZE_LIMIT_BYTES,
-    ONNX_OPSET,
-    PARITY_TOLERANCE,
-    RR_FEATURE_NAMES,
-    SCORED_CLASSES,
-    SHIPPED_SEED,
-)
-from heartbeat.data.loader import BeatTable
-from heartbeat.export.onnx import (
-    ExportError,
-    check_onnx,
-    check_parity,
-    export_onnx,
-    load_checkpoint,
-    parameter_count,
-)
-from heartbeat.models.augment import model_windows
-from heartbeat.models.inputs import RRScaler, apply_rr_scaler, rr_model_inputs
+from heartbeat.constants import RR_FEATURE_NAMES, SCORED_CLASSES, SHIPPED_SEED
 from heartbeat.runs import canonical_json, write_text_atomic
-from heartbeat.train.final import FINAL_DEVICE
-from heartbeat.train.torch_setup import configure_torch
 
 NOTICE_NAME = "NOTICE"
 FREEZE_NAME = "freeze.json"
 
-# PUB-07, R52: MIT for the weights (as `LICENSE`), and ODC-By 1.0 section 4.3's
-# notice for the training data, worded as in `DATA_LICENSE.md`.
+# PUB-07, R52: ODC-By 1.0 section 4.3's notice for the training data, worded as
+# in `DATA_LICENSE.md`; the fixtures carry it too.
+ATTRIBUTION_NOTICE = (
+    "Contains information from the MIT-BIH Arrhythmia Database (version 1.0.0, "
+    "PhysioNet), which is made available under the ODC Attribution License v1.0."
+)
+
+# PUB-07, R52: MIT for the weights (as `LICENSE`), and the notice above.
 NOTICE_TEXT = """heartbeat-v1 model files
 
 The model weights in this folder are released under the MIT License, like the
@@ -223,104 +206,3 @@ def bundle_files(models_dir: Path, repo: Path) -> list[dict[str, Any]]:
         for path in sorted(models_dir.rglob("*"))
         if path.is_file() and path.relative_to(models_dir).as_posix() != FREEZE_NAME
     ]
-
-
-EXPORT_LABEL = (
-    "frozen models from train-final, exported on CPU; parity: PyTorch against "
-    "Python ONNX Runtime on every DS1 kept beat (R26)"
-)
-
-
-def _same_scaler(
-    entries: Sequence[Mapping[str, Any]], baseline: Mapping[str, Any]
-) -> tuple[list[float], list[float]]:
-    # Every final model's scaler is fitted on the same DS1 rows (settling 2).
-    scalers = [e["scaler"] for e in entries] + [baseline["scaler"]]
-    if any(s != scalers[0] for s in scalers[1:]):
-        raise ExportError("the final models' RR scalers differ; scaler.json is shared")
-    return list(scalers[0]["mean"]), list(scalers[0]["std"])
-
-
-def export_models(
-    train_final: Mapping[str, Any],
-    beats: BeatTable,
-    models_dir: Path,
-    repo: Path,
-) -> dict[str, Any]:
-    """Export every final model and the baseline into `models_dir`.
-
-    Args:
-        train_final: The `results/train_final.json` payload.
-        beats: Every DS1 kept beat, for the parity check.
-        models_dir: The bundle folder (`models/heartbeat-v1/`).
-        repo: Root that checkpoint and bundle paths are relative to.
-
-    Returns:
-        The `results/export.json` payload (without run provenance).
-
-    Raises:
-        ExportError: On a checkpoint whose SHA256 differs from `train_final`,
-            differing scalers, a file that breaks design call 3 or the size
-            gate (R25), or a parity miss (R26).
-    """
-    configure_torch(FINAL_DEVICE)
-    width = float(train_final["width"])
-    entries = sorted(train_final["models"], key=lambda e: int(e["seed"]))
-    mean, std = _same_scaler(entries, train_final["baseline"])
-    scaler = RRScaler(mean=np.array(mean), std=np.array(std))
-    windows = model_windows(beats.window_adu)
-    rr = apply_rr_scaler(scaler, rr_model_inputs(beats.rr_s)).astype(np.float32)
-    seeds: list[SeedModel] = []
-    rows: list[dict[str, Any]] = []
-    parameters = 0
-    for entry in entries:
-        seed = int(entry["seed"])
-        try:
-            model = load_checkpoint(repo / entry["path"], width, entry["sha256"])
-        except ExportError as error:
-            raise ExportError(f"seed-{seed}: {error}") from error
-        data = export_onnx(model)
-        check_onnx(data)
-        diff = check_parity(model, data, windows, rr)
-        parameters = parameter_count(model)
-        seeds.append(
-            SeedModel(seed, data, entry["class_weights"], float(entry["temperature"]))
-        )
-        rows.append(
-            {
-                "seed": seed,
-                "path": (models_dir / seed_folder(seed) / "model.onnx")
-                .relative_to(repo)
-                .as_posix(),
-                "checkpoint_sha256": entry["sha256"],
-                "temperature": entry["temperature"],
-                "parity_max_abs_diff": diff,
-            }
-        )
-    write_bundle(models_dir, seeds, mean, std, train_final["baseline"])
-    baseline = train_final["baseline"]
-    return {
-        "label": EXPORT_LABEL,
-        "width": width,
-        "epochs": train_final["epochs"],
-        "shipped_seed": SHIPPED_SEED,
-        "opset": ONNX_OPSET,
-        "parameters": parameters,
-        "size_limit_bytes": MODEL_SIZE_LIMIT_BYTES,
-        "versions": {
-            name: importlib.metadata.version(name)
-            for name in ("torch", "onnx", "onnxscript", "onnxruntime")
-        },
-        "parity": {
-            "tolerance": PARITY_TOLERANCE,
-            "beats": int(beats.sample.size),
-            "data": "every DS1 kept beat, CPU",
-        },
-        "models": rows,
-        "baseline": {
-            "path": (models_dir / "baseline.json").relative_to(repo).as_posix(),
-            "C": baseline["C"],
-            "temperature": baseline["temperature"],
-        },
-        "files": bundle_files(models_dir, repo),
-    }
