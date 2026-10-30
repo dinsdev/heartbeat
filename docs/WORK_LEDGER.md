@@ -1866,3 +1866,9 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Reason:** Phase 4 ran a 108-minute rebuild inside one goal; the clean-clone check is a read-only comparison that already stops on any mismatch; no step needs Din mid-run (Phase 2 split only because `make-folds` is Din's).
 
 **Rejected:** two goals split before the clean-clone check (a review point that adds a wait and no safety, since nothing in that compute is irreversible or touches DS2).
+
+## 2026-10-30: Phase 5 task plan drafted, for Din's review
+
+**Drafted:** `docs/PLAN.md` section 8, Phase 5: twelve tasks on branch `phase-5-export` (phase bump with constants, paths and the dirty-flag scope; the frozen baseline; header demographics and `describe-data`; export; parity fixtures; the freeze record and gate; the log, scoring, report and DS1 rehearsal; stages, `--exact` and the reproduction check; cards and verify; the real rebuild; the clean-clone check; the hand-off), file map, test-first cases for R25 to R28, R41, R42, R50 and R52, nine stop conditions, review focus. It rests on Phase 5 settling 1 to 6 and twelve design calls listed in the plan.
+
+**Found while planning (code read, nothing run):** every training stage fingerprints `data/`, `signal/`, `models/`, `train/`, `evaluate/`, `runs.py`, `results.py` and `constants.py`, `config.py`, `paths.py`, so settling 1's change to `train/final.py` reruns all training in the real rebuild (about 110 minutes, measured in Phase 4). The plan puts every training-side change and every new constant first and the rest in new folders, so later fixes rerun nothing. The dirty flag skips only `results/`, while `export` writes `models/heartbeat-v1/` and `fixtures/parity/` during the rebuild; design call 2 widens the skip to those two folders. The Task 10 rebuild doubles as a reproduction of the Phase 4 results on new code.

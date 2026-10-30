@@ -750,3 +750,137 @@ Never change a test's expected value, a tolerance, a grid, a seed, the epoch cap
 4. The leaky side quietly tuned: its width, epoch and C must come from the honest selection (Task 6).
 5. The scaler or class weights fitted on validation rows in the CNN path, and the CNN's logits read with the wrong fold's weights (Task 4 inherits Phase 3's tests).
 6. Accuracy leaking into any headline payload (design call 10).
+
+### Phase 5: Export, parity and the rebuild (task plan, 2026-10-30)
+
+**Goal:** the frozen baseline and the three CNN seeds are exported under `models/heartbeat-v1/` with scaler, calibration and `NOTICE`; DS1 parity fixtures hold every preprocessing step; PyTorch and Python ONNX Runtime agree within 1e-5 with exact labels; `evaluate-test` exists with its freeze gate, its append-only log and a DS1 rehearsal of its success path; `heartbeat verify` and `heartbeat cards` work; `rebuild` runs through export and cards and stops before DS2; a clean clone on this Mac reproduces every output exactly (settling 4); R25 to R28, R41, R42, R50 and R52 pass locally and, after Din's push, in CI.
+
+**Approach:** keep everything after training out of the training code. The stages that train fingerprint `data/`, `signal/`, `models/`, `train/`, `evaluate/`, `runs.py`, `results.py` and the shared `constants.py`, `config.py`, `paths.py`; Phase 5's training-side changes (the frozen baseline, the header reader, the dirty-flag scope) and every new constant and path land first, then the post-training code goes in new folders (`export/`, `sealed/`, `cards/`), so a fix found after the real rebuild never reruns two hours of training. One real rebuild at the end, then the clean clone. Test first throughout.
+
+**Settled for this phase (ledger, 2026-10-30, "Phase 5 settling" 1 to 6):** `train-final` also fits the baseline on every DS1 row at the chosen C, with its DS1 out-of-fold temperature, exported as `baseline.json` and scored with NumPy; all three CNN seeds are exported as ONNX and the sealed run scores only committed files; `evaluate-test`'s success path is rehearsed on DS1 records in a test, never through the CLI; reproduction is exact on this Mac (results equal apart from volatile keys, outputs equal by SHA256), with no cross-machine number; the cards render every DS1-backed block, the exhibit included, and the data card's DS2 rows come from the expected-count manifest and the headers; one goal run.
+
+**Design calls for Din's review (made by Claude while planning):**
+
+1. Code layout. New packages `src/heartbeat/export/` (E3), `src/heartbeat/sealed/` and `src/heartbeat/cards/`, plus `src/heartbeat/verify.py` and `src/heartbeat/checks/reproduction.py`. None is in any training stage's code list. Every Phase 5 constant and path is added in Task 1, since `constants.py` and `paths.py` feed every fingerprint.
+2. The dirty flag also skips `models/heartbeat-v1/` and `fixtures/parity/` (today it skips `results/` only), since `export` writes them during a clean-tree rebuild and they carry their own provenance in `results/export.json`. `cards` is the last stage and opens no run folder, so its writes to the two cards dirty nothing.
+3. `models/heartbeat-v1/` layout: `model.onnx` and `calibration.json` (seed 0, shipped: class order, log class weights, temperature), `scaler.json` (shared), `baseline.json` (settling 1), `NOTICE` (R52), `seeds/seed-1/` and `seeds/seed-2/` (each `model.onnx` and `calibration.json`), and in Phase 7 `freeze.json`. ONNX: opset 20, single file, batch norm folded, inputs `window` `(b, 1, 256)` and `rr` `(b, 6)` float32 (z-scored window, scaled RR inputs), output `logits` `(b, 4)` in `SCORED_CLASSES` order, dynamic batch. JSON through `canonical_json`, so reruns are byte-identical. `results/export.json` records each file's size and SHA256, each source checkpoint's SHA256 (checked against `results/train_final.json`), the opset, the torch, onnx and onnxruntime versions, and the parameter count.
+4. Parity fixtures (PARITY-02, R27): 50 DS1 beats (20 N, 12 S, 12 V, 6 F; no Q), drawn with `PARITY_FIXTURE_SEED = 20261031` (distinct from the fold, bootstrap and leaky-split seeds) from kept DS1 beats, written by `export` to `fixtures/parity/fixtures.json`. Per beat: record, sample, class, the annotated beat samples the RR features read (the 5 minutes before, the beat and the next one), the int16 window, the z-scored window, the six RR values in seconds, the model inputs after the log ratios, the scaled inputs, and for each seed the PyTorch logits, the adjusted logits, the probabilities and the label; the baseline's logits too. R26 in CI compares Python ONNX Runtime on the committed models with the fixture's PyTorch logits, so CI needs no checkpoint.
+5. Freeze record: written by `heartbeat export --freeze` (so `models/heartbeat-v1/` keeps one writer), never run before Phase 7. Fields: `commit` (HEAD when written), SHA256 of `config/default.toml`, `manifests/folds.sha256` and `uv.lock`, SHA256 of every other file under `models/heartbeat-v1/`, and the date. It refuses on a dirty tree or when a model file differs from `results/export.json`. The gate `evaluate-test` runs: a clean tree; the record parses; `git diff --name-only <commit> HEAD` is exactly `models/heartbeat-v1/freeze.json`; every hash matches; and (R47, built now, its row stays Phase 7) the record's commit is on `origin/main`. Proposed in this planning session, Din's edit: add `heartbeat export --freeze` to the guard's Din-only list.
+6. Sealed log (R42): `results/test_runs.jsonl`, one line per run with a sequential id, type `sealed` or `reproduction`, commit, the freeze record's SHA256, the report's path and SHA256, and the date. The full EVAL-08 report goes to `results/test_runs/<id>-<type>.json`. The writer opens the log in append mode and refuses if the report file exists. `verify` checks every line and report hash, and walks the log's git history to check each committed version extends the one before.
+7. `run_sealed(records, raw_dir, models_dir, log_path, reports_dir, entry_type)`: gate, `prepare_record` in memory, ONNX Runtime on CPU for the three seeds, NumPy for the baseline, the EVAL-08 report from the existing `evaluate/` functions (paired bootstrap at `BOOTSTRAP_SEED` and 10,000 draws, the 20-patient S bootstrap without 232, the per-patient table, EC57 FPRs, confusion matrix, calibration), then the log. If a needed change touches `evaluate/`, it reruns training: say so in the ledger.
+8. Stages after `train-final`: `describe-data` (upstream `download`; record headers and the expected-count manifest to `results/data_summary.json`); `export` (upstream `train-final`; `models/heartbeat-v1/`, `fixtures/parity/`, `results/export.json`); `reproduce-test` (upstream `export`; with no freeze record it logs "no freeze record: stopping before DS2" and ends the rebuild cleanly (R28, OPS-02); with a record and no sealed entry it stops and names `evaluate-test` (Din); with both it runs `run_sealed` as a reproduction and requires the report to equal the last sealed one); `cards` (upstream `describe-data`, `select`, `exhibit`, `export`; last). `build-demo-data` stays planned for Phase 6.
+9. `rebuild --exact` sets the CV device to CPU for cross-validation and the exhibit, recorded in each run folder, so its fingerprints differ from the default mode's. Built and tested, never run (guard, about 15 hours).
+10. Reproduction comparison (settling 4): `uv run python -m heartbeat.checks.reproduction --other DIR` compares two checkouts. `results/*.json` after removing `VOLATILE_KEYS` (run names, commit, run-folder paths, wall times, dates; one constant, nothing else) must be equal; `models/heartbeat-v1/`, `fixtures/parity/` and the two cards must be byte-identical. Checkpoint SHA256s sit in `results/train_final.json` under non-volatile keys, so they compare too.
+11. `heartbeat verify` (OPS-04): manifests and the cache's checksums (when the cache exists), the folds pin, models against `results/export.json`, `NOTICE` (R52), ONNX parity on the fixtures (R26), the card blocks (R50), the log (R42). CI's `python` job runs it after `uv run pytest`.
+12. Card blocks render deterministically: four decimals, intervals written "a to b", the source file and its label ("DS1 out-of-fold, MPS" or "CPU") in each block, a `test_*` block pending until a sealed entry exists. `model_details` reads `models/heartbeat-v1/freeze.json` when it exists and says "Pending (Phase 7)" otherwise. Headers whose age or sex does not parse render "unknown" and are listed in the ledger.
+
+**Preconditions:** Phase 4 merged (`c9329a3`); settling 1 to 6 committed on `main` (`ebfcde8` to `38ebf44`); the MIT-BIH cache downloaded and DS1 prepared.
+
+**Global constraints:** section 2 and the earlier phases' constraints. No new dependency (onnx 1.23.2, onnxscript 0.7.2 and onnxruntime 1.30.0 are pinned). No DS2 signal, label or prediction is read: DS2 headers and the expected-count manifest only (settling 5). Never run `heartbeat evaluate-test`, `heartbeat export --freeze` or `rebuild --exact`. No hand-written text quotes an exhibit number (settling 5). Numbers in the ledger name their results file and run folder and their label. Long jobs run in the background with their expected time stated.
+
+**The current-phase bump:** the first commit on branch `phase-5-export` sets `current-phase = 5`; the coverage test is red until R25 to R28, R41, R42, R50 and R52 each have a test, and each commit that leaves it red names the rows remaining. Tests that need the exported models stay red until Task 10's rebuild, and the commits say so.
+
+#### File map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/heartbeat/constants.py`, `paths.py` | `ONNX_OPSET = 20`, `MODEL_SIZE_LIMIT_BYTES = 1_000_000`, `PARITY_TOLERANCE = 1e-5`, `PARITY_FIXTURE_SEED = 20261031`, `PARITY_FIXTURE_QUOTA = {"N": 20, "S": 12, "V": 12, "F": 6}`; `MODELS_DIR`, `FIXTURES_DIR`, `TEST_LOG`, `TEST_REPORTS_DIR`, `FREEZE_RECORD`, the two card paths |
+| `src/heartbeat/runs.py` | Dirty-flag scope (design call 2) |
+| `src/heartbeat/train/final.py` | The frozen baseline (settling 1) |
+| `src/heartbeat/data/records.py` | `read_header_demographics(raw_dir, record_id)` (age, sex) |
+| `src/heartbeat/export/` | `onnx.py` (export and the PyTorch against ORT check), `bundle.py` (`models/heartbeat-v1/` files, `NOTICE`), `fixtures.py`, `freeze.py` (write, read, gate) |
+| `src/heartbeat/sealed/` | `score.py` (ONNX and NumPy scoring), `report.py` (EVAL-08), `log.py` (append-only writer), `run.py` (`run_sealed`) |
+| `src/heartbeat/cards/` | `blocks.py` (one renderer per block), `render.py` (rewrite or check the blocks) |
+| `src/heartbeat/verify.py`, `checks/reproduction.py` | `heartbeat verify`; the two-checkout comparison |
+| `src/heartbeat/stages.py`, `cli.py` | Four stages, `--exact`; `export`, `evaluate-test`, `verify`, `cards` leave the stub list |
+| `.github/workflows/ci.yml` | `uv run heartbeat verify` step |
+| `tests/unit/` | `test_final.py`, `test_records.py`, `test_runs.py` updated; new `test_export_onnx.py`, `test_bundle.py`, `test_fixtures.py`, `test_freeze.py`, `test_sealed_score.py`, `test_sealed_report.py`, `test_sealed_log.py`, `test_cards.py`, `test_verify.py`, `test_reproduction.py`; `test_stages.py`, `test_cli.py` updated |
+| `tests/data/` | `test_parity_real.py` (R26, R27), `test_sealed_rehearsal_real.py` (settling 3), `test_rebuild_stops_real.py` (R28), `test_headers_real.py` |
+
+#### Task 1: Phase bump, constants, paths, dirty-flag scope
+
+1. Commit `chore: start Phase 5 (current-phase = 5)` on `phase-5-export`.
+2. Test first in `test_runs.py`: a change under `models/heartbeat-v1/` or `fixtures/parity/` leaves `dirty` false; a change anywhere else still sets it. Add every constant and path in the file map. Commit `feat(runs): Phase 5 constants and paths; rebuild outputs leave the dirty flag`.
+
+#### Task 2: The frozen baseline (TASKS 5.1, settling 1)
+
+1. Tests first, `test_final.py` and `test_sealed_score.py`: the baseline fit uses every DS1 row, the C from `results/cv_baseline.json`, and the temperature from its `calibration` block; two fits give equal coefficients; a convergence warning raises; NumPy logits from the exported coefficients, intercepts and scaler equal scikit-learn's decision function in `SCORED_CLASSES` order within 1e-5 on real DS1 rows, labels exact; `results/train_final.json` gains a `baseline` block and its CNN entries are unchanged in shape.
+2. Implement. Commit `feat(train): the frozen baseline on every DS1 row (settling 1)`.
+
+#### Task 3: Header demographics and `describe-data` (TASKS 5.5, settling 5)
+
+1. Tests first: `test_records.py` on planted header text (age and sex parsed; a missing or unparseable value gives `None`); `test_headers_real.py` reads all 44 headers and touches no `.dat` file (spy); the stage writes per-set and per-record AAMI counts from `mitdb-beat-counts.toml`, DS1 kept-beat counts from the prepared files, and age and sex per set.
+2. Implement. Commit `feat(data): header demographics and the describe-data stage`.
+
+From here no task edits a training code folder or `_SHARED_CODE`. If one must, say so in the commit and the ledger: it reruns training in Task 10.
+
+#### Task 4: Export (TASKS 5.1, R25, R26, R52)
+
+1. Tests first, `test_export_onnx.py` and `test_bundle.py`, on a small seeded network: one file, no external data, opset 20, no BatchNormalization node, input and output names and shapes as design call 3, dynamic batch; PyTorch against ORT within 1e-5 with equal labels, else export raises; two exports byte-identical; a model of 1 MB or more raises (R25); a checkpoint whose SHA256 differs from `results/train_final.json` raises; `NOTICE` holds the MIT line and the ODC-By 1.0 section 4.3 notice (R52); the layout and `results/export.json` fields of design call 3.
+2. Implement. Commit `feat(export): ONNX for three seeds, the bundle and NOTICE (R25, R26, R52)`.
+
+#### Task 5: Parity fixtures (TASKS 5.2, R26, R27)
+
+1. Tests first, `test_fixtures.py` and `test_parity_real.py`: the quota per class, no Q, every record in DS1 (R27), the same draw twice; each stored step equals the Python pipeline's own value (window, z-score, RR, log ratios, scaler, logits, adjusted logits, probabilities, label); ORT on the committed models against the stored PyTorch logits within 1e-5, labels exact, all three seeds and the baseline (R26).
+2. Implement. Commit `feat(export): DS1 parity fixtures (R26, R27)`.
+
+#### Task 6: Freeze record and gate (TASKS 5.3, R41)
+
+1. Tests first, `test_freeze.py`, in temporary git repos: a matching record passes; no record, a wrong model hash, a wrong config hash, a diff touching any file besides the record, and a dirty tree each refuse with a message naming the cause (R41); `--freeze` refuses on a dirty tree; the `origin/main` check against a bare remote (tagged R47).
+2. Implement. Commit `feat(export): the freeze record and the sealed-run gate (R41)`.
+
+#### Task 7: Log, scoring, report and the rehearsal (TASKS 5.3, R42, settling 3)
+
+1. Tests first. `test_sealed_log.py` (R42): append only, sequential ids, both entry types, refusal when the report file exists, a rewritten earlier line detected. `test_sealed_report.py` on synthetic beats: every EVAL-08 item; a draw with no predicted S skipped for S precision and counted; undefined points shown as undefined; Q beats not scored and counted. `test_cli.py`: `evaluate-test` binds the DS2 list, `MODELS_DIR`, `TEST_LOG` and `TEST_REPORTS_DIR` (spy on `run_sealed`, nothing read). `test_sealed_rehearsal_real.py`: the whole path on DS1 records with a planted freeze record in a temporary repo and outputs under `tmp_path`, asserting structure only (settling 3).
+2. Implement. Commit `feat(sealed): evaluate-test with its log and a DS1 rehearsal (R42)`. The rehearsal stays red until Task 10 exports the models.
+
+#### Task 8: Stages, `--exact`, reproduction comparison (TASKS 5.4, R28)
+
+1. Tests first: `test_stages.py`, the four stages' inputs, outputs and order, `reproduce-test`'s three cases, `--exact` changing the CV device and the fingerprints; `test_rebuild_stops_real.py` (R28): with no freeze record the rebuild ends after `export` and `cards`, and no DS2 record reaches `prepare_record` or the record reader (spy); `test_reproduction.py`: equal after removing only `VOLATILE_KEYS`, a changed metric fails, a changed byte in a model file fails, and no metric name is in `VOLATILE_KEYS`.
+2. Implement. Commit `feat(cli): Phase 5 stages, --exact and the reproduction check (R28)`.
+
+#### Task 9: Cards and verify (TASKS 5.4, 5.5, R50)
+
+1. Tests first: `test_cards.py` (R50): each block renders from its results file, rendering twice gives the same text, the check fails on a hand-edited block, `test_*` blocks stay pending with no sealed entry and fail if pending after one, rendered text passes the wording lint; `test_verify.py`: each check fails on its planted fault (a missing `NOTICE`, a changed model byte, a stale block, a rewritten log line). Add the CI step.
+2. Implement. Commit `feat(cards): heartbeat cards and heartbeat verify (R50)`.
+
+#### Task 10: The real rebuild
+
+1. On a clean tree, `uv run heartbeat rebuild` in the background (expected about 110 minutes: training reruns because Tasks 1 to 3 changed its code). Record each stage's wall time.
+2. Compare with `main`'s Phase 4 results by Task 8's rule: `cv_baseline`, `cv_cnn_curves`, `selection`, `cv_cnn`, `exhibit` and the CNN entries of `train_final` must be equal apart from `VOLATILE_KEYS`, and the three checkpoint SHA256s identical (stop 1).
+3. Commit the outputs alone (`results/`, `models/heartbeat-v1/`, `fixtures/parity/`, the two cards) as `feat(export): frozen-model bundle, fixtures and rendered cards`. `uv run pytest` is now fully green.
+
+#### Task 11: The clean-clone check (settling 4)
+
+1. `git clone` the branch into the session scratchpad, `uv sync --frozen` there, and `uv run heartbeat rebuild` in the background (about 112 minutes with the fresh download).
+2. `uv run python -m heartbeat.checks.reproduction --other <clone>` must pass (stop 2). Record the result, the clone's commit and its stage times. Delete the clone afterwards.
+
+#### Task 12: Docs and the hand-off to Din
+
+1. `scripts/check.sh`, `uv run pytest` (real-data layer included), `uv run heartbeat verify`, `rule_coverage` (R25 to R28, R41, R42, R50, R52 covered), `repo_config` and the wording lint all green.
+2. `AGENTS.md` Commands: the new subcommands and stages move to "Working today", with measured times. `docs/TASKS.md` 5.1 to 5.5 Verified (locally) with commands. Ledger entry: what was built, commits, deviations and why, stage times, both reproduction results, model sizes and SHA256s, the baseline's coefficients file hash, demographics that did not parse. Commit `docs: Phase 5 verification and hand-off`.
+3. Give Din the push command for `phase-5-export`. After the push, read the run with `gh run list` and `gh run view`, record it, and fix anything red in a new commit.
+
+#### Stop and ask Din
+
+Never change a test's expected value, a tolerance (1e-5, labels exact), the size gate, a seed or `VOLATILE_KEYS` to get past one of these:
+
+1. Task 10's results differ from Phase 4's beyond `VOLATILE_KEYS`, or a checkpoint SHA256 differs.
+2. The clean clone differs in any compared file.
+3. PyTorch against ORT exceeds 1e-5 or a label differs, for any seed; or NumPy against scikit-learn for the baseline.
+4. A model file is 1 MB or more, has external data, or keeps a batch norm node.
+5. The baseline fit fails to converge, or its temperature differs from `results/cv_baseline.json`.
+6. Anything needs a new dependency, a pin change, or an edit to `manifests/`, `config/folds.json` or `.claude/`.
+7. Any DS2 signal, label or prediction seen by accident (rule 1), or any code path in a test that would open a DS2 `.dat` or `.atr` file.
+8. A step would need `heartbeat evaluate-test`, `heartbeat export --freeze` or `rebuild --exact`.
+9. A header without parseable age or sex: not a stop; render "unknown" and list it in the ledger.
+
+#### Review focus
+
+1. The rehearsal drifting from the sealed wiring (Task 7's binding test).
+2. `VOLATILE_KEYS` hiding a real difference (Task 8's test that no metric is listed).
+3. The freeze gate letting a code change through (only the record may differ from its commit).
+4. A fixture beat from DS2, or a fixture step computed by a different path than the pipeline's.
+5. A card block rendered from anything but committed results, or an exhibit number in hand-written text.
+6. The log writer rewriting history, and `verify` missing it.
+7. A post-training fix landing in a training code folder or `_SHARED_CODE`, which reruns two hours of training.
