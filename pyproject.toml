@@ -81,6 +81,12 @@ strict = true
 files = ["src", "tests"]
 mypy_path = "src"
 
+# scipy ships no type information, and scipy-stubs would be a new dependency
+# (Phase 2 plan: none), so its imports are typed Any at the boundary.
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests", ".claude/hooks"]
 addopts = ["--strict-markers"]
