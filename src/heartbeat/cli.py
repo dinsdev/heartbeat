@@ -25,18 +25,25 @@ from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
 from heartbeat.evaluate.calibration import TemperatureAtBoundError
+from heartbeat.export.freeze import FreezeError
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
     DEFAULT_CONFIG,
     FOLDS_JSON,
     FOLDS_PIN,
+    MODELS_DIR,
     PACKAGE_DIR,
+    REPO_ROOT,
     RUNS_DIR,
     SPLITS_MANIFEST,
     STAGES_DIR,
     SUBJECTS_MANIFEST,
+    TEST_LOG,
+    TEST_REPORTS_DIR,
     UV_LOCK,
 )
+from heartbeat.sealed.log import LogError
+from heartbeat.sealed.run import SEALED_DATA_LABEL, run_sealed
 from heartbeat.stages import (
     PIPELINE,
     PLANNED,
@@ -303,6 +310,35 @@ def _train_final(args: argparse.Namespace) -> int:
     return 0
 
 
+def _evaluate_test(args: argparse.Namespace) -> int:
+    # Settling 3: the one binding of run_sealed. Only Din runs this (guard).
+    settings = load_settings(DEFAULT_CONFIG)
+    splits = load_splits(SPLITS_MANIFEST)
+    try:
+        entry = run_sealed(
+            splits.ds2,
+            settings.data.raw_dir,
+            MODELS_DIR,
+            TEST_LOG,
+            TEST_REPORTS_DIR,
+            "sealed",
+            repo=REPO_ROOT,
+            log_root=REPO_ROOT,
+            lead=splits.lead,
+            subjects=load_subjects(SUBJECTS_MANIFEST),
+            data_label=SEALED_DATA_LABEL,
+            require_remote=True,
+        )
+    except (FreezeError, LogError) as error:
+        print(f"heartbeat evaluate-test: {error}", file=sys.stderr)
+        return 1
+    print(
+        f"heartbeat evaluate-test: logged run {entry['id']} ({entry['type']}) "
+        f"in {TEST_LOG}; report {entry['report']}"
+    )
+    return 0
+
+
 def rebuild_context() -> Context:
     """Return the context `rebuild` runs in."""
     return Context(
@@ -360,6 +396,7 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "select": _select,
         "exhibit": _exhibit,
         "train-final": _train_final,
+        "evaluate-test": _evaluate_test,
     }
 )
 

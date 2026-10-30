@@ -44,8 +44,9 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
 
 
 # The Phase 2 to 4 subcommands are built and have their own tests here and in
-# test_folds.py and test_stages.py; the rest stay stubs until their phase.
-BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4}
+# test_folds.py and test_stages.py; Phase 5's as they land; the rest stay stubs
+# until their phase.
+BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4} | {"evaluate-test"}
 
 
 @pytest.mark.parametrize(
@@ -346,3 +347,64 @@ def test_select_exits_1_at_the_epoch_edge(
     monkeypatch.setattr(cli, "run_select_all", edge)
     assert main(["select"]) == 1
     assert "selected epoch 38" in capsys.readouterr().err
+
+
+# evaluate-test (Phase 5 settling 3): one binding of run_sealed, never run here.
+
+
+def test_evaluate_test_binds_ds2_the_models_and_the_log(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from heartbeat.config import load_settings
+    from heartbeat.data.manifests import load_splits, load_subjects
+    from heartbeat.paths import (
+        DEFAULT_CONFIG,
+        MODELS_DIR,
+        REPO_ROOT,
+        SPLITS_MANIFEST,
+        SUBJECTS_MANIFEST,
+        TEST_LOG,
+        TEST_REPORTS_DIR,
+    )
+    from heartbeat.sealed.run import SEALED_DATA_LABEL
+
+    calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def spy(*args: object, **kwargs: object) -> dict[str, object]:
+        calls.append((args, kwargs))
+        return {"id": 1, "type": "sealed", "report": "results/test_runs/1-sealed.json"}
+
+    monkeypatch.setattr(cli, "run_sealed", spy)
+    assert main(["evaluate-test"]) == 0
+    ((args, kwargs),) = calls
+    splits = load_splits(SPLITS_MANIFEST)
+    assert args == (
+        splits.ds2,
+        load_settings(DEFAULT_CONFIG).data.raw_dir,
+        MODELS_DIR,
+        TEST_LOG,
+        TEST_REPORTS_DIR,
+        "sealed",
+    )
+    assert len(splits.ds2) == 21
+    assert kwargs["repo"] == REPO_ROOT
+    assert kwargs["log_root"] == REPO_ROOT
+    assert kwargs["lead"] == splits.lead
+    assert kwargs["subjects"] == load_subjects(SUBJECTS_MANIFEST)
+    assert kwargs["require_remote"] is True
+    assert kwargs["data_label"] == SEALED_DATA_LABEL
+    assert "DS2 test" in str(kwargs["data_label"])
+    assert "logged run 1" in capsys.readouterr().out
+
+
+def test_evaluate_test_exits_1_when_the_gate_refuses(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from heartbeat.export.freeze import FreezeError
+
+    def refuse(*args: object, **kwargs: object) -> None:
+        raise FreezeError("no freeze record")
+
+    monkeypatch.setattr(cli, "run_sealed", refuse)
+    assert main(["evaluate-test"]) == 1
+    assert "no freeze record" in capsys.readouterr().err

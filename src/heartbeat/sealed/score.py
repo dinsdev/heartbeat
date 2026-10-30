@@ -80,6 +80,21 @@ def _check_classes(path: Path, payload: dict[str, Any]) -> None:
         )
 
 
+def load_scaler(path: Path) -> RRScaler:
+    """Read `scaler.json`, the RR scaler every seed shares.
+
+    Raises:
+        ValueError: If its feature order is not `RR_FEATURE_NAMES`.
+    """
+    payload = _read_json(path)
+    if payload.get("features") != list(RR_FEATURE_NAMES):
+        raise ValueError(f"{path}: features {payload.get('features')}")
+    return RRScaler(
+        mean=np.array(payload["mean"], dtype=np.float64),
+        std=np.array(payload["std"], dtype=np.float64),
+    )
+
+
 def load_baseline(path: Path) -> BaselineParams:
     """Read `baseline.json` (settling 1).
 
