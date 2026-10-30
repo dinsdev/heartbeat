@@ -183,6 +183,21 @@
   "calibration": {
     "bins": 10,
     "brier": 0.11732420297060088,
+    "cross_fitted": {
+      "ece": {
+        "S": 0.015543971173390465,
+        "V": 0.027828793931228734
+      },
+      "label": "per-fold temperatures fitted on the other four folds",
+      "log_loss": 0.35336585220148753,
+      "temperatures": [
+        1.175784398201475,
+        1.4432029508006037,
+        1.3769007296335223,
+        1.4312549207187075,
+        1.4561520878982364
+      ]
+    },
     "ece": {
       "S": 0.016281315010718517,
       "V": 0.03091921347369577
@@ -371,7 +386,7 @@
       "V": 3.1519682636557826
     }
   ],
-  "commit": "4257e39771681bfbbd4e014bfe6af230c691d58c",
+  "commit": "27b1250b55032a2be0394b6a81c175fb1d79ccff",
   "data": "DS1 out-of-fold, CPU",
   "dirty": false,
   "fold_spread": {
@@ -926,5 +941,5 @@
       }
     }
   },
-  "run": "20261030T022556Z-4257e39-cv-baseline"
+  "run": "20261030T023341Z-27b1250-cv-baseline"
 }
