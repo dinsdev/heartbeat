@@ -1756,3 +1756,13 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Superseded runs:** 41110852250 (push) and 41111021128 (pull request) at `9fbaf27` failed on the 7 MPS-only exhibit tests (entry above).
 
 **Phase 4 exit (PLAN.md section 8, Goal):** R22 to R24 pass locally and in CI, and the six Phase 4 `results/` files are committed from a clean-tree rebuild (`32fa004`). Met. TASKS 4.1 to 4.4 record the CI runs. **Not accepted:** only Din sets Accepted. **Waiting on Din:** the PR review and merge, and dropping `stash@{0}` and `stash@{1}`.
+
+## 2026-10-30: Phase 4 accepted
+
+**Decision (Din):** TASKS 4.1 to 4.4 are Accepted. Din opened and merged PR dinsdev/heartbeat#5 (merge commit `c9329a3` on `main`, 19:12:40Z), deleted the branch, and asked for the rows to be marked Accepted and the leftovers cleaned up.
+
+**State at acceptance:** the Phase 4 exit is met (PLAN.md section 8, Goal: R22 to R24 pass locally and in CI; the six Phase 4 `results/` files are committed from a clean-tree rebuild). CI runs, all green: 41111431147 (push) and 41111435865 (pull request) at `4040df1`; 41112569226 (push) and 41112581923 (pull request) at `c490c50`; 41113368076 on `main` after the merge (19:12:42Z to 19:14:11Z, both jobs success). On `main` after the merge, `uv run heartbeat check-folds` exits 0.
+
+**Cleanup (Din's go):** deleted the merged local branch `phase-4-cnn` and pruned the deleted remote branches (`origin/phase-4-cnn`, and `origin/phase-3-harness` from the Phase 3 merge). Two stashes remain for Din to drop, since `.claude/hooks/guard.py` blocks `git stash` for Claude: `stash@{0}` (the stopped first rebuild's `results/` files: `cv_baseline.json`, `cv_cnn.json`, `cv_cnn_curves.json`, `selection.json`) and `stash@{1}` (the Task 4 reproduction of `results/cv_baseline.json`). Both hold `results/` files only, already compared and recorded in the Phase 4 entries above.
+
+**Carried into Phase 5:** the two flags from the hand-off entry, report only: the MPS against CPU gap on width 1, fold 0 exceeds the seed spread at 8 of 40 epochs but not at the selected epoch 10, and F stays weak (pooled F1 0.0372, `results/cv_cnn.json`, DS1 out-of-fold, MPS) because fold 0 holds most of DS1's F beats.
