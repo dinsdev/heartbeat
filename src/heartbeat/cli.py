@@ -217,8 +217,8 @@ def _rebuild(args: argparse.Namespace) -> int:
         )
         return 2
     if args.exact:
-        # E4: --exact changes how models train; no Phase 2 stage trains one.
-        print("heartbeat rebuild: --exact has no effect on the Phase 2 stages")
+        # E4: --exact changes how the CNN trains; no built stage trains one yet.
+        print("heartbeat rebuild: --exact has no effect before the Phase 4 stages")
     try:
         results = run_pipeline(PIPELINE, rebuild_context(), from_stage=args.from_stage)
     except UnknownStageError as error:

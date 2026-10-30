@@ -84,5 +84,4 @@ def test_only_stages_imports_the_results_writer() -> None:
         for path in PACKAGE_DIR.rglob("*.py")
         if _imports_write_result(path)
     )
-    # Task 7 adds the stage that imports it; nothing else may.
-    assert set(importers) <= {"stages.py"}
+    assert importers == ["stages.py"]
