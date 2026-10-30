@@ -24,28 +24,38 @@ from heartbeat.constants import CNN_SEEDS, CNN_WIDTHS
 from heartbeat.data.describe import describe_data
 from heartbeat.data.download import download
 from heartbeat.data.folds import Folds, check_folds
-from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
+from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces, require_ds1
 from heartbeat.data.manifests import (
     load_beat_counts,
     load_checksums,
     load_splits,
     load_subjects,
 )
+from heartbeat.data.npz import load_prepared
 from heartbeat.data.prepare import FLOOR_HITS_FILE, prepare_ds1
 from heartbeat.data.records import read_header_demographics
+from heartbeat.export.build import export_models
+from heartbeat.export.bundle import FREEZE_NAME
+from heartbeat.export.fixtures import FIXTURES_NAME
 from heartbeat.paths import (
     BEAT_COUNTS_MANIFEST,
     CHECKSUM_MANIFEST,
+    FIXTURES_DIR,
     FOLDS_JSON,
     FOLDS_PIN,
+    MODELS_DIR,
     REPO_ROOT,
     RESULTS_DIR,
     RUNS_DIR,
     SPLITS_MANIFEST,
     SUBJECTS_MANIFEST,
+    TEST_LOG,
+    TEST_REPORTS_DIR,
 )
 from heartbeat.results import write_result
 from heartbeat.runs import RunFolder, create_run
+from heartbeat.sealed.log import read_log
+from heartbeat.sealed.run import SEALED_DATA_LABEL, run_sealed
 from heartbeat.train.cnn_cv import (
     MissingRunError,
     curves_payload,
@@ -579,6 +589,106 @@ def _run_describe_data(context: Context) -> None:
     write_result(DATA_SUMMARY_RESULT, payload, run)
 
 
+EXPORT_RESULT = "export"
+
+
+def run_export_all(
+    settings: Settings,
+    root: Path = RUNS_DIR,
+    repo: Path = REPO_ROOT,
+    results_dir: Path = RESULTS_DIR,
+    models_dir: Path = MODELS_DIR,
+    fixtures_dir: Path = FIXTURES_DIR,
+) -> tuple[RunFolder, dict[str, Any]]:
+    """Export the final models and write the parity fixtures (E3, E5).
+
+    Reads the committed `results/train_final.json` and the checkpoints it
+    names, every DS1 kept beat, and each DS1 record's annotated beat samples.
+    """
+    train_final = _result(results_dir, TRAIN_FINAL_RESULT)
+    splits = load_splits(SPLITS_MANIFEST)
+    subjects = load_subjects(SUBJECTS_MANIFEST)
+    prepared_dir = settings.data.prepared_dir
+    beats = load_ds1(prepared_dir, splits, subjects)
+    require_ds1(splits.ds1, splits)
+    annotated = {
+        record: load_prepared(prepared_dir / f"{record}.npz").beat_sample
+        for record in splits.ds1
+    }
+    extra = {"train_final_run": train_final["run"]}
+    with create_run("export", settings, extra, root=root, repo=repo) as run:
+        payload = export_models(
+            train_final, beats, annotated, splits, models_dir, fixtures_dir, repo
+        )
+        run.write_json("metrics", payload)
+    return run, payload
+
+
+def _run_export(context: Context) -> None:
+    run, payload = run_export_all(context.settings)
+    write_result(EXPORT_RESULT, payload, run)
+
+
+NO_FREEZE_MESSAGE = "no freeze record: stopping before DS2"
+
+
+class SealedRunMissingError(RuntimeError):
+    """A freeze record exists but no sealed run is logged yet (design call 8)."""
+
+
+def reproduce_test(
+    settings: Settings,
+    models_dir: Path = MODELS_DIR,
+    log_path: Path = TEST_LOG,
+    reports_dir: Path = TEST_REPORTS_DIR,
+    repo: Path = REPO_ROOT,
+) -> str:
+    """The reproduction step of OPS-03, or a clean stop before DS2 (R28, OPS-02).
+
+    Without a freeze record nothing is read and the rebuild goes on to the
+    cards. With a record but no sealed entry it stops: the sealed run is Din's
+    (`evaluate-test`). With both it evaluates DS2 again as a reproduction entry,
+    which must equal the last sealed report.
+
+    Raises:
+        SealedRunMissingError: With a freeze record and no sealed entry.
+    """
+    if not (models_dir / FREEZE_NAME).is_file():
+        log.info(NO_FREEZE_MESSAGE)
+        return NO_FREEZE_MESSAGE
+    if not any(entry["type"] == "sealed" for entry in read_log(log_path)):
+        raise SealedRunMissingError(
+            "a freeze record exists but no sealed run is logged; the sealed run "
+            "is Din's: `uv run heartbeat evaluate-test`"
+        )
+    splits = load_splits(SPLITS_MANIFEST)
+    entry = run_sealed(
+        splits.ds2,
+        settings.data.raw_dir,
+        models_dir,
+        log_path,
+        reports_dir,
+        "reproduction",
+        repo=repo,
+        log_root=repo,
+        lead=splits.lead,
+        subjects=load_subjects(SUBJECTS_MANIFEST),
+        data_label=SEALED_DATA_LABEL,
+        require_remote=True,
+    )
+    return f"reproduction logged as run {entry['id']}"
+
+
+def _run_reproduce_test(context: Context) -> None:
+    reproduce_test(
+        context.settings,
+        models_dir=MODELS_DIR,
+        log_path=TEST_LOG,
+        reports_dir=TEST_REPORTS_DIR,
+        repo=REPO_ROOT,
+    )
+
+
 def _run_cross_validate_cnn(context: Context) -> None:
     run, payload = run_cnn_cv_all(context.settings)
     write_result(CV_CNN_CURVES_RESULT, payload, run)
@@ -737,11 +847,31 @@ PIPELINE: tuple[Stage, ...] = (
         run=_run_describe_data,
         outputs=_results(DATA_SUMMARY_RESULT),
     ),
+    Stage(
+        name="export",
+        settings_keys=("data.prepared_dir",),
+        upstream=("train-final",),
+        code=(*_TRAINING_CODE, "export", "sealed"),
+        inputs=_inputs_and_results(TRAIN_FINAL_RESULT),
+        run=_run_export,
+        outputs=lambda context: (
+            RESULTS_DIR / f"{EXPORT_RESULT}.json",
+            MODELS_DIR / "model.onnx",
+            FIXTURES_DIR / FIXTURES_NAME,
+        ),
+    ),
+    Stage(
+        name="reproduce-test",
+        settings_keys=("data.raw_dir",),
+        upstream=("export",),
+        code=(*_TRAINING_CODE, "export", "sealed"),
+        inputs=lambda context: (SPLITS_MANIFEST, SUBJECTS_MANIFEST),
+        run=_run_reproduce_test,
+        outputs=lambda context: (),
+        # Decided by the freeze record and the log each time, not a fingerprint.
+        always_run=True,
+    ),
 )
 
 # OPS-01's later stages with the phase that builds each.
-PLANNED: tuple[tuple[str, int], ...] = (
-    ("export", 5),
-    ("reproduce-test", 5),
-    ("build-demo-data", 6),
-)
+PLANNED: tuple[tuple[str, int], ...] = (("build-demo-data", 6),)

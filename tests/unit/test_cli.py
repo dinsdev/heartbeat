@@ -46,7 +46,10 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
 # The Phase 2 to 4 subcommands are built and have their own tests here and in
 # test_folds.py and test_stages.py; Phase 5's as they land; the rest stay stubs
 # until their phase.
-BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4} | {"evaluate-test"}
+BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4} | {
+    "export",
+    "evaluate-test",
+}
 
 
 @pytest.mark.parametrize(
@@ -408,3 +411,48 @@ def test_evaluate_test_exits_1_when_the_gate_refuses(
     monkeypatch.setattr(cli, "run_sealed", refuse)
     assert main(["evaluate-test"]) == 1
     assert "no freeze record" in capsys.readouterr().err
+
+
+# export (E3) and export --freeze (design call 5; Din's, never run here).
+
+
+def test_export_writes_a_run_folder_and_no_results(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    calls: list[object] = []
+
+    class Run:
+        path = tmp_path / "runs" / "export"
+
+    def spy(settings: object) -> tuple[object, dict[str, object]]:
+        calls.append(settings)
+        return Run(), {}
+
+    monkeypatch.setattr(cli, "run_export_all", spy)
+    assert main(["export"]) == 0
+    assert len(calls) == 1
+    assert "run folder" in capsys.readouterr().out
+
+
+def test_export_freeze_writes_the_record_for_the_repo_and_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    from heartbeat.paths import MODELS_DIR, REPO_ROOT
+
+    calls: list[tuple[object, ...]] = []
+
+    def spy(*args: object) -> Path:
+        calls.append(args)
+        return MODELS_DIR / "freeze.json"
+
+    monkeypatch.setattr(cli, "write_freeze", spy)
+    monkeypatch.setattr(cli, "RESULTS_DIR", tmp_path)
+    assert main(["export", "--freeze"]) == 1
+    assert "export.json" in capsys.readouterr().err
+    (tmp_path / "export.json").write_text('{"files": []}', encoding="utf-8")
+    assert main(["export", "--freeze"]) == 0
+    ((repo, models, record, _today),) = calls
+    assert (repo, models, record) == (REPO_ROOT, MODELS_DIR, {"files": []})
+    assert "commit it and push" in capsys.readouterr().out

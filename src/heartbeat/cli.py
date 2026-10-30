@@ -2,9 +2,12 @@
 
 import argparse
 import hashlib
+import json
 import logging
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 
@@ -25,15 +28,18 @@ from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
 from heartbeat.evaluate.calibration import TemperatureAtBoundError
-from heartbeat.export.freeze import FreezeError
+from heartbeat.export.freeze import FreezeError, write_freeze
+from heartbeat.export.onnx import ExportError
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
     DEFAULT_CONFIG,
+    FIXTURES_DIR,
     FOLDS_JSON,
     FOLDS_PIN,
     MODELS_DIR,
     PACKAGE_DIR,
     REPO_ROOT,
+    RESULTS_DIR,
     RUNS_DIR,
     SPLITS_MANIFEST,
     STAGES_DIR,
@@ -45,12 +51,14 @@ from heartbeat.paths import (
 from heartbeat.sealed.log import LogError
 from heartbeat.sealed.run import SEALED_DATA_LABEL, run_sealed
 from heartbeat.stages import (
+    EXPORT_RESULT,
     PIPELINE,
     PLANNED,
     Context,
     StageFailedError,
     UnknownStageError,
     run_exhibit_all,
+    run_export_all,
     run_final_all,
     run_pipeline,
     run_select_all,
@@ -339,10 +347,47 @@ def _evaluate_test(args: argparse.Namespace) -> int:
     return 0
 
 
-def rebuild_context() -> Context:
-    """Return the context `rebuild` runs in."""
+def _export(args: argparse.Namespace) -> int:
+    if args.freeze:
+        # Phase 5 design call 5: Din's, before the sealed run (the guard
+        # keeps it from Claude).
+        try:
+            export_record = json.loads(
+                (RESULTS_DIR / f"{EXPORT_RESULT}.json").read_text(encoding="utf-8")
+            )
+            path = write_freeze(
+                REPO_ROOT, MODELS_DIR, export_record, datetime.now(UTC).date()
+            )
+        except (FreezeError, FileNotFoundError) as error:
+            print(f"heartbeat export --freeze: {error}", file=sys.stderr)
+            return 1
+        print(f"heartbeat export --freeze: wrote {path}; commit it and push")
+        return 0
+    # Writes models/heartbeat-v1/, fixtures/parity/ and a run folder;
+    # results/export.json is written by the rebuild stage (rule 5).
+    try:
+        run, _ = run_export_all(load_settings(DEFAULT_CONFIG))
+    except (ExportError, *_CNN_STOPS) as error:
+        print(f"heartbeat export: {error}", file=sys.stderr)
+        return 1
+    print(f"heartbeat export: wrote {MODELS_DIR} and {FIXTURES_DIR}")
+    print(f"run folder {run.path}")
+    return 0
+
+
+def rebuild_context(exact: bool = False) -> Context:
+    """Return the context `rebuild` runs in.
+
+    Args:
+        exact: E4's `--exact` mode (Phase 5 design call 9): cross-validation
+            and the exhibit run on CPU too, so their fingerprints differ from
+            the default mode's and every stage reruns. About 15 hours; Din's.
+    """
+    settings = load_settings(DEFAULT_CONFIG)
+    if exact:
+        settings = replace(settings, train=replace(settings.train, cv_device="cpu"))
     return Context(
-        settings=load_settings(DEFAULT_CONFIG),
+        settings=settings,
         package_dir=PACKAGE_DIR,
         state_dir=STAGES_DIR,
         uv_lock=UV_LOCK,
@@ -359,14 +404,11 @@ def _rebuild(args: argparse.Namespace) -> int:
         )
         return 2
     if args.exact:
-        # E4: --exact (every training run on CPU, checked bit for bit) is built
-        # with the reproduction checks in Phase 5.
-        print(
-            "heartbeat rebuild: --exact is not built yet (Phase 5); "
-            "running the default mode"
-        )
+        print("heartbeat rebuild: --exact, every training run on CPU")
     try:
-        results = run_pipeline(PIPELINE, rebuild_context(), from_stage=args.from_stage)
+        results = run_pipeline(
+            PIPELINE, rebuild_context(exact=args.exact), from_stage=args.from_stage
+        )
     except UnknownStageError as error:
         print(f"heartbeat rebuild: {error}", file=sys.stderr)
         return 2
@@ -396,6 +438,7 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "select": _select,
         "exhibit": _exhibit,
         "train-final": _train_final,
+        "export": _export,
         "evaluate-test": _evaluate_test,
     }
 )
@@ -444,6 +487,12 @@ def build_parser() -> argparse.ArgumentParser:
                 "--device",
                 choices=CV_DEVICES,
                 help="CNN device (default: [train] cv_device)",
+            )
+        if name == "export":
+            sub.add_argument(
+                "--freeze",
+                action="store_true",
+                help="write the freeze record (Din, Phase 7)",
             )
         if name == "rebuild":
             sub.add_argument(
