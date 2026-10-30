@@ -82,6 +82,7 @@ BLOCKED = [
     "pnpm -C web run deploy",
     "uv run heartbeat make-folds",
     "uv run heartbeat rebuild --exact",
+    "uv run heartbeat export --freeze",
     # discarding uncommitted work
     "git clean -fdx",
     "git reset --hard HEAD",
@@ -128,6 +129,7 @@ ALLOWED = [
     "uv run heartbeat rebuild",
     "uv run heartbeat rebuild --from cross-validate",
     "uv run heartbeat verify",
+    "uv run heartbeat export",
     "pnpm -C web build",
     "wrangler whoami",
     "pnpm -C web exec wrangler types",
