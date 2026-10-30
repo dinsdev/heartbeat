@@ -296,7 +296,8 @@ def test_summary_has_no_nan_and_carries_the_calibration_label(
 
 
 def test_default_grid_is_the_locked_one() -> None:
-    assert BASELINE_C_GRID == (0.01, 0.1, 1.0, 10.0, 100.0)
+    # Phase 4 settling 1: seven values, widened once and never again.
+    assert BASELINE_C_GRID == (0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0)
 
 
 def test_summary_reports_a_cross_fitted_calibration_block(

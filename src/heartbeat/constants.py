@@ -82,8 +82,9 @@ FLOOR_HIT_LIMIT = 5
 # over N, S and V; four-class macro F1 is reported beside it.
 HEADLINE_CLASSES = ("N", "S", "V")
 
-# C2, MODEL-01: the baseline's C grid, chosen on the C1 folds.
-BASELINE_C_GRID = (0.01, 0.1, 1.0, 10.0, 100.0)
+# C2, MODEL-01: the baseline's C grid, chosen on the C1 folds. Widened to
+# 0.0001 once by Phase 4 settling 1 and never again.
+BASELINE_C_GRID = (0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0)
 # Phase 3 task plan, design call 5: lbfgs iterations; non-convergence stops the run.
 BASELINE_MAX_ITER = 10_000
 
