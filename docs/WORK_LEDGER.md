@@ -1434,3 +1434,13 @@ EC57 (Table V definitions): S Se 0.2450, +P 0.0825, FPR 0.0514; V Se 0.4820, +P 
 **Verified (local, `13ea660` plus this commit's docs):** `scripts/check.sh` exit 0 twice (648 passed, 105 real-data deselected; 10.1 s and 9.4 s wall clock); `CI=1 uv run pytest` 753 passed in 8.4 s (real-data layer included); `uv run pytest -m realdata` 105 passed; `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R16 to R21 covered, 0 uncovered, 25 pending); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout: no DS2 signal, label or prediction was read or produced (stop 7 clear); no dependency, pin, `manifests/`, `config/folds.json`, `models/` or `.claude/` change (stop 6 clear); metrics agree with scikit-learn wherever both are defined (stop 2 clear).
 
 **Not verified:** CI on these commits (waits for Din's push). **Waiting on Din:** the settling 4 decision above, the C grid edge, and whether to drop `stash@{0}`.
+
+## 2026-10-29: Phase 3 settling 4 amended: DS1 calibration reports both temperatures (C4 clarification)
+
+**Trigger:** settling 4's cross-fit check exceeded its threshold (previous entry): the DS1 out-of-fold log loss is 0.3534 nats per beat with per-fold temperatures against 0.3357 with the single in-sample one, a gap of 0.0176 against 1e-3 (`results/cv_baseline.json` at `13ea660`, run `20261030T022556Z-4257e39-cv-baseline`; DS1 out-of-fold, CPU).
+
+**Decision (Din, option 2):** `results/cv_baseline.json` keeps the in-sample block, labeled "temperature fitted on these predictions", and adds beside it a cross-fitted block: one temperature per fold fitted on the other four folds' adjusted logits, applied to that fold, with log loss and S and V ECE, labeled "per-fold temperatures fitted on the other four folds". The shipped temperature stays the single pooled fit (EVAL-11). Brier and reliability data stay in-sample only. Reason: the measured effect is about 1,700 times the estimate that settling 4 used to reject cross-fitting, and the shared driver gives the CNN the same two blocks in Phase 4.
+
+**Rejected:** option 1 (in-sample only, the DS1 log loss stays optimistic by about 5%); option 3 (cross-fitted only, two temperatures with no pooled one for the shipped model's numbers).
+
+**Applied:** made before any DS2 result and before the Phase 7 gate (rule 6). No requirement text changes; EVAL-11 and EVAL-12 hold as written.
