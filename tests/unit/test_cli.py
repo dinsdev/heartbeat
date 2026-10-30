@@ -1,8 +1,14 @@
 """The `heartbeat` command: every E4 subcommand exists as a stub until its phase."""
 
+import hashlib
+from pathlib import Path
+
 import pytest
 
+from heartbeat import cli
 from heartbeat.cli import SUBCOMMANDS, main
+from heartbeat.config import DataSettings, FoldSettings, Settings
+from heartbeat.data import download as download_module
 
 EXPECTED_PHASES = {
     "download": 2,
@@ -35,7 +41,14 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-@pytest.mark.parametrize(("name", "phase"), sorted(EXPECTED_PHASES.items()))
+# Subcommands built so far in Phase 2; each has its own tests.
+BUILT = {"download"}
+
+
+@pytest.mark.parametrize(
+    ("name", "phase"),
+    sorted((n, p) for n, p in EXPECTED_PHASES.items() if n not in BUILT),
+)
 def test_stub_exits_2_and_says_when_it_arrives(
     name: str, phase: int, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -66,3 +79,49 @@ def test_rebuild_from_needs_a_stage() -> None:
     with pytest.raises(SystemExit) as exit_info:
         main(["rebuild", "--from"])
     assert exit_info.value.code != 0
+
+
+def _tmp_settings(tmp_path: Path) -> Settings:
+    return Settings(
+        data=DataSettings(
+            raw_dir=tmp_path / "raw",
+            prepared_dir=tmp_path / "prepared",
+            sources=("https://a.example/", "https://b.example/"),
+        ),
+        folds=FoldSettings(seed=1),
+    )
+
+
+def test_download_fetches_and_reports_counts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    files = {"100.atr": b"a", "100.dat": b"d", "100.hea": b"h"}
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    monkeypatch.setattr(
+        cli,
+        "load_checksums",
+        lambda _: {n: hashlib.sha256(d).hexdigest() for n, d in files.items()},
+    )
+    monkeypatch.setattr(
+        download_module,
+        "fetch_url",
+        lambda url: files[url.removeprefix("https://a.example/")],
+    )
+    assert main(["download"]) == 0
+    assert "fetched 3, skipped 0, of 3 files" in capsys.readouterr().out
+    assert main(["download"]) == 0
+    assert "fetched 0, skipped 3, of 3 files" in capsys.readouterr().out
+
+
+def test_download_exits_1_naming_the_file_on_a_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    monkeypatch.setattr(cli, "load_checksums", lambda _: {"100.hea": "0" * 64})
+    monkeypatch.setattr(download_module, "fetch_url", lambda url: b"wrong")
+    assert main(["download"]) == 1
+    assert "100.hea" in capsys.readouterr().err

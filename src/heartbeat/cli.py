@@ -1,9 +1,16 @@
 """The `heartbeat` command (E4). Each subcommand is a stub until its phase builds it."""
 
 import argparse
+import logging
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from types import MappingProxyType
+
+from heartbeat.config import load_settings
+from heartbeat.data import download as download_module
+from heartbeat.data.download import ChecksumMismatchError, DownloadError
+from heartbeat.data.manifests import load_checksums
+from heartbeat.paths import CHECKSUM_MANIFEST, DEFAULT_CONFIG
 
 # PLAN.md section 8, Phase 1, Task 1: subcommand name to the phase that builds it.
 SUBCOMMANDS: Mapping[str, int] = MappingProxyType(
@@ -27,6 +34,32 @@ SUBCOMMANDS: Mapping[str, int] = MappingProxyType(
 
 # Exit code for a subcommand that exists in the interface but not yet in code.
 NOT_BUILT_EXIT = 2
+
+
+def _download(args: argparse.Namespace) -> int:
+    settings = load_settings(DEFAULT_CONFIG)
+    checksums = load_checksums(CHECKSUM_MANIFEST)
+    try:
+        report = download_module.download(
+            settings.data.raw_dir,
+            checksums,
+            settings.data.sources,
+            fetch=download_module.fetch_url,
+        )
+    except (ChecksumMismatchError, DownloadError) as error:
+        print(f"heartbeat download: {error}", file=sys.stderr)
+        return 1
+    print(
+        f"heartbeat download: fetched {len(report.fetched)}, "
+        f"skipped {len(report.skipped)}, of {len(checksums)} files "
+        f"in {settings.data.raw_dir}"
+    )
+    return 0
+
+
+HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
+    {"download": _download}
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -65,6 +98,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     command: str = args.command
+    handler = HANDLERS.get(command)
+    if handler is not None:
+        logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
+        return handler(args)
     phase = SUBCOMMANDS[command]
     print(f"heartbeat {command}: not built yet (Phase {phase})", file=sys.stderr)
     return NOT_BUILT_EXIT
