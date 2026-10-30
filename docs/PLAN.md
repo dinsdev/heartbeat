@@ -605,3 +605,148 @@ Never change a test's expected value, a tolerance, the C grid or a seed to get p
 3. Out-of-fold logits adjusted with the wrong fold's weights: Task 6 tests a case where folds have different weights.
 4. The scaler or weights fitted on validation rows: Task 6.
 5. A results file written from a dirty tree or by hand: Task 5's committed-results test and the guard hook.
+
+### Phase 4: CNN and the leakage exhibit (task plan, 2026-10-30)
+
+**Goal:** the C3 network trains deterministically from one master seed per run; the CNN is cross-validated through the shared driver (3 widths x 5 folds x 3 seeds, 40 epochs, every epoch scored); `select` fixes width and epoch count by settling 2's rule; the exhibit's leaky side runs for the CNN and the baseline; three final models train on CPU; `rebuild` runs every stage through `train-final` and writes the Phase 4 `results/` files; R22 to R24 pass locally and, after Din's push, in CI.
+
+**Approach:** extend the Phase 3 driver rather than add a second one. A splitter becomes the driver's only source of folds (patient folds from `config/folds.json`, or the exhibit's beat-level folds), which makes R24 structural the way the shared driver made R21 structural. A model that trains in epochs supplies a generator that yields the fitted model after each epoch; the driver scores every epoch's validation logits itself, so folds, class weights, the RR scaler, the selection metric and calibration stay in one place. Every run trains the full 40 epochs, and the leaky side does too, so the honest and leaky numbers come from the same code at the same epoch. Test first throughout.
+
+**Settled for this phase (ledger, 2026-10-30, "Phase 4 settling" 1 to 5):** the baseline C grid widens to 0.0001 and never again; cap 40, every epoch scored in eval mode, joint argmax of the seed mean over width and epoch, ties to the smaller width then fewer epochs, a stop if the pick is epoch 36 to 40; seed 0 is the DS1 headline with seeds 1 and 2 as a range, each final model's temperature comes from its own seed, a paired DS1 difference against the baseline; augmentation re-cuts the window shifted by up to 5 samples, then z-scores, then adds noise of standard deviation 0.05 in z-units, training only; deterministic mode and 4 threads everywhere, an exact same-Mac MPS rerun check before the full job, MPS against CPU measured and reported. One goal run (Din, 2026-10-30).
+
+**Design calls for Din's review (made by Claude while planning, approved with this plan):**
+
+1. Leaky splitter: `StratifiedKFold(n_splits=5, shuffle=True, random_state=LEAKY_SPLIT_SEED)` on the beats' classes, `LEAKY_SPLIT_SEED = 20261030` (today, distinct from the fold and bootstrap seeds). Generated in code, not a committed file: it feeds no selection, and the pinned scikit-learn makes it reproducible. `results/exhibit.json` records the SHA256 of the beat-to-fold assignment.
+2. The trace for augmentation comes from a new guarded loader, `load_ds1_traces`, through the same `require_ds1` check as `load_ds1` (R15 extends to it). `BeatTable` is unchanged.
+3. Per-epoch out-of-fold logits are stored in float32 in each run folder (about 33 MB per width and seed, about 300 MB for the CV job, gitignored). Committed `results/cv_cnn_curves.json` holds only the pooled confusion matrix per width, seed and epoch (360 matrices) and the run folder names; per-fold numbers at the chosen point come from the logits; downstream stages read logits from the named run folders and fail with "rerun `rebuild --from cross-validate-cnn`" if one is missing.
+4. One run folder per width and seed for CV (`cv-cnn-w1-s0` and so on), one per seed for the leaky side and for `train-final`. Final checkpoints stay in run folders; committed `results/train_final.json` records each one's path, SHA256, width, epoch count, temperature, scaler, class weights, device, threads and wall time. Phase 5's export reads them and checks the SHA256. `models/` stays untouched (export writes it).
+5. Seeds: `SeedSequence(master)` with master = the seed index (0, 1, 2), spawned per fold and then per stream (weight init, shuffle, shift, noise, dropout). Dropout uses PyTorch's global generator, so each fit sets `torch.manual_seed` from its own derived stream at the start; nothing else touches global state.
+6. Batches: preloaded tensors, a `DataLoader` with `num_workers=0` and a seeded generator, `drop_last=True` (a batch of one breaks batch norm; at most 255 random beats sit out each epoch). `CrossEntropyLoss(weight=...)` in `SCORED_CLASSES` order from `balanced_class_weights`. Model path float32.
+7. The CV device is a run setting, `[train] cv_device = "mps"` in `config/default.toml` (the `--exact` mode later sets CPU); final training is CPU by constant (C6). Provenance adds the torch version, device, thread count and the deterministic flag.
+8. Stages after `cross-validate` (baseline, unchanged): `cross-validate-cnn` (writes `results/cv_cnn_curves.json`), `select` (writes `results/selection.json` and `results/cv_cnn.json`), `exhibit` (writes `results/exhibit.json`), `train-final` (writes `results/train_final.json`). Splitting the CNN out of `cross-validate` keeps a baseline-only change from rerunning an hour of training. `rebuild` then stops after `train-final` and names `export` (Phase 5).
+9. `cv_summary` becomes model-agnostic (it takes the calibrated out-of-fold predictions, a selection block and the data label from the caller, so CNN files say "DS1 out-of-fold, MPS"). The baseline's `results/cv_baseline.json` must come out identical apart from `run` and `commit` after this refactor, which Task 4 checks.
+10. Accuracy is computed only in `train/exhibit.py` (EXHIBIT-03); a test checks no other results payload has an accuracy key.
+
+**Preconditions:** Phase 3 merged (`4dd4c0c`); settling 1 to 5 committed on `main` (`e687fd9` to `5add987`); the MIT-BIH cache downloaded and DS1 prepared (`uv run heartbeat rebuild`).
+
+**Global constraints:** section 2 and the earlier phases' constraints. No new dependency (torch 2.14.1 is already pinned). DS1 only: no code path touches DS2. Numbers quoted in the ledger name their results file and run folder and say "DS1 out-of-fold, MPS" (CNN CV, exhibit) or "DS1 out-of-fold, CPU" (baseline). Exhibit numbers stay out of public text until the case study. Long jobs run in the background with their expected time stated.
+
+**The current-phase bump:** the first commit on branch `phase-4-cnn` sets `current-phase = 4`; the coverage test is red until R22 to R24 each have a test, and each commit that leaves it red names the rows remaining.
+
+#### File map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/heartbeat/constants.py` | `BASELINE_C_GRID` widened (settling 1); `CNN_WIDTHS = (0.5, 1.0, 2.0)`, `CNN_CHANNELS = (16, 32, 64, 64)`, `CNN_KERNEL = 7`, `CNN_HIDDEN = 64`, `CNN_DROPOUT = 0.3`, `LEARNING_RATE = 1e-3`, `WEIGHT_DECAY = 1e-4`, `BATCH_SIZE = 256` (C3); `CNN_SEEDS = (0, 1, 2)`, `SHIPPED_SEED = 0` (C6); `MAX_EPOCHS = 40`, `EPOCH_EDGE_FIRST = 36` (settling 2); `SHIFT_MAX_SAMPLES = 5`, `NOISE_STD_Z = 0.05` (settling 4); `TORCH_THREADS = 4` (settling 5); `LEAKY_SPLIT_SEED = 20261030` |
+| `config/default.toml`, `src/heartbeat/config.py` | `[train] cv_device` |
+| `src/heartbeat/data/loader.py` | `load_ds1_traces` (R15) |
+| `src/heartbeat/models/cnn.py` | The C3 network (MODEL-02) and the CNN `ModelSpec` |
+| `src/heartbeat/models/augment.py` | Shift by re-cut, z-score, noise (MODEL-03, settling 4) |
+| `src/heartbeat/models/spec.py` | `ModelSpec` gains an optional `fit_epochs` |
+| `src/heartbeat/train/seeds.py` | Derived seeds (MODEL-05) |
+| `src/heartbeat/train/torch_setup.py` | Deterministic mode, threads, device (MODEL-06, settling 5) |
+| `src/heartbeat/train/loop.py` | The epoch loop (MODEL-03) |
+| `src/heartbeat/train/cv.py` | Splitters, `cross_validate_epochs`, model-agnostic summary (EVAL-07, R21, R24) |
+| `src/heartbeat/train/select.py` | Curves, joint argmax, edge stop, per-seed calibration, seed range, paired difference (MODEL-04, settlings 2 and 3) |
+| `src/heartbeat/train/exhibit.py` | Leaky side for both models, accuracy (EXHIBIT-01 to 03) |
+| `src/heartbeat/train/final.py` | `train-final` (MODEL-05, MODEL-06) |
+| `src/heartbeat/runs.py` | Provenance adds torch, device, threads, deterministic flag |
+| `src/heartbeat/stages.py`, `cli.py` | Four stages; `cross-validate --model cnn` with `--width`, `--seed`, `--fold`, `--device` for development runs; `select`, `exhibit`, `train-final` subcommands (run folders only) |
+| `tests/unit/` | `test_cnn.py`, `test_augment.py`, `test_seeds.py`, `test_torch_setup.py`, `test_loop.py`, `test_select.py`, `test_exhibit.py`, `test_final.py`; `test_cv.py`, `test_loader.py` (or its existing home), `test_runs.py`, `test_stages.py`, `test_cli.py` updated |
+| `tests/data/` | `test_cnn_smoke_real.py` (R23) |
+
+#### Task 1: Phase bump and the widened C grid (settling 1)
+
+1. Commit `chore: start Phase 4 (current-phase = 4)` on `phase-4-cnn`.
+2. Test first: `test_cv.py`'s grid assertion becomes the seven values (approved in settling 1); run it red. Change `BASELINE_C_GRID`; green. Commit `feat(train): widen the baseline C grid to 0.0001 (settling 1)`.
+3. On that clean tree, `uv run heartbeat rebuild` (cross-validate reruns, about 5 s). Commit `results/cv_baseline.json` alone as `feat(train): baseline out-of-fold results on the seven-value grid`. Record the chosen C and whether it is 0.0001 (stop 6).
+
+#### Task 2: The network, augmentation and seeds (TASKS 4.1)
+
+**Interfaces produced:** `HeartbeatCNN(width: float)` with `forward(window (b, 1, 256) float32, rr (b, 6) float32) -> (b, 4)` logits in `SCORED_CLASSES` order; `augment_batch(traces, record, sample, rng_shift, rng_noise) -> (b, 1, 256) float32`; `validation_windows(beats) -> (n, 1, 256) float32` (unaugmented, from `window_adu` through `zscore_windows`); `RunSeeds` and `derive_seeds(master: int, fold: int) -> RunSeeds`.
+
+1. Tests first. `test_cnn.py`: parameter counts exactly 14,724, 52,036 and 196,548 at widths 0.5, 1 and 2 (C7's measured counts, matched by hand from MODEL-02 while planning); output shape and dtype; eval mode gives identical outputs on two calls; channels scale with width while the hidden layer stays 64. `test_augment.py`: on a planted ramp trace the shifted window equals the trace cut at the beat sample plus the offset; offsets cover [-5, 5] and nothing outside; a shift that leaves the record raises; the z-score step equals `zscore_windows` on the re-cut window (floor included); noise has standard deviation 0.05 within a stated sampling bound on a fixed generator; `validation_windows` equals `zscore_windows(beats.window_adu)` cast to float32. `test_seeds.py`: same master and fold give the same seeds; different folds or streams differ; derivation goes through `SeedSequence.spawn`.
+2. Implement. Commit `feat(models): the C3 network, augmentation and derived seeds`.
+
+#### Task 3: Deterministic setup and the epoch loop (TASKS 4.1, R22)
+
+**Interfaces produced:** `configure_torch(device: str) -> torch.device` (sets `use_deterministic_algorithms(True)` and `set_num_threads(TORCH_THREADS)`, checks MPS availability, raises otherwise); `train_epochs(model, train inputs, y_train, class_weight, seeds, n_epochs, device) -> Iterator[HeartbeatCNN]` (AdamW at a constant rate, weighted cross-entropy, augmentation on training batches only, yields the model in eval mode after each epoch and restores train mode).
+
+1. Tests first, `test_torch_setup.py` and `test_loop.py`, on small synthetic data on CPU. R22: two runs with one seed give identical weights after 2 epochs (`torch.equal` on every tensor); a different seed gives different weights. Prefix property: the validation logits at epoch 2 of a 3-epoch run equal those of a 2-epoch run (bit for bit), which is what lets `train-final` train for exactly the selected epoch count. Validation scoring between epochs consumes no training random stream (a run scored every epoch equals one never scored). Augmentation is called on training batches and never on validation (spy). The loss is finite (a NaN raises with the epoch and batch).
+2. Implement. Commit `feat(train): deterministic setup and the epoch loop (R22)`.
+
+#### Task 4: Splitters and the epoch driver (TASKS 4.2, R21, R24)
+
+**Interfaces produced:** `Splitter(name, indices(beats) -> list[(train, val)])`, `patient_splitter(folds)` (wraps `fold_indices`), `beat_splitter(seed=LEAKY_SPLIT_SEED)`; `cross_validate(spec, beats, splitter, params)` (the Phase 3 signature with the splitter in place of the folds); `cross_validate_epochs(spec, beats, splitter, params, n_epochs) -> EpochCVResult` (logits `(n_epochs, n, 4)` float32, fold per beat, each fold's weights and scaler); `CNN: ModelSpec` with `fit_epochs`; `resolved_config(...)` (everything a run depends on, as one dict); `cv_summary` taking calibrated out-of-fold predictions and a caller-supplied selection block.
+
+1. Tests first, `test_cv.py`. R21 extended: the CNN goes through the same driver and gets its folds only from a splitter, its weights only from `balanced_class_weights`, its selection metric only from `selection_score` (spies, and the AST check that `models/` neither imports `data.folds` nor computes weights now covers `cnn.py` and `augment.py`). R24: the honest and leaky resolved configs for one model differ in exactly one key, the splitter, for both the CNN and the baseline. `beat_splitter` puts every beat in exactly one validation fold, keeps class proportions per fold within one beat of `StratifiedKFold`'s own result, and is identical across calls. `cross_validate_epochs` gives every beat exactly one prediction per epoch. A tiny CNN on synthetic data runs end to end through the driver on CPU.
+2. Implement. Commit `feat(train): splitters and the epoch driver (R21, R24)`.
+3. On that clean tree, `uv run heartbeat rebuild --from cross-validate` (the CNN stages arrive in Task 8): `results/cv_baseline.json` must differ from Task 1's commit only in `run` and `commit` (design call 9). If anything else differs, fix the refactor, never the file. Keep the reproduction copy in `git stash`, as Phase 3 did.
+
+#### Task 5: `select` (TASKS 4.2)
+
+**Interfaces produced:** `epoch_curves(curves_payload) -> Curves` (per width, seed and epoch, from the pooled confusion matrices: macro F1 over N, S, V and four-class); `select_config(curves) -> Selection` (seed mean, joint argmax, ties to the smaller width then fewer epochs; raises `EpochEdgeError` when the epoch is at least `EPOCH_EDGE_FIRST`; raises on an undefined score); `cnn_summary(selection, run folders, beats, baseline oof)` (settling 3: seed 0 headline through `cv_summary`, seeds 1 and 2 as a min to max range, per-seed temperatures, the paired difference CNN seed 0 minus baseline on one draw matrix).
+
+1. Tests first, `test_select.py`, on hand-built curves: the argmax over width and epoch; both tie rules; epoch 36 raises and 35 does not; the seed mean is a plain mean of the three pooled scores; each seed's temperature is fitted on that seed's adjusted logits only (spy); the paired difference uses one `draw_counts` call for both models (R17); the payload has no NaN; selection reads confusion matrices, never the DS2 loader.
+2. Implement. Commit `feat(train): select width and epoch count from the curves`.
+
+#### Task 6: The exhibit (TASKS 4.3)
+
+**Interfaces produced:** `run_exhibit(selection, baseline chosen C, beats, folds) -> payload`: the honest side read from the CV run folders (CNN) and the Phase 3 driver at the chosen C (baseline); the leaky side through `beat_splitter`, with the CNN at the selected width trained 40 epochs and read at the selected epoch for seeds 0 to 2, and the baseline at its chosen C; for each side and model, the headline metrics with patient-bootstrap intervals, seeds 1 and 2 as a range for the CNN, and accuracy.
+
+1. Tests first, `test_exhibit.py`: both models on both sides; the leaky side uses the honest side's chosen width, epoch and C with no retuning (R24's config test applied to the exhibit's actual calls); accuracy appears in the exhibit payload and in no other results payload (design call 10); the payload records the leaky assignment's SHA256.
+2. Implement. Commit `feat(train): the leakage exhibit for the CNN and the baseline`.
+
+#### Task 7: `train-final` (TASKS 4.4)
+
+**Interfaces produced:** `train_final(selection, beats, traces, seed) -> FinalModel` (all DS1 rows; scaler and weights fitted on all of them; exactly the selected epochs; CPU by constant; checkpoint written to the run folder with its SHA256); `final_payload(models, selection)` (design call 4).
+
+1. Tests first, `test_final.py`, on synthetic data: training uses every row; the device is CPU whatever `cv_device` says; the epoch count equals the selection's; the temperature recorded is that seed's from the selection; the checkpoint's SHA256 matches the file; two short runs with one seed write byte-identical checkpoints.
+2. Implement. Commit `feat(train): final models on CPU`.
+
+#### Task 8: Stages, CLI and the real-data smoke test (TASKS 4.1 to 4.4, R23)
+
+1. Tests first: `test_stages.py`, the four new stages (upstream, code folders, inputs including the folds, its pin and the manifests, and outputs as in design call 8) rerun when an input changes and are skipped otherwise; `rebuild` names `export` as next. `test_cli.py`: `select`, `exhibit` and `train-final` leave the stub list. `tests/data/test_cnn_smoke_real.py` (`realdata`, R23): a few CPU batches of the CNN on real DS1 through `train_epochs` with real traces give a finite loss and logits for every validation beat, and only DS1 records are read.
+2. Implement. Commit `feat(cli): Phase 4 rebuild stages and subcommands (R23)`.
+
+#### Task 9: The device checks before the full job (settling 5)
+
+1. `uv run heartbeat cross-validate --model cnn --width 1 --seed 0 --fold 0 --device mps` twice. A throwaway script in Claude's scratchpad compares the two run folders: weights and every epoch's logits must be bit-identical (stop 2). Delete the script after.
+2. The same configuration with `--device cpu` (about 12 minutes, in the background). Record in the ledger: both epoch curves of that fold's macro F1 over N, S and V, label agreement at each epoch, and the max logit difference. The seed spread to compare with comes from the full job (Task 10) and is added to the same entry then; a device gap larger than the spread is flagged to Din, not a stop.
+
+#### Task 10: The real run, and its checks
+
+1. On a clean tree, `uv run heartbeat rebuild` in the background (expected: cross-validate-cnn about 1 hour on MPS, select seconds, exhibit about 15 to 35 minutes by width, train-final about 30 minutes at width 1 to 2 hours at width 2; record each stage's wall-clock time). If `select` raises `EpochEdgeError`, stop (stop 1).
+2. Commit the results files alone (`cv_baseline.json` reruns too, since its code folders changed) as `feat(train): CNN cross-validation, selection, exhibit and final models`.
+3. Reproduction of the summaries: `uv run heartbeat select` writes a new run folder from the same CV run folders; its payloads must equal `results/selection.json` and `results/cv_cnn.json` apart from `run` and `commit` (stop 3).
+4. Finish Task 9's entry with the seed spread for width 1, fold 0.
+
+#### Task 11: Docs and the hand-off to Din
+
+1. `scripts/check.sh`, `uv run pytest` (real-data layer included), `rule_coverage` (R22 to R24 covered), `repo_config` and the wording lint all green.
+2. `AGENTS.md` Commands: the new subcommands and stages move to "Working today", with measured times. `docs/TASKS.md` 4.1 to 4.4 Verified (locally) with commands. Ledger entry: what was built, commits, deviations and why, stage timings, the chosen width and epoch with each width's best point, the baseline's chosen C on the new grid, DS1 out-of-fold headline numbers for the CNN (seed 0 with intervals, seeds 1 and 2 range) and the paired difference, the exhibit's two rows for each model, and the final models' checksums, each naming its results file and run folder and its label ("DS1 out-of-fold, MPS" or "CPU"). Commit `docs: Phase 4 verification and hand-off`.
+3. Give Din the push command for `phase-4-cnn`. After the push, read the run with `gh run list` and `gh run view`, record its wall-clock time, and fix anything red in a new commit. Phase 4 exits when R22 to R24 pass in CI and the results files are committed.
+
+#### Stop and ask Din
+
+Never change a test's expected value, a tolerance, a grid, a seed, the epoch cap or the noise level to get past one of these:
+
+1. `select` picks an epoch from 36 to 40 (settling 2).
+2. The two same-seed MPS runs in Task 9 differ in any weight or logit (settling 5).
+3. `heartbeat select` does not reproduce the committed selection and CNN summary, or Task 4's refactor changes `results/cv_baseline.json` beyond `run` and `commit`.
+4. A loss goes NaN or infinite, or any selection score is undefined.
+5. A fitted temperature lands within 1% of a bound, or lbfgs fails to converge at any C on either side of the exhibit.
+6. The baseline's chosen C is 0.0001: not a stop; say so in the ledger and the hand-off (settling 1 says the grid stays).
+7. MPS is unavailable, or deterministic mode raises on an operation the network needs.
+8. Anything needs a new dependency, a pin change, or an edit to `manifests/`, `config/folds.json`, `models/` or `.claude/`.
+9. Any DS2 signal, label or prediction seen by accident (rule 1).
+10. The MPS against CPU gap on width 1, fold 0 exceeds that fold's seed spread: not a stop; flag it in the ledger and the hand-off (AS3).
+
+#### Review focus
+
+1. A random stream shared or reused between folds, seeds or the two sides of the exhibit (Task 2's seed tests, Task 3's scoring-consumes-nothing test).
+2. Augmentation reaching validation or final evaluation (Task 3's spy).
+3. The selected epoch meaning something different in CV and in `train-final` (Task 3's prefix property; `drop_last` and the shuffle order must not depend on the run length).
+4. The leaky side quietly tuned: its width, epoch and C must come from the honest selection (Task 6).
+5. The scaler or class weights fitted on validation rows in the CNN path, and the CNN's logits read with the wrong fold's weights (Task 4 inherits Phase 3's tests).
+6. Accuracy leaking into any headline payload (design call 10).

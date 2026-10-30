@@ -1587,3 +1587,9 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Caveat:** the probe ran 2 epochs on synthetic data without augmentation; item 2 is the real-data confirmation.
 
 **Applied:** no requirement text changes (OPS-03 and the PRD's reproducibility line hold: the default mode on this Mac is now expected to be exact, which is stricter than "within tolerance").
+
+## 2026-10-30: Phase 4 task plan drafted, for Din's review
+
+**Drafted:** `docs/PLAN.md` section 8, Phase 4: eleven tasks on branch `phase-4-cnn` (phase bump and the widened C grid, network with augmentation and seeds, deterministic setup and the epoch loop, splitters and the epoch driver, `select`, the exhibit, `train-final`, stages and CLI with the R23 smoke test, the device checks, the real run, the hand-off), file map, interfaces, test-first cases for R22 to R24, ten stop-and-ask conditions, review focus. It rests on Phase 4 settling 1 to 5, one goal run (Din, 2026-10-30), and ten design calls listed in the plan (leaky splitter seed 20261030 in code, a guarded trace loader, float32 per-epoch logits in run folders with pooled confusion matrices committed, run folder layout and `results/train_final.json` with checkpoint hashes, `SeedSequence` streams per fold, `drop_last=True`, a `cv_device` setting, four new stages, a model-agnostic `cv_summary`, accuracy only in the exhibit).
+
+**Checked while drafting (by hand from MODEL-02, no code run):** the parameter counts of the C3 network are 14,724, 52,036 and 196,548 at widths 0.5, 1 and 2, equal to C7's measured counts, so Task 2 tests them exactly.
