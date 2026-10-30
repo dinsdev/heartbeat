@@ -138,3 +138,18 @@ TORCH_THREADS = 4
 # Phase 4 task plan, design call 1: the exhibit's beat-level split (C5), distinct
 # from the fold and bootstrap seeds.
 LEAKY_SPLIT_SEED = 20261030
+
+# E2, D5, R25: each exported ONNX file is one file at opset 20, under 1 MB.
+ONNX_OPSET = 20
+MODEL_SIZE_LIMIT_BYTES = 1_000_000
+
+# E5, PARITY-03: outputs and features agree within 1e-5; labels exactly.
+PARITY_TOLERANCE = 1e-5
+
+# PARITY-02 (Phase 5 task plan, design call 4): 50 kept DS1 beats by class
+# quota, no Q, drawn with their own seed (distinct from the fold, bootstrap
+# and leaky-split seeds).
+PARITY_FIXTURE_SEED = 20261031
+PARITY_FIXTURE_QUOTA: Mapping[str, int] = MappingProxyType(
+    {"N": 20, "S": 12, "V": 12, "F": 6}
+)
