@@ -31,7 +31,15 @@ jobs:
       - run: uv run ruff check
       - run: uv run ruff format --check
       - run: uv run mypy
-      # Runs the wording lint, the rule-coverage check and the R45 and R46 checks.
+      # The 132 pinned MIT-BIH files for the real-data tests (L2). The key is the
+      # checksum manifest, and the download step checks every cached file (R2).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/raw/mitdb/1.0.0
+          key: mitdb-1.0.0-${{ hashFiles('manifests/mitdb-1.0.0.sha256') }}
+      - run: uv run heartbeat download
+      # Runs the wording lint, the rule-coverage check, the R45 and R46 checks,
+      # and the real-data tests.
       - run: uv run pytest
 
   web:

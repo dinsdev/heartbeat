@@ -349,3 +349,137 @@ Each line has its test in the named task.
 3. Rule ID prefix collisions (R4 and R44, R1 and R10): Task 3.
 4. Workflow pins that look pinned but are not (quoted tags, short or uppercase SHAs, Docker tags, reusable workflows by branch): Task 5.
 5. Local and CI toolchains drifting (a lock written by uv 0.12.11 installed by 0.13.0; torch's Linux wheels pulling CUDA): Task 1 step 2 and the first CI run, recorded in the ledger.
+
+### Phase 2: Data and split (task plan, 2026-10-29)
+
+**Goal:** the 132 pinned files downloaded and checked, DS1 prepared into the canonical int16 trace with beats, AAMI classes and RR features, a loader that cannot hand out DS2, folds made once by Din and protected by a pinned hash, and `rebuild` running its first three stages, with R1 to R15 and R51 passing in CI on real data.
+
+**Approach:** pure functions for every numeric step (`signal/`), thin I/O around them (`data/`), and one stage framework (`stages.py`) that later phases extend. Test first throughout: each module's tests are written and seen failing before the module exists. Real-data tests (L2) read the cache through session fixtures and never skip; a missing cache fails with the command that fills it.
+
+**Settled for this phase (ledger, 2026-10-29, "Phase 2 settling" 1 to 6, and the manifests entry):** manifests written in planning and read-only to the goal agent; filter order 4 with `sosfiltfilt`; exact RR averages; `prepare` builds DS1 only before the freeze; folds by one seeded run with a pinned hash; two goal runs around `make-folds`. Design calls approved in the same session: the window-range check reads DS1 only; more than 5 DS1 floor hits stops the run; stage fingerprints hash the code of the package folders a stage declares, not the whole package.
+
+**Preconditions:** `manifests/` (four files) and `config/default.toml` committed (done, `7534e21`); network access to the S3 mirror; Din at the keyboard for Goal B.
+
+**Global constraints:** section 2 above and the Phase 1 constraints (exact pins, Conventional Commits, the dash tier in every file). No new Python dependency: downloads use `urllib.request` and `hashlib`; reading uses the pinned wfdb; filtering scipy; folds scikit-learn. One new CI action, `actions/cache`, pinned to the full hash of its newest release at least 14 days old (R46), found the way Phase 1 found its pins. DS2: download, checksum (R2) and annotation counts (R11) only. No DS2 signal is read in this phase; the R4 real-data test reads record 100's header only (`wfdb.rdheader`), never its signal.
+
+**The current-phase bump:** the first commit sets `[tool.heartbeat] current-phase = 2`. From then until every Phase 2 row has a test, the repo-level coverage test is red; it is the only red allowed in `scripts/check.sh` before a commit, and each commit message that leaves it red says which rows remain.
+
+#### File map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/heartbeat/constants.py` | Planning values with decision IDs: `FS_HZ = 360`, `ADU_PER_MV = 200`, band 0.5 and 40 Hz, `BANDPASS_ORDER = 4`, `WINDOW_BEFORE_SAMPLES = 96`, `WINDOW_AFTER_SAMPLES = 160`, `ZSCORE_STD_FLOOR_ADU = 2.0`, `RR_LOCAL_INTERVALS = 10`, `RR_LONG_WINDOW_SAMPLES = 108000`, `AAMI_CLASS`, `NON_BEAT_SYMBOLS`, `SCORED_CLASSES = ("N", "S", "V", "F")`, `RR_FEATURE_NAMES`, `N_FOLDS = 5`, `FLOOR_HIT_LIMIT = 5` |
+| `src/heartbeat/paths.py` | Adds `CONFIG_DIR`, `DEFAULT_CONFIG`, `MANIFESTS_DIR` and one constant per manifest, `FOLDS_JSON`, `FOLDS_PIN`, `UV_LOCK`, `STAGES_DIR` (`data/stages`) |
+| `src/heartbeat/config.py` | `load_settings(path) -> Settings` (frozen dataclasses: data folders, sources, fold seed) |
+| `src/heartbeat/data/manifests.py` | Parse and validate the four manifests |
+| `src/heartbeat/data/download.py` | Cache check and download (DATA-01, DATA-02) |
+| `src/heartbeat/data/records.py` | wfdb read, MLII by name (DATA-04) |
+| `src/heartbeat/data/aami.py` | Strict symbol mapping (DATA-09, DATA-10) |
+| `src/heartbeat/signal/filter.py` | Bandpass and int16 rounding (DATA-05) |
+| `src/heartbeat/signal/rr.py` | The six RR features (DATA-07) |
+| `src/heartbeat/signal/windows.py` | Window cutting and the floored z-score (DATA-06, R51) |
+| `src/heartbeat/data/prepare.py` | Per-record pipeline; DS1 writer and floor-hit report (DATA-08) |
+| `src/heartbeat/data/loader.py` | `load_ds1`; DS2 and excluded IDs raise (EVAL-04) |
+| `src/heartbeat/data/folds.py` | `make_folds`, `write_folds`, `check_folds` (EVAL-02, EVAL-03) |
+| `src/heartbeat/stages.py` | Stage framework, fingerprints, `run_pipeline` (OPS-01, partial) |
+| `src/heartbeat/cli.py` | `download`, `prepare`, `make-folds`, `check-folds`, `rebuild` become real |
+| `tests/unit/` | `test_manifests.py`, `test_download.py`, `test_records.py`, `test_aami.py`, `test_filter.py`, `test_windows.py`, `test_rr.py`, `test_prepare.py`, `test_loader.py`, `test_folds.py`, `test_stages.py`, `test_cli.py` (updated) |
+| `tests/data/` | `conftest.py` (session fixtures: settings, cache present, DS1 prepared into a temp folder), `test_cache.py`, `test_records_real.py`, `test_counts.py`, `test_windows_real.py`, `test_loader_real.py`; Goal B adds `test_folds_committed.py` |
+| `.github/workflows/ci.yml` | `python` job: cache step and `uv run heartbeat download` before pytest |
+| `config/folds.json`, `manifests/folds.sha256` | Goal B only: written by Din's `make-folds` run and the pin edit Din approves |
+
+#### Task 1: Phase bump, constants, config, manifests reader (TASKS 2.1)
+
+**Interfaces produced:** `Settings`, `DataSettings(raw_dir: Path, prepared_dir: Path, sources: tuple[str, ...])`, `FoldSettings(seed: int)`; `Splits(ds1: tuple[str, ...], ds2: tuple[str, ...], excluded: Mapping[str, str], lead: str)`; `load_splits(path) -> Splits`, `load_subjects(path) -> Mapping[str, str]`, `load_checksums(path) -> Mapping[str, str]` (file name to hex), `load_beat_counts(path) -> Mapping[str, Mapping[str, int]]`, `downloaded_records(checksums) -> tuple[str, ...]`; `ManifestError`.
+
+1. Commit `chore: start Phase 2 (current-phase = 2)`.
+2. Tests first, `tests/unit/test_manifests.py`: R3 (`ds1` and `ds2` equal de Chazal's lists written out in the test, 202 excluded, the four paced records excluded, none in either set, 22 and 21 records); R12 (no subject ID on both sides of DS1 and DS2; 201 and 202 one ID; 48 records, 47 subjects); the checksum manifest names exactly the `.hea`, `.dat` and `.atr` of the 44 non-paced records; a malformed checksum line, a duplicate record, a record in both sets, or an unknown key raises `ManifestError` naming the file and line. Settings, in the same file: the fold seed reads 20261026; an unknown key in `config/default.toml` raises.
+3. Implement `constants.py`, `paths.py` additions, `config.py`, `data/manifests.py` until green. Commit `feat(data): constants, settings and manifest readers`.
+
+#### Task 2: Signal functions (TASKS 2.3, numeric half)
+
+**Interfaces produced:** `bandpass_mv(x_mv: NDArray[np.float64]) -> NDArray[np.float64]`; `to_adu(x_mv) -> NDArray[np.int16]` (`np.rint`, `TraceRangeError` outside int16); `rr_features(beat_sample: NDArray[np.int64]) -> NDArray[np.float64]` of shape `(n_beats - 2, 6)` for beats 1 to n-2 in `RR_FEATURE_NAMES` order, `ValueError` for fewer than 3 beats or non-increasing samples; `window_bounds(sample: int) -> tuple[int, int]`; `extract_windows(trace_adu, beat_sample) -> NDArray[np.int16]` `(n, 256)`, `WindowRangeError` naming the beat; `zscore_windows(windows_adu) -> NDArray[np.float64]`; `window_std_adu(windows_adu) -> NDArray[np.float64]`.
+
+1. Tests first, each one case:
+   - R5 (`test_filter.py`): on 60 s synthetic sines at 360 Hz, measured away from the edges, gain within 0.2 dB of 0 from 2 to 25 Hz; within 0.2 dB of -6 dB at 0.5 and 40 Hz; at most -30 dB at 60 Hz; at most -40 dB at 0.1 Hz (measured on the settled filter in planning: worst -0.14 dB in 2 to 25 Hz, -6.02 dB at both edges, -32.8 dB at 60 Hz, -112.6 dB at 0.1 Hz); zero phase: a 10 Hz sine's output has its cross-correlation peak at lag 0 and a phase difference under 1e-3 rad.
+   - R6: hypothesis over float64 arrays within plus or minus 150 mV, `abs(to_adu(x) / 200 - x) <= 0.0025`; values beyond the int16 range raise `TraceRangeError`; round half to even on exact halves.
+   - R7 (`test_windows.py`): `window_bounds(1000) == (904, 1160)`; `extract_windows` puts `trace[s]` at index 96; a beat at sample 95 or within 159 samples of the end raises `WindowRangeError`.
+   - R51: a constant window gives all zeros; hypothesis over any int16 window gives finite values; a window with standard deviation above 2 equals `(x - mean) / std` with population standard deviation.
+   - R8 (`test_rr.py`): hypothesis over increasing beat samples, moving any beat at index i+2 or later never changes row i; moving beat i+1 changes only post-RR and post-over-pre of row i.
+   - R9: a Q beat between two N beats is an RR endpoint (beats at 0, 300, 600 give pre-RR 300/360 s for the last N).
+   - The settled definitions on a hand-checked example: the local average uses `RR_(i-9)` to `RR_i` (fewer at the start); the long average includes every interval whose ending beat lies at most 108,000 samples before beat i (one at exactly 108,000 is in, one at 108,001 out); the first kept beat's averages equal its pre-RR.
+2. Implement until green. Commit `feat(signal): bandpass, int16 rounding, windows, z-score and RR features`.
+
+#### Task 3: AAMI mapping and record reading (TASKS 2.3, labels half)
+
+**Interfaces produced:** `NON_BEAT_SYMBOLS = frozenset("+~|!x[]\"")`; `classify_symbols(record_id: str, symbols: Sequence[str]) -> tuple[NDArray[np.bool_], NDArray[np.str_]]` (is-beat mask, class per beat); `UnknownSymbolError` naming record, index and symbol; `select_lead(sig_names: Sequence[str], lead: str) -> int` (`LeadNotFoundError`); `RawRecord(record_id, mlii_mv, ann_sample, ann_symbol)`; `read_record(raw_dir, record_id) -> RawRecord` (asserts 360 Hz, beat samples strictly increasing); `read_annotations(raw_dir, record_id)` (annotations only, for R11).
+
+1. Tests first: R10 (`test_aami.py`): an unknown symbol raises with record and index; every symbol in DATA-09 maps to its class; `!` and `x` are not beats; the mapping covers exactly the symbols DATA-09 lists. R4 (`test_records.py`): `select_lead(["V5", "MLII"], "MLII") == 1`, `["MLII", "V1"]` gives 0, a missing lead raises.
+2. Implement. Real-data tests (`tests/data/test_records_real.py`, `realdata`): R4 on 114 (full record: MLII is channel 1, 360 Hz) and 100 (header only via `wfdb.rdheader`: MLII is channel 0).
+3. Commit `feat(data): strict AAMI mapping and MLII by name`.
+
+#### Task 4: Downloader (TASKS 2.2)
+
+**Interfaces produced:** `sha256_file(path) -> str`; `check_cache(raw_dir, checksums) -> CacheStatus(ok, missing)`, raising `ChecksumMismatchError` on a present file with the wrong hash (DATA-02: stop, never re-download over it; the message says to delete the file); `download(raw_dir, checksums, sources, fetch=fetch_url) -> DownloadReport(fetched, skipped, source_used)`. `fetch: Callable[[str], bytes]` is injected so L1 tests need no network; `fetch_url` uses `urllib.request` with a 60 s timeout.
+
+1. Tests first (`test_download.py`, fake `fetch`, temporary folders): R1, a fetched file with the wrong hash from every source raises `ChecksumMismatchError` and leaves no file under its name; a wrong hash from the first source falls back to the second and succeeds; a network error on the first source falls back; matching cached files are skipped and `fetch` is never called; a cached file with the wrong hash stops the run; review focus 1: an exception while writing leaves no file under the final name, and stale temporary files from an earlier interrupted run are removed at the start; writes go to a temporary name in the same folder and `os.replace` after the hash matches.
+2. Implement. CLI `heartbeat download` (prints counts, exit 0; exit 1 with the file name on a mismatch). Real-data test R2 (`tests/data/test_cache.py`): `check_cache` over all 132 files is ok.
+3. Run `uv run heartbeat download` locally (about 100 MB; measured 1.9 MB/s from the mirror in E2, so about a minute; a guess for today). Commit `feat(data): checksum-pinned downloader with mirror fallback`.
+
+#### Task 5: Prepare and the loader (TASKS 2.3, 2.4)
+
+**Interfaces produced:** `PreparedRecord(record_id, subject_id, trace_adu int16, beat_sample int64, beat_symbol, beat_class, kept bool, rr_s float64 (n_kept, 6))` with `save_prepared(record, path)` (atomic `.npz`, `allow_pickle=False`) and `load_prepared(path)`; `prepare_record(raw: RawRecord, subject_id: str) -> PreparedRecord` (pure; the same function will prepare DS2 in memory inside `evaluate-test`); `prepare_ds1(settings, splits, subjects) -> PrepareReport` writing `<prepared_dir>/<record>.npz` and `<prepared_dir>/floor_hits.json` (per DS1 record: hits and smallest window standard deviation in int16 units); `SealedRecordError`; `require_ds1(record_ids, splits)`; `BeatTable(record_id, subject_id, sample, beat_class, window_adu (n, 256) int16, rr_s (n, 6))`; `load_ds1(prepared_dir, splits, subjects, records=None, include_q=False) -> BeatTable`.
+
+1. Tests first: `test_prepare.py` on a synthetic `RawRecord` (a few beats, one Q, one `+` marker): first and last beat not kept; Q kept for RR but its class is Q; non-beats excluded from RR; RR rows line up with kept beats; a round trip through `save_prepared` and `load_prepared` is exact; `prepare_ds1` refuses a DS2 or excluded ID before reading anything. R15 (`test_loader.py`): `load_ds1` and `require_ds1` raise `SealedRecordError` for every DS2 ID, 202, the paced IDs and an unknown ID, even when a matching `.npz` exists in a temporary folder; an import-graph test (AST over `src/heartbeat`) finds `read_record` imported only by `data/prepare.py`.
+2. Implement. CLI `heartbeat prepare` writes DS1 and prints the floor-hit total.
+3. Real-data tests: R11 (`test_counts.py`) for each of the 44 records, symbol counts from `read_annotations` equal `mitdb-beat-counts.toml` exactly, and AAMI class counts per record follow from them; DS1 window range (`test_windows_real.py`): every kept DS1 beat has a full window; R15 L2 (`test_loader_real.py`): `load_ds1` on the prepared DS1 returns 22 records, classes only N, S, V, F, dtypes and shapes as documented, and refuses `"100"`.
+4. Run `uv run heartbeat prepare`. Record in the ledger: floor hits per DS1 record and the smallest standard deviation (B3 amendment); our per-class totals from the annotations against de Chazal's Table II (DS1: N 45868, S 942, V 3787, F 415, Q 8; DS2 with 202, as the paper counts it: N 44258, S 1837, V 3221, F 388, Q 7), once for all beats and once with each record's first and last beat dropped, listing every difference (annotation counts only; no DS2 signal). Commit `feat(data): DS1 prepare, floor-hit report and split-enforcing loader`.
+
+#### Task 6: Folds code (TASKS 2.5, code half)
+
+**Interfaces produced:** `Folds(seed, sklearn_version, manifest_sha256: Mapping[str, str], subject_fold: Mapping[str, int], class_counts: Mapping[str, Mapping[str, int]])`; `make_folds(beats: BeatTable, seed: int) -> Folds` (`StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)` on scored DS1 beats, label the class, group the subject); `write_folds(folds, path)` (canonical JSON: sorted keys, two-space indent, trailing newline; atomic; refuses to overwrite); `read_folds(path)`; `check_folds(folds_path, pin_path, splits, subjects) -> Folds` raising `FoldCheckError` with the reason. The pin file uses `sha256sum` format (`<hex>  config/folds.json`).
+
+1. Tests first (`test_folds.py`, synthetic `BeatTable`s, temporary paths): `make_folds` is deterministic for one seed; every subject in exactly one fold; R13, a planted fold file with one subject in two folds, a DS2 subject, a missing DS1 subject, or 201 and 202 split apart fails `check_folds`; R14, flipping one byte of a valid copy fails on the pinned hash, a missing pin fails, and `check_folds` never imports or calls the splitter (patched to raise); `write_folds` refuses an existing file; `heartbeat make-folds --out <tmp>` and `heartbeat check-folds` called as `main([...])` in process (the shell form of `make-folds` is denied by F5).
+2. Implement. CLI `make-folds [--out PATH]` (default `config/folds.json`, reads the prepared DS1 and the seed from settings) and `check-folds`. Commit `feat(data): make-folds and check-folds with a pinned hash`.
+
+#### Task 7: Stage framework and `rebuild` (TASKS 2.6)
+
+**Interfaces produced:** `Stage(name, settings_keys, upstream, code, inputs, run, outputs, always_run=False)`; `fingerprint(stage, context, upstream_fingerprints) -> str` (SHA256 over canonical JSON of: name, the named settings values, upstream fingerprints, the hash of every `.py` file under the stage's declared package folders, the hashes of its input files, the `uv.lock` hash); `run_pipeline(stages, context, from_stage=None) -> list[StageResult]`; state in `data/stages/<name>.json`; `PIPELINE` (download, prepare, check-folds built; cross-validate, select, exhibit, train-final, export, reproduce-test, build-demo-data named with their phases).
+
+1. Tests first (`test_stages.py`, stages with counting `run` functions in temporary folders): a second run skips every stage; a changed setting, input file, code file or upstream fingerprint reruns that stage and everything after it; deleting an output reruns its stage; `--from prepare` reruns prepare and check-folds but not download; `check-folds` (`always_run`) runs every time; an unknown `--from` exits non-zero; a stage that fails leaves its old state untouched; `rebuild` stops after the last built stage, exits 0 and names the next stage and its phase; `--exact` parses.
+2. Implement and wire `rebuild`. Update `test_cli.py`: the stub test now covers only subcommands whose phase is above 2; the five built ones have their own tests. Commit `feat(cli): rebuild stages with fingerprints and --from`.
+
+#### Task 8: CI real-data step, docs, and the hand-off to Din (Goal A ends here)
+
+1. `.github/workflows/ci.yml`, `python` job, before pytest: `actions/cache` (hash-pinned, with the version comment) on `data/raw/mitdb/1.0.0` keyed on `hashFiles('manifests/mitdb-1.0.0.sha256')`, then `uv run heartbeat download`. R45 and R46 tests pass on the new workflow. Commit `ci: cache and download MIT-BIH for the real-data tests`.
+2. `scripts/check.sh`, `uv run pytest` (with the real-data layer), `rule_coverage`, `repo_config` and the wording lint all green; R13's real-file test is not written yet, since the planted-leak test already covers the row. `AGENTS.md` Commands: `download`, `prepare`, `check-folds`, `rebuild` move to "Working today" and `make-folds` is listed as Din's. `docs/TASKS.md`: 2.1 to 2.4 and 2.6 Implemented or Verified as checks allow, 2.5 In progress. Ledger: what was built, deviations and why, timings, the floor hits and Table II comparison from Task 5. Commit `docs: Phase 2 Goal A verification and hand-off`.
+3. Stop and give Din: `uv run heartbeat make-folds`.
+
+#### Task 9: The committed folds (Goal B)
+
+1. Din has run `make-folds`; `config/folds.json` exists and is untracked. Read it (DS1 only) and compute its SHA256.
+2. Write `manifests/folds.sha256` (Din approves the prompt). Tests first, `tests/data/test_folds_committed.py`: R13 on the committed file (every DS1 subject once, no DS2 or excluded subject, 201's fold valid, its manifest hashes equal today's manifests); `check_folds` on the committed file and pin passes.
+3. `uv run heartbeat check-folds` exit 0; `uv run heartbeat rebuild` twice: the first runs, the second skips download and prepare (timings recorded).
+4. Ledger entry (rigor event, rule 4): seed, scikit-learn version, subjects per fold, per-fold class counts, where 208 and its F beats landed, the hash, and that this was the only run. Commit `feat(data): committed folds and their pinned hash` with `config/folds.json`, `manifests/folds.sha256` and the test.
+5. Full verification as in Task 8, `docs/TASKS.md` 2.1 to 2.6 Verified where checks passed, `AGENTS.md` if anything changed. Commit, then give Din the push command for `phase-2-data`. After the push, read the run with `gh run list` and `gh run view`, record its wall-clock time and the download time in the ledger, and fix anything red in a new commit. Phase 2 exits when R1 to R15 and R51 pass in CI.
+
+#### Stop and ask Din (both goals)
+
+Never edit a manifest, a test's expected value or a tolerance to get past one of these:
+
+1. Any record's `.atr` counts differ from `mitdb-beat-counts.toml` (R11).
+2. An annotation symbol outside DATA-09's beats and `NON_BEAT_SYMBOLS` in any record.
+3. A kept DS1 beat whose window leaves the record, or MLII missing, or a rate other than 360 Hz.
+4. More than 5 DS1 windows hit the z-score floor.
+5. Both download sources fail, or a downloaded file's hash never matches.
+6. Anything that would need a new dependency, a pin change, or an edit to `manifests/` (Goal A) or `.claude/`.
+7. Any DS2 signal, feature or prediction seen by accident (rule 1).
+8. Din's fold file fails `check_folds` or holds other than 22 DS1 subjects (a bug to fix in code; never a reason to rerun `make-folds` for different folds).
+
+#### Review focus
+
+1. A cached file corrupted after download, and a download interrupted mid-write: Task 4.
+2. The edge cases of the settled RR definitions (first kept beat, the exact 5-minute boundary, Q beats as endpoints): Task 2.
+3. DS2 reaching `prepare` or the loader by any path, including a stray `.npz` in the prepared folder: Task 5.
+4. A fold file that is valid but different from the pinned one: Task 6.
+5. A stage skipped although its code changed, because the code sits outside the folders the stage declares: Task 7 declares download as `data/`, prepare as `data/` and `signal/`, check-folds as `data/`, each plus `constants.py`, `config.py` and `paths.py`; Din's review of this plan is the check that the lists are complete.

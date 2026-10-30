@@ -1,0 +1,32 @@
+# Record lists for the MIT-BIH Arrhythmia Database 1.0.0 (B1, C1; EVAL-01,
+# DATA-03). Code reads these lists from here and never repeats them (R3).
+# Changing this file is a rigor event: Din's go and a ledger entry (rule 4).
+#
+# DS1 and DS2 are de Chazal, O'Dwyer and Reilly (2004), Table II footnote,
+# checked against the full text on 2026-10-29. DS2 here leaves out 202
+# (B1 leak fix), so it has 21 records from 21 subjects.
+
+database = "mitdb"
+version = "1.0.0"
+lead = "MLII"
+
+# Training and development (22 records, 22 subjects).
+ds1 = [
+  "101", "106", "108", "109", "112", "114", "115", "116", "118", "119", "122",
+  "124", "201", "203", "205", "207", "208", "209", "215", "220", "223", "230",
+]
+
+# The sealed test set (AGENTS.md rule 1). Read only by `evaluate-test`.
+ds2 = [
+  "100", "103", "105", "111", "113", "117", "121", "123", "200", "210", "212",
+  "213", "214", "219", "221", "222", "228", "231", "232", "233", "234",
+]
+
+# Records in neither set, with the reason. 202 is still downloaded and
+# checksummed (DATA-01 covers the 44 non-paced records); the paced ones are not.
+[excluded]
+"102" = "paced (B1, AAMI practice)"
+"104" = "paced (B1, AAMI practice)"
+"107" = "paced (B1, AAMI practice)"
+"217" = "paced (B1, AAMI practice)"
+"202" = "same subject as 201, which is in DS1 (B1 leak fix)"

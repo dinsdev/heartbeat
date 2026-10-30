@@ -52,7 +52,7 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [tool.heartbeat]
 # Bumped as the first commit of each phase (Phase 1 settling, 1 of 4).
-current-phase = 1
+current-phase = 2
 
 [tool.ruff]
 line-length = 88
@@ -79,7 +79,16 @@ convention = "google"
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
-mypy_path = "src"
+mypy_path = "src:tests"
+# tests/conftest.py and tests/data/conftest.py share a file name; package bases
+# from mypy_path name them conftest and data.conftest.
+explicit_package_bases = true
+
+# scipy, scikit-learn and wfdb ship no type information; stubs would be a new dependency
+# (Phase 2 plan: none), so its imports are typed Any at the boundary.
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*", "sklearn", "sklearn.*", "wfdb", "wfdb.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests", ".claude/hooks"]
