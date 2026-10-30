@@ -36,7 +36,7 @@ Working today (Phase 2):
 | Rebuild the built stages (download, prepare, check-folds), skipping unchanged ones | `uv run heartbeat rebuild` |
 | Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
 | Real-data tests only (layer L2, needs the download) | `uv run pytest -m realdata` |
-| Make the folds, once, Din only (F5 denies it to Claude) | `uv run heartbeat make-folds` |
+| Make the folds: done once by Din on 2026-10-29 and never run again (C1; F5 denies it to Claude) | `uv run heartbeat make-folds` |
 | Subcommands of later phases (stubs that exit 2 and name their phase) | `uv run heartbeat --help` |
 | Web lint, format (web files and every Markdown file), types, unit tests | `pnpm -C web run lint`, `pnpm -C web run format:check`, `pnpm -C web run check`, `pnpm -C web run test` |
 | One Vitest file | `pnpm -C web exec vitest run <file>` |

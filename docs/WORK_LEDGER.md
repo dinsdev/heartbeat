@@ -1220,14 +1220,14 @@ The dropped first and last beats are 42 N, 1 S and 1 F in DS1, and 41 N, 2 V and
 
 **Subjects and scored DS1 beats per fold (class counts from the file; beat totals and F per subject from `load_ds1` on `data/prepared/`, by a one-off `uv run python -c` command, nothing saved):**
 
-| Fold | Subjects | N | S | V | F | Beats |
-| --- | --- | --- | --- | --- | --- | --- |
-| 0 | s114, s118, s207, s208, s215 | 10302 | 219 | 1425 | 377 | 12323 |
-| 1 | s106, s115, s201, s205, s230 | 9911 | 131 | 790 | 13 | 10845 |
-| 2 | s101, s112, s124, s203 | 8454 | 38 | 491 | 6 | 8989 |
-| 3 | s108, s116, s119, s209 | 8198 | 388 | 571 | 2 | 9159 |
-| 4 | s109, s122, s220, s223 | 8959 | 167 | 511 | 16 | 9653 |
-| All | 22 | 45824 | 943 | 3788 | 414 | 50969 |
+| Fold | Subjects                     | N     | S   | V    | F   | Beats |
+| ---- | ---------------------------- | ----- | --- | ---- | --- | ----- |
+| 0    | s114, s118, s207, s208, s215 | 10302 | 219 | 1425 | 377 | 12323 |
+| 1    | s106, s115, s201, s205, s230 | 9911  | 131 | 790  | 13  | 10845 |
+| 2    | s101, s112, s124, s203       | 8454  | 38  | 491  | 6   | 8989  |
+| 3    | s108, s116, s119, s209       | 8198  | 388 | 571  | 2   | 9159  |
+| 4    | s109, s122, s220, s223       | 8959  | 167 | 511  | 16  | 9653  |
+| All  | 22                           | 45824 | 943 | 3788 | 414 | 50969 |
 
 The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 202; 202 is excluded) sits in fold 1.
 
@@ -1236,3 +1236,24 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Test first (`tests/data/test_folds_committed.py`, layer L2):** written before the pin existed. `uv run pytest tests/data/test_folds_committed.py` then gave 5 passed and 1 failed: the R13 tests on the real file (every DS1 subject once, 22 subjects in 5 non-empty folds, no DS2 or excluded subject, s201 in a valid fold, manifest hashes equal today's, per-fold class counts equal a recount from the prepared DS1 using the file's own assignment) passed, and the R14 test (`check_folds` on the committed file and pin) failed with `manifests/folds.sha256 missing: the fold file has no pin`. After the pin: 6 passed.
 
 **Stop condition 8:** clear. The file passes `check_folds` and holds exactly the 22 DS1 subjects.
+
+## 2026-10-29: Phase 2 Goal B verified locally; CI waits for Din's push
+
+**Built:** `a60528f` commits `config/folds.json`, `manifests/folds.sha256` and `tests/data/test_folds_committed.py` with the folds entry above. This commit: `docs/TASKS.md` 2.1 to 2.6 Verified (local), the `make-folds` row in `AGENTS.md` (run once, never again), Prettier's table padding on the folds entry, and this entry.
+
+**A slip, fixed here:** `a60528f` was committed after the wording lint but without rerunning `scripts/check.sh`, and Prettier then failed on the unpadded fold table in this ledger (`pnpm -C web run format:check`, exit 1). This commit applies Prettier's padding; no content changed.
+
+**`rebuild` on real data (`/usr/bin/time -p uv run heartbeat rebuild`, local Mac):** run twice, both skipped download and prepare (the stage state from Goal A's runs was current) and ran check-folds, exit 0, 0.65 s and 0.62 s. To show a full run passing with the pin in place, `uv run heartbeat rebuild --from download` ran download, prepare and check-folds, exit 0, 1.15 s; a plain `rebuild` after it skipped download and prepare, exit 0, 0.63 s. Each stops after check-folds and names cross-validate (Phase 3) as the next stage.
+
+**Verified (local, this commit):** `scripts/check.sh` exit 0 (Python: 522 passed, 104 real-data tests deselected; 7.4 s); `uv run pytest` exit 0 (626 passed, real-data layer included); `uv run pytest -m realdata` 104 passed; `uv run heartbeat check-folds` exit 0 ("ok, 22 subjects in 5 folds"); `shasum -a 256 -c manifests/folds.sha256` OK; `uv run python -m heartbeat.checks.rule_coverage` exit 0 (0 uncovered at current-phase 2, 31 rows pending in phases 3 to 7); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0.
+
+**Stop conditions (both goals):** 1 to 7 as in Goal A's entry, nothing new in Goal B (no download, no manifest edit other than the approved `folds.sha256`, no `.claude/` edit, no DS2 signal read); 8 clear.
+
+**Phase 2 exit (PLAN section 3), item by item:**
+
+1. R1 to R15 and R51 pass in CI, including the real-data layer: passing locally (`uv run pytest`); **waits on CI** after Din's push.
+2. Per-record class counts match PhysioNet's table (R11): passing locally on all 44 records; **waits on CI**.
+3. Per-class totals compared with de Chazal's Table II, each difference in the ledger: done (Goal A's entry, 2026-10-29).
+4. `folds.json` committed with a ledger entry (rigor event): done (`a60528f`, "The folds committed and pinned").
+
+**Not verified:** the CI run on `phase-2-data` (cache step, download time, wall clock). Recorded here after Din pushes.
