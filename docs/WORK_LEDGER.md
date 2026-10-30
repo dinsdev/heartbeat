@@ -1275,3 +1275,9 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Run:** CI run 40986936397 on `c0e3a8d` (push), read with `gh run view 40986936397` (read-only): both jobs succeeded. It replaces the guess in the entry above with a measurement.
 
 **Timings (from the run's step timestamps, `gh run view --json jobs`):** wall clock 98 s (01:37:24Z to 01:39:02Z); `python` job 36 s. The cache step restored `mitdb-1.0.0-c5638e23...618c` in about 1 s. `uv run heartbeat download` took 5 s and printed "fetched 0, skipped 132, of 132 files", so every cached file was hash-checked and nothing was fetched (DATA-02). `uv run pytest`: 626 passed in 10.72 s. `web` job: 1 min 34 s.
+
+## 2026-10-29: Phase 2 accepted
+
+**Decision (Din):** TASKS 2.1 to 2.6 are Accepted. Din pushed `phase-2-data`, opened and merged PR dinsdev/heartbeat#3 (merge commit `5643163` on `main`), deleted the branch, and asked for the rows to be marked Accepted.
+
+**State at acceptance:** every Phase 2 exit item in PLAN section 3 met, the CI items by runs 40986663297, 40986936397 and 40987265240 (push) and 40987268101 (pull request), all green. On `main` after the merge, `uv run heartbeat check-folds` exits 0. The two CI entries above are dated by the runs' UTC timestamps (2026-10-30); this entry uses Din's local date.
