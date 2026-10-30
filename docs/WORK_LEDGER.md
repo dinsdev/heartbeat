@@ -1856,3 +1856,13 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Rejected:** a renderer hold list keeping `exhibit` pending until Phase 8 (a special state in R50 and `verify` to delay a file anyone can read).
 
 **Applied:** `docs/PLAN.md` Phase 4 exit (clarification) and Phase 5 builds; `docs/TASKS.md` 5.5.
+
+## 2026-10-30: Phase 5 settling, 6: one goal run
+
+**Checked:** `.claude/hooks/guard.py` blocks write programs, Edit and writing interpreters on `models/heartbeat-v1/` and `results/`, while `uv run heartbeat export`, `uv run heartbeat rebuild` and `git add` pass, so the goal can write and commit those outputs without prompts. `heartbeat evaluate-test` is on the guard's Din-only list, which fits settling 3 (the rehearsal runs through pytest, never the CLI).
+
+**Decision (Din):** Phase 5 runs as one `/goal` run on branch `phase-5-export` at high effort: the code tasks test first; `rebuild` in the working repo (`train-final` reruns for the baseline; export, the data stage and the cards are new); the `results/`, `models/heartbeat-v1/` and `fixtures/parity/` outputs committed on their own; the clean-clone check from that commit in the session scratchpad, in the background (about 110 minutes), compared by settling 4's rule; docs; then the push command for Din, or a stop-and-ask condition.
+
+**Reason:** Phase 4 ran a 108-minute rebuild inside one goal; the clean-clone check is a read-only comparison that already stops on any mismatch; no step needs Din mid-run (Phase 2 split only because `make-folds` is Din's).
+
+**Rejected:** two goals split before the clean-clone check (a review point that adds a wait and no safety, since nothing in that compute is irreversible or touches DS2).
