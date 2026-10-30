@@ -1521,3 +1521,21 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Rejected:** argmax of a centered 5-epoch moving average (more robust to jumpy curves, at the price of one more parameter and an edge rule); early stopping (excluded by C1).
 
 **Applied:** `docs/PRD.md` MODEL-04.
+
+## 2026-10-30: Phase 4 settling, 3: which seed is reported on DS1, and which temperature ships (C4, C6 clarification)
+
+**Gap:** selection uses the seed mean (MODEL-04), but a seed mean cannot be bootstrapped or calibrated: each seed has its own out-of-fold logits. C6 fixed the sealed run's rule (headline seed 0, one line with the range over seeds 1 and 2) but not the DS1 out-of-fold report or which predictions the temperature is fitted on. No CNN result exists yet (rule 6).
+
+**Decision (Din):**
+
+1. `results/cv_cnn.json` headline: seed 0's out-of-fold predictions at the selected width and epoch, with the full Phase 3 summary through the shared driver (pooled metrics, fold spread, patient-bootstrap intervals with skip counts, EC57, both calibration blocks from the settling 4 amendment).
+2. Seeds 1 and 2: the same point metrics as a min to max range line, no intervals.
+3. Temperature: each final model gets the temperature fitted on its own seed's out-of-fold adjusted logits at the selected configuration. The shipped model's is seed 0's (EVAL-11).
+4. A paired DS1 difference, CNN seed 0 minus the baseline at its chosen C, on the same bootstrap draws (R17), labeled "DS1 out-of-fold". EVAL-10's wording rule applies to it as to the DS2 one.
+5. The exhibit (C5) follows the same rule on both sides: seed 0 headline with intervals, seeds 1 and 2 as a range.
+
+**Reason:** report the model that ships, and match the sealed run's rule so DS1 and DS2 tables read side by side. A seed-mean headline describes no shipped model and would need an ensemble (a different model) or averaged intervals (not meaningful).
+
+**Rejected:** one temperature fitted on all three seeds' pooled out-of-fold logits (steadier, but fitted on predictions of models other than the one it calibrates).
+
+**Applied:** `docs/PRD.md` EVAL-11.
