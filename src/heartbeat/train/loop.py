@@ -11,11 +11,16 @@ start of the fit, the batch order from a seeded `DataLoader` generator, shift
 and noise from their own NumPy generators. Each is drawn per epoch in the
 same way whatever the run length, so epoch e of a longer run equals epoch e
 of a run that stops at e (the prefix property `train-final` relies on).
+
+`cnn_spec` wires the network and this loop into a `ModelSpec` for the CV
+driver. It lives here, not in `models/`, because `models/` never imports
+`heartbeat.train` (R21's import check).
 """
 
 import logging
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import torch
@@ -25,15 +30,25 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from heartbeat.constants import (
     BATCH_SIZE,
+    CNN_CHANNELS,
+    CNN_DROPOUT,
+    CNN_HIDDEN,
+    CNN_KERNEL,
     LEARNING_RATE,
+    NOISE_STD_Z,
     RR_FEATURE_NAMES,
     SCORED_CLASSES,
+    SHIFT_MAX_SAMPLES,
+    TORCH_THREADS,
     WEIGHT_DECAY,
 )
+from heartbeat.data.loader import BeatTable
 from heartbeat.evaluate.metrics import class_indices
-from heartbeat.models.augment import augment_batch
+from heartbeat.models.augment import augment_batch, model_windows
 from heartbeat.models.cnn import HeartbeatCNN
-from heartbeat.train.seeds import RunSeeds, torch_seed
+from heartbeat.models.spec import ModelSpec, epochs_only
+from heartbeat.train.seeds import RunSeeds, derive_seeds, torch_seed
+from heartbeat.train.torch_setup import configure_torch
 
 log = logging.getLogger(__name__)
 
@@ -139,7 +154,8 @@ def train_epochs(
         log.debug("epoch %d: mean loss %.4f", epoch, float(per_batch.mean()))
         model.eval()
         yield model
-        model.train()
+        if epoch < n_epochs:
+            model.train()
 
 
 def cnn_logits(
@@ -171,3 +187,86 @@ def cnn_logits(
     if not parts:
         return np.zeros((0, len(SCORED_CLASSES)), dtype=np.float32)
     return np.concatenate(parts)
+
+
+@dataclass(frozen=True)
+class CNNInputs:
+    """The CNN's input for a set of rows.
+
+    Attributes:
+        windows: Unaugmented z-scored windows, float32, `(n, 1, 256)`.
+        rr: Scaled RR inputs, float32, `(n, 6)`.
+        record: Each row's record, `(n,)`, for the re-cut shift.
+        sample: Each row's annotation sample, `(n,)`.
+    """
+
+    windows: NDArray[np.float32]
+    rr: NDArray[np.float32]
+    record: NDArray[np.str_]
+    sample: NDArray[np.int64]
+
+
+def cnn_spec(traces: Mapping[str, NDArray[np.int16]], device: str) -> ModelSpec:
+    """The CNN as the CV driver sees it.
+
+    Args:
+        traces: Record to int16 trace (from `load_ds1_traces`), for the shift.
+        device: "mps" or "cpu" (design call 7); configured when a fit starts.
+
+    `params` holds the width and the master seed; the driver's fold index
+    picks the fit's streams (`derive_seeds`).
+    """
+
+    def inputs(
+        beats: BeatTable, rows: NDArray[np.int64], rr_scaled: NDArray[np.float64]
+    ) -> CNNInputs:
+        return CNNInputs(
+            windows=model_windows(beats.window_adu[rows]),
+            rr=rr_scaled.astype(np.float32),
+            record=beats.record_id[rows],
+            sample=beats.sample[rows],
+        )
+
+    def fit_epochs(
+        x: CNNInputs,
+        y: NDArray[np.str_],
+        class_weight: Mapping[str, float],
+        params: Mapping[str, Any],
+        fold: int,
+        n_epochs: int,
+    ) -> Iterator[HeartbeatCNN]:
+        torch_device = configure_torch(device)
+        seeds = derive_seeds(int(params["seed"]), fold)
+        model = init_model(float(params["width"]), seeds)
+        data = TrainData(traces=traces, record=x.record, sample=x.sample, rr=x.rr)
+        yield from train_epochs(
+            model, data, y, class_weight, seeds, n_epochs, torch_device
+        )
+
+    def logits(model: HeartbeatCNN, x: CNNInputs) -> NDArray[np.float64]:
+        torch_device = next(model.parameters()).device
+        return cnn_logits(model, x.windows, x.rr, torch_device).astype(np.float64)
+
+    return ModelSpec(
+        name="cnn",
+        inputs=inputs,
+        fit=epochs_only,
+        logits=logits,
+        fit_epochs=fit_epochs,
+        config={
+            "device": device,
+            "deterministic": True,
+            "torch_threads": TORCH_THREADS,
+            "channels": list(CNN_CHANNELS),
+            "kernel": CNN_KERNEL,
+            "hidden": CNN_HIDDEN,
+            "dropout": CNN_DROPOUT,
+            "batch_size": BATCH_SIZE,
+            "drop_last": True,
+            "learning_rate": LEARNING_RATE,
+            "weight_decay": WEIGHT_DECAY,
+            "shift_max_samples": SHIFT_MAX_SAMPLES,
+            "noise_std_z": NOISE_STD_Z,
+            "eval_batch_size": EVAL_BATCH_SIZE,
+        },
+    )

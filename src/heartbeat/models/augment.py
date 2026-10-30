@@ -65,6 +65,11 @@ def augment_batch(
     return noisy.astype(np.float32)[:, np.newaxis, :]
 
 
+def model_windows(window_adu: NDArray[np.int16]) -> NDArray[np.float32]:
+    """Unaugmented model windows from int16 windows, `(n, 1, 256)` float32."""
+    return zscore_windows(window_adu).astype(np.float32)[:, np.newaxis, :]
+
+
 def validation_windows(beats: BeatTable) -> NDArray[np.float32]:
     """Unaugmented model windows, `(n, 1, 256)` float32 (the inference path)."""
-    return zscore_windows(beats.window_adu).astype(np.float32)[:, np.newaxis, :]
+    return model_windows(beats.window_adu)

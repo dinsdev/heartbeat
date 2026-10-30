@@ -13,7 +13,7 @@ from heartbeat.data.manifests import Splits
 from heartbeat.data.prepare import PrepareReport
 from heartbeat.models.baseline import BASELINE
 from heartbeat.paths import FOLDS_JSON, FOLDS_PIN
-from heartbeat.train.cv import cross_validate
+from heartbeat.train.cv import cross_validate, patient_splitter
 
 
 def test_baseline_cv_on_real_ds1_at_one_c(
@@ -24,7 +24,7 @@ def test_baseline_cv_on_real_ds1_at_one_c(
     folder, _ = prepared_ds1
     beats = load_ds1(folder, splits, subjects)
     folds = check_folds(FOLDS_JSON, FOLDS_PIN, splits, subjects)
-    result = cross_validate(BASELINE, beats, folds, {"C": 1.0})
+    result = cross_validate(BASELINE, beats, patient_splitter(folds), {"C": 1.0})
     assert result.logits.shape == (beats.sample.size, 4)
     assert np.all(np.isfinite(result.logits))
     assert set(beats.beat_class.tolist()) == {"N", "S", "V", "F"}
