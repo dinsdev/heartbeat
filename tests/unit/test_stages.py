@@ -12,6 +12,7 @@ from heartbeat import cli
 from heartbeat.cli import main, rebuild_context
 from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 from heartbeat.paths import (
+    BEAT_COUNTS_MANIFEST,
     FOLDS_JSON,
     FOLDS_PIN,
     RESULTS_DIR,
@@ -251,8 +252,9 @@ def test_missing_input_file_has_its_own_fingerprint(counting: Counting) -> None:
 # The real pipeline
 
 
-def test_pipeline_has_the_eight_built_stages_in_order() -> None:
-    # Phase 4 design call 8: four stages after the baseline's cross-validate.
+def test_pipeline_has_the_built_stages_in_order() -> None:
+    # Phase 4 design call 8: four stages after the baseline's cross-validate;
+    # Phase 5 design call 8: the stages after train-final.
     assert [s.name for s in PIPELINE] == [
         "download",
         "prepare",
@@ -262,6 +264,7 @@ def test_pipeline_has_the_eight_built_stages_in_order() -> None:
         "select",
         "exhibit",
         "train-final",
+        "describe-data",
     ]
     by_name = {s.name: s for s in PIPELINE}
     assert by_name["check-folds"].always_run
@@ -271,6 +274,7 @@ def test_pipeline_has_the_eight_built_stages_in_order() -> None:
     assert by_name["select"].upstream == ("cross-validate", "cross-validate-cnn")
     assert by_name["exhibit"].upstream == ("select",)
     assert by_name["train-final"].upstream == ("select",)
+    assert by_name["describe-data"].upstream == ("download", "prepare")
     assert not any(s.always_run for s in PIPELINE if s.name != "check-folds")
     assert by_name["cross-validate-cnn"].settings_keys == (
         "data.prepared_dir",
@@ -300,6 +304,7 @@ def test_pipeline_code_folders_match_the_plan() -> None:
         "select": training,
         "exhibit": training,
         "train-final": training,
+        "describe-data": {"data", "runs.py", "results.py", *shared},
     }
 
 
@@ -476,6 +481,35 @@ def test_each_cnn_stage_writes_its_results_from_its_run(
     stage = {s.name: s for s in PIPELINE}[name]
     stage.run(rebuild_context())
     assert written == [(r, p, run) for r, p in zip(results, payloads, strict=True)]
+
+
+def test_describe_data_reads_the_manifests_and_writes_its_summary() -> None:
+    stage = {s.name: s for s in PIPELINE}["describe-data"]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == {
+        SPLITS_MANIFEST,
+        SUBJECTS_MANIFEST,
+        BEAT_COUNTS_MANIFEST,
+    }
+    assert list(stage.outputs(context)) == [RESULTS_DIR / "data_summary.json"]
+
+
+def test_describe_data_writes_its_result_from_its_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heartbeat import stages as stages_module
+
+    run, payload = object(), {"which": "data_summary"}
+    monkeypatch.setattr(stages_module, "run_describe_data", lambda s: (run, payload))
+    written: list[tuple[str, object, object]] = []
+
+    def spy(name: str, result: object, source: object) -> Path:
+        written.append((name, result, source))
+        return Path(name)
+
+    monkeypatch.setattr(stages_module, "write_result", spy)
+    {s.name: s for s in PIPELINE}["describe-data"].run(rebuild_context())
+    assert written == [("data_summary", payload, run)]
 
 
 def test_planned_stages_follow_with_their_phases() -> None:

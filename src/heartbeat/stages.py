@@ -21,12 +21,20 @@ from numpy.typing import NDArray
 
 from heartbeat.config import Settings
 from heartbeat.constants import CNN_SEEDS, CNN_WIDTHS
+from heartbeat.data.describe import describe_data
 from heartbeat.data.download import download
 from heartbeat.data.folds import Folds, check_folds
 from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
-from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
+from heartbeat.data.manifests import (
+    load_beat_counts,
+    load_checksums,
+    load_splits,
+    load_subjects,
+)
 from heartbeat.data.prepare import FLOOR_HITS_FILE, prepare_ds1
+from heartbeat.data.records import read_header_demographics
 from heartbeat.paths import (
+    BEAT_COUNTS_MANIFEST,
     CHECKSUM_MANIFEST,
     FOLDS_JSON,
     FOLDS_PIN,
@@ -540,6 +548,37 @@ def run_final_all(
     return run, payload
 
 
+DATA_SUMMARY_RESULT = "data_summary"
+
+
+def run_describe_data(
+    settings: Settings, root: Path = RUNS_DIR, repo: Path = REPO_ROOT
+) -> tuple[RunFolder, dict[str, Any]]:
+    """The data card's counts and demographics (Phase 5 settling 5).
+
+    Reads the expected-count manifest, every DS1 and DS2 header (`.hea`
+    only) and the prepared DS1 files; no DS2 signal or annotation.
+    """
+    splits = load_splits(SPLITS_MANIFEST)
+    subjects = load_subjects(SUBJECTS_MANIFEST)
+    raw_dir = settings.data.raw_dir
+    demographics = {
+        r: read_header_demographics(raw_dir, r) for r in (*splits.ds1, *splits.ds2)
+    }
+    kept = load_ds1(settings.data.prepared_dir, splits, subjects, include_q=True)
+    payload = describe_data(
+        splits, subjects, load_beat_counts(BEAT_COUNTS_MANIFEST), demographics, kept
+    )
+    with create_run("describe-data", settings, {}, root=root, repo=repo) as run:
+        run.write_json("data_summary", payload)
+    return run, payload
+
+
+def _run_describe_data(context: Context) -> None:
+    run, payload = run_describe_data(context.settings)
+    write_result(DATA_SUMMARY_RESULT, payload, run)
+
+
 def _run_cross_validate_cnn(context: Context) -> None:
     run, payload = run_cnn_cv_all(context.settings)
     write_result(CV_CNN_CURVES_RESULT, payload, run)
@@ -683,6 +722,20 @@ PIPELINE: tuple[Stage, ...] = (
         inputs=_inputs_and_results(SELECTION_RESULT, CV_BASELINE_RESULT),
         run=_run_train_final,
         outputs=_results(TRAIN_FINAL_RESULT),
+    ),
+    Stage(
+        name="describe-data",
+        settings_keys=("data.raw_dir", "data.prepared_dir"),
+        # Headers come from the download, kept DS1 beats from prepare.
+        upstream=("download", "prepare"),
+        code=("data", "runs.py", "results.py", *_SHARED_CODE),
+        inputs=lambda context: (
+            SPLITS_MANIFEST,
+            SUBJECTS_MANIFEST,
+            BEAT_COUNTS_MANIFEST,
+        ),
+        run=_run_describe_data,
+        outputs=_results(DATA_SUMMARY_RESULT),
     ),
 )
 

@@ -3,6 +3,8 @@
 Rule 1: `read_record` reads a signal. Only `data/prepare.py` imports it (an
 import-graph test checks this), and `prepare` refuses DS2 before reading.
 `read_annotations` reads `.atr` files only, which R11 may do for every record.
+`read_header_demographics` reads the `.hea` text only, for the data card's age
+and sex rows (Phase 5 settling 5), which may be done for every record.
 """
 
 from collections.abc import Sequence
@@ -38,6 +40,19 @@ class Annotations:
     record_id: str
     sample: NDArray[np.int64]
     symbol: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Demographics:
+    """Age and sex from a record header's first comment line.
+
+    Attributes:
+        age: Age in years, or None when the header gives none (for example -1).
+        sex: "M" or "F", or None when the header gives neither.
+    """
+
+    age: int | None
+    sex: str | None
 
 
 @dataclass(frozen=True)
@@ -125,3 +140,24 @@ def read_record(raw_dir: Path, record_id: str, lead: str) -> RawRecord:
         ann_sample=annotations.sample,
         ann_symbol=annotations.symbol,
     )
+
+
+def parse_demographics(header_text: str) -> Demographics:
+    """Age and sex from the first `#` line of a header, as `# <age> <sex> ...`.
+
+    A value that is missing or does not parse gives None, never an error: the
+    card renders it "unknown" and the ledger lists it (Phase 5 plan, stop 9).
+    """
+    comments = [line for line in header_text.splitlines() if line.startswith("#")]
+    fields = comments[0].lstrip("#").split() if comments else []
+    age: int | None = None
+    if fields and fields[0].isdigit():
+        age = int(fields[0])
+    sex = fields[1] if len(fields) > 1 and fields[1] in ("M", "F") else None
+    return Demographics(age=age, sex=sex)
+
+
+def read_header_demographics(raw_dir: Path, record_id: str) -> Demographics:
+    """Read a record's age and sex from its `.hea` file, opening nothing else."""
+    text = (raw_dir / f"{record_id}.hea").read_text(encoding="utf-8")
+    return parse_demographics(text)
