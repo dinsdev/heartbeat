@@ -21,8 +21,19 @@ from heartbeat.paths import (
     DEFAULT_CONFIG,
     FOLDS_JSON,
     FOLDS_PIN,
+    PACKAGE_DIR,
     SPLITS_MANIFEST,
+    STAGES_DIR,
     SUBJECTS_MANIFEST,
+    UV_LOCK,
+)
+from heartbeat.stages import (
+    PIPELINE,
+    PLANNED,
+    Context,
+    StageFailedError,
+    UnknownStageError,
+    run_pipeline,
 )
 
 # Phase 2 settling 5: the manifests whose hashes the fold file records.
@@ -150,12 +161,55 @@ def _check_folds(args: argparse.Namespace) -> int:
     return 0
 
 
+def rebuild_context() -> Context:
+    """Return the context `rebuild` runs in."""
+    return Context(
+        settings=load_settings(DEFAULT_CONFIG),
+        package_dir=PACKAGE_DIR,
+        state_dir=STAGES_DIR,
+        uv_lock=UV_LOCK,
+    )
+
+
+def _rebuild(args: argparse.Namespace) -> int:
+    planned = dict(PLANNED)
+    if args.from_stage in planned:
+        print(
+            f"heartbeat rebuild: stage {args.from_stage} is not built yet "
+            f"(Phase {planned[args.from_stage]})",
+            file=sys.stderr,
+        )
+        return 2
+    if args.exact:
+        # E4: --exact changes how models train; no Phase 2 stage trains one.
+        print("heartbeat rebuild: --exact has no effect on the Phase 2 stages")
+    try:
+        results = run_pipeline(PIPELINE, rebuild_context(), from_stage=args.from_stage)
+    except UnknownStageError as error:
+        print(f"heartbeat rebuild: {error}", file=sys.stderr)
+        return 2
+    except StageFailedError as error:
+        print(f"heartbeat rebuild: {error}", file=sys.stderr)
+        return 1
+    for result in results:
+        state = "ran" if result.ran else "skipped"
+        print(f"{result.name}: {state} ({result.reason})")
+    if PLANNED:
+        name, phase = PLANNED[0]
+        print(
+            f"heartbeat rebuild: stopped after {results[-1].name}; "
+            f"next stage {name} (Phase {phase}) is not built yet"
+        )
+    return 0
+
+
 HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
     {
         "download": _download,
         "prepare": _prepare,
         "make-folds": _make_folds,
         "check-folds": _check_folds,
+        "rebuild": _rebuild,
     }
 )
 

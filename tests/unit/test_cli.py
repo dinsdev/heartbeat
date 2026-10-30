@@ -41,13 +41,11 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-# Subcommands built so far in Phase 2; each has its own tests.
-BUILT = {"download", "prepare", "make-folds", "check-folds"}
-
-
+# The five Phase 2 subcommands are built and have their own tests here and in
+# test_folds.py and test_stages.py; the rest stay stubs until their phase.
 @pytest.mark.parametrize(
     ("name", "phase"),
-    sorted((n, p) for n, p in EXPECTED_PHASES.items() if n not in BUILT),
+    sorted((n, p) for n, p in EXPECTED_PHASES.items() if p > 2),
 )
 def test_stub_exits_2_and_says_when_it_arrives(
     name: str, phase: int, capsys: pytest.CaptureFixture[str]
@@ -68,11 +66,6 @@ def test_no_subcommand_exits_nonzero() -> None:
     with pytest.raises(SystemExit) as exit_info:
         main([])
     assert exit_info.value.code != 0
-
-
-def test_rebuild_accepts_from_and_exact(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["rebuild", "--from", "prepare", "--exact"]) == 2
-    assert "heartbeat rebuild: not built yet (Phase 2)" in capsys.readouterr().err
 
 
 def test_rebuild_from_needs_a_stage() -> None:
