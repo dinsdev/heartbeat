@@ -1257,3 +1257,15 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 4. `folds.json` committed with a ledger entry (rigor event): done (`a60528f`, "The folds committed and pinned").
 
 **Not verified:** the CI run on `phase-2-data` (cache step, download time, wall clock). Recorded here after Din pushes.
+
+## 2026-10-30: Phase 2 CI, first run green; Phase 2 exit met
+
+**Run:** Din pushed `phase-2-data` (`git push -u origin phase-2-data`). CI run 40986663297 on `639154b`, read with `gh run view 40986663297` (read-only): both jobs succeeded.
+
+**Timings (from the run's job and step timestamps, `gh run view --json jobs`):**
+
+- Wall clock: 70 s, queued 01:34:37Z to finished 01:35:47Z (UTC, 2026-10-30).
+- `python` job: 38 s. Cache step: `Cache not found` for key `mitdb-1.0.0-c5638e23...618c` (the first run on this manifest). `uv run heartbeat download`: 11 s, "fetched 132, skipped 0, of 132 files". The post step saved the cache under the same key, so later runs should restore it and the download step should only check hashes (a guess until a run shows it). `uv run pytest`: 626 passed in 7.64 s, the same total as the local `uv run pytest`, real-data layer included.
+- `web` job: 1 min 7 s, most of it `playwright install --with-deps` (36 s).
+
+**Phase 2 exit (PLAN section 3):** all four items met. R1 to R15 and R51 pass in CI with the real-data layer (item 1), R11 among them (item 2); items 3 and 4 were done before the push (2026-10-29 entries). TASKS 2.1 to 2.6 record the CI run. Phase 2 is Verified; Accepted waits on Din.
