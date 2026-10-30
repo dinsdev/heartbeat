@@ -1487,3 +1487,17 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Correction:** the "Phase 3 CI, first run green" entry calls run 41003567037 the run from Din's push. It is the pull-request run for the same commit; the push run is 41003500236, also green. Its timings and test counts stand as recorded.
 
 **Carried into Phase 4:** the chosen C, 0.01, is the lower edge of the locked grid (Din's call whether to widen it).
+
+## 2026-10-30: Phase 4 settling, 1: the baseline C grid widens to 0.0001 (C2 amendment)
+
+**Trigger:** the Phase 3 baseline chose C = 0.01, the lower edge of the locked five-value grid. Pooled macro F1 over N, S and V by C: 0.01 0.5229, then 0.5160 to 0.5163 from 0.1 to 100 (`results/cv_baseline.json` at `58105d9`, run `20261030T023341Z-27b1250-cv-baseline`; DS1 out-of-fold, CPU). A smaller C might score higher; not tried.
+
+**Decision (Din):** `BASELINE_C_GRID` becomes seven log-spaced values, `(0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0)`. Selection is unchanged (pooled out-of-fold macro F1 over N, S and V, ties to the smaller C). Committed before running it: the grid does not widen again. If 0.0001 wins, it is reported as the grid edge and kept.
+
+**Reason:** the baseline is the comparison the project's story rests on, and its chosen C carries into the exhibit (C5) and the sealed run. A baseline stopped at a grid edge is under-tuned, which flatters the CNN (C2's own rule). Choosing C on the DS1 folds is what cross-validation is for; no DS2 data is involved. The grid is fixed here, before any number for the new values exists, so the extension is not picked from its own results.
+
+**Rejected:** keep five values and report the edge (defensible, but leaves an obvious objection standing); try 0.001 in the scratchpad first (picks the grid after seeing its result).
+
+**Cost:** Phase 4's first task changes the constant, updates `tests/unit/test_cv.py`'s grid assertion (approved here, rule 3), reruns `uv run heartbeat rebuild` (about 5 s) and recommits `results/cv_baseline.json`. Every baseline number in the "Phase 3 built" entry is superseded by that file if the chosen C changes; the Phase 3 entries stay as the record of the five-value run.
+
+**Applied:** `docs/PRD.md` MODEL-01; `docs/TASKS.md` C2 row. Made before any DS2 result and before the Phase 7 gate (rule 6; C2 is not part of the pre-registered plan, but is a locked decision).
