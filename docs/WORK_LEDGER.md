@@ -1469,3 +1469,11 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Verified (local, this commit):** `scripts/check.sh` exit 0 (649 passed, 105 real-data deselected); `CI=1 uv run pytest` exit 0 (real-data layer included); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R16 to R21 covered, 0 uncovered); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout.
 
 **Not verified:** CI on these commits. **Waiting on Din:** the push, then CI; the C grid edge; dropping `stash@{0}` and `stash@{1}`.
+
+## 2026-10-30: Phase 3 CI, first run green; Phase 3 exit met
+
+**Run:** CI run 41003567037 on `phase-3-harness` at `07c738b` (Din's push), conclusion success, 1 minute 18 seconds wall clock (04:33:34Z to 04:34:52Z). The `python` job took 53 s: checkout with `fetch-depth: 0`, ruff, mypy, the MIT-BIH cache and download, then `uv run pytest` with 754 passed in 22.5 s, including the real-data layer, R16 to R21 and `test_results_committed.py`. The `web` job took 75 s and passed.
+
+**Phase 3 exit (PLAN.md section 8):** R16 to R21 pass in CI and `results/cv_baseline.json` is committed. Met.
+
+**Also done (Din):** both reproduction stashes dropped. **Next:** the pull request and its merge (Din).
