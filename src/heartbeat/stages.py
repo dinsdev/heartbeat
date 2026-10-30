@@ -46,7 +46,7 @@ from heartbeat.train.cnn_cv import (
 )
 from heartbeat.train.cv import oof_predictions, run_baseline
 from heartbeat.train.exhibit import run_exhibit
-from heartbeat.train.final import final_payload, train_final
+from heartbeat.train.final import final_payload, train_final, train_final_baseline
 from heartbeat.train.loop import cnn_spec
 from heartbeat.train.select import (
     EpochEdgeError,
@@ -492,8 +492,13 @@ def run_final_all(
     repo: Path = REPO_ROOT,
     results_dir: Path = RESULTS_DIR,
 ) -> tuple[RunFolder, dict[str, Any]]:
-    """Train the three final models on CPU at the committed selection (C6)."""
+    """Train the three final models on CPU at the committed selection (C6).
+
+    Then refit the baseline on every DS1 row at the committed C, with the
+    temperature of its DS1 out-of-fold predictions (Phase 5 settling 1).
+    """
     selection = _result(results_dir, SELECTION_RESULT)
+    cv_baseline = _result(results_dir, CV_BASELINE_RESULT)
     width = float(selection["width"])
     epochs = int(selection["epoch"])
     temperatures = {int(t["seed"]): t["temperature"] for t in selection["temperatures"]}
@@ -513,8 +518,23 @@ def run_final_all(
         )
         for seed in CNN_SEEDS
     ]
-    payload = final_payload(models, width=width, epochs=epochs, repo=repo)
-    extra = {"runs": [m.run for m in models], "selection_run": selection["run"]}
+    baseline = train_final_baseline(
+        settings,
+        beats,
+        c=float(cv_baseline["chosen_c"]),
+        temperature=float(cv_baseline["calibration"]["temperature"]),
+        root=root,
+        repo=repo,
+    )
+    payload = final_payload(
+        models, width=width, epochs=epochs, baseline=baseline, repo=repo
+    )
+    extra = {
+        "runs": [m.run for m in models],
+        "baseline_run": baseline.run,
+        "selection_run": selection["run"],
+        "cv_baseline_run": cv_baseline["run"],
+    }
     with create_run("train-final", settings, extra, root=root, repo=repo) as run:
         run.write_json("metrics", payload)
     return run, payload
@@ -660,7 +680,7 @@ PIPELINE: tuple[Stage, ...] = (
         settings_keys=("data.prepared_dir",),
         upstream=("select",),
         code=_TRAINING_CODE,
-        inputs=_inputs_and_results(SELECTION_RESULT),
+        inputs=_inputs_and_results(SELECTION_RESULT, CV_BASELINE_RESULT),
         run=_run_train_final,
         outputs=_results(TRAIN_FINAL_RESULT),
     ),

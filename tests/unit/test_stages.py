@@ -376,7 +376,9 @@ FOLD_INPUTS = {FOLDS_JSON, FOLDS_PIN, SPLITS_MANIFEST, SUBJECTS_MANIFEST}
         ("cross-validate-cnn", set(), ["cv_cnn_curves"]),
         ("select", {"cv_cnn_curves", "cv_baseline"}, ["selection", "cv_cnn"]),
         ("exhibit", {"selection", "cv_cnn_curves", "cv_baseline"}, ["exhibit"]),
-        ("train-final", {"selection"}, ["train_final"]),
+        # Phase 5 settling 1: the frozen baseline reads the chosen C and its
+        # out-of-fold temperature.
+        ("train-final", {"selection", "cv_baseline"}, ["train_final"]),
     ],
 )
 def test_the_cnn_stages_read_the_folds_and_write_their_results(
