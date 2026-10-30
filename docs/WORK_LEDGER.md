@@ -1739,3 +1739,20 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Decision (Din, 2026-10-30):** the exhibit tests run on CPU. Two lines change in `tests/unit/test_exhibit.py`: the helper's device becomes `"cpu"`, and the expected `data` label of the beat-side CNN row becomes "DS1 out-of-fold, CPU" (was "DS1 out-of-fold, MPS"). This is a change to a test's expected value, so it needed Din's go (rule 3). Rejected: skipping the tests without MPS (rule 3 forbids skips) and a silent CPU fallback in the code (breaks stop condition 7). What the exhibit test no longer shows: that the CNN row's label follows the CV device rather than the baseline's CPU label. `test_cnn_cv.py::test_the_data_label_names_the_device` still checks the label against the device.
 
 **Verified (local):** `uv run pytest tests/unit/test_exhibit.py` 9 passed in 7.7 s; `scripts/check.sh` exit 0 (773 passed, 106 real-data deselected); the wording lint exit 0. **Not verified:** CI on the fix (waits for Din's push).
+
+## 2026-10-30: Phase 4 CI green on the fix; Phase 4 exit met
+
+**Runs:** Din pushed `4040df1`. Both runs concluded success, read with `gh run view`, `gh pr checks phase-4-cnn` and each run's log archive (`gh api repos/dinsdev/heartbeat/actions/runs/<id>/logs`, read-only).
+
+| Run | Event | Run created to last update | `python` job | `web` job | `uv run pytest` |
+| --- | --- | --- | --- | --- | --- |
+| 41111431147 | push | 18:58:56Z to 19:03:38Z | 59 s | 2 min 21 s | 879 passed in 24.25 s |
+| 41111435865 | pull request | 18:58:59Z to 19:02:54Z | 1 min 9 s | 1 min 8 s | 879 passed in 26.26 s |
+
+879 is the local `CI=1 uv run pytest` count, so the real-data layer, R22 to R24 and the 9 exhibit tests ran. The Playwright step passed in both (2 passed).
+
+**GitHub incident:** the runs started during the tail of GitHub's "Incident with Actions, Pages, and Webhooks" (opened 17:50Z, marked mitigated 18:32Z, still "monitoring" at 19:01Z on githubstatus.com). `gh run list` showed both runs queued at 19:00:47Z although their job records say the jobs started at 18:58:59Z, and `gh run view --json jobs` listed only 3 of the python job's 14 steps. The log archives were complete and are the source of the counts above. The job times in the table come from GitHub's job records and may be off by the incident's lag; the run spans include it. Our side had no part in the delay: the repo is public (no minutes cap), the concurrency groups differ by ref, and nothing else was running in the org.
+
+**Superseded runs:** 41110852250 (push) and 41111021128 (pull request) at `9fbaf27` failed on the 7 MPS-only exhibit tests (entry above).
+
+**Phase 4 exit (PLAN.md section 8, Goal):** R22 to R24 pass locally and in CI, and the six Phase 4 `results/` files are committed from a clean-tree rebuild (`32fa004`). Met. TASKS 4.1 to 4.4 record the CI runs. **Not accepted:** only Din sets Accepted. **Waiting on Din:** the PR review and merge, and dropping `stash@{0}` and `stash@{1}`.
