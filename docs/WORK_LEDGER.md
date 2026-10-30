@@ -1207,3 +1207,32 @@ The dropped first and last beats are 42 N, 1 S and 1 F in DS1, and 41 N, 2 V and
 **Not verified:** CI on these commits (waits for Din's push after Goal B), including the cache step and the download time in CI.
 
 **Waiting on Din:** one run of `uv run heartbeat make-folds` (F5 denies it to Claude). It reads `data/prepared/` (already written by `prepare`) and the seed 20261026, writes `config/folds.json` (untracked) and prints the subjects and class counts per fold and the file's SHA256. Goal B then pins it.
+
+## 2026-10-29: The folds committed and pinned (rigor event, rule 4)
+
+**What happened:** Din ran `uv run heartbeat make-folds` once, after Goal A's hand-off. It wrote `config/folds.json` (1,039 bytes, untracked until this commit). That was the only run (Din's word in the Goal B prompt; `write_folds` refuses to overwrite, so no later run could have replaced the file in place). Claude did not run `make-folds`, did not edit the file, and did not recompute the folds to compare (Phase 2 settling 5).
+
+**The file (read with `read_folds`, DS1 only):**
+
+- Fold seed 20261026, from `config/default.toml` (Phase 2 settling 5). scikit-learn 1.9.1 (the locked version; `uv run python -c "import sklearn; print(sklearn.__version__)"` gives the same).
+- Manifest hashes recorded in the file equal today's: `splits.toml` `29fc551b...28d9`, `subjects.toml` `4f9cce1c...bf64` (`shasum -a 256`).
+- SHA256 of the file: `9513124b1611b458b25ea29d1d191a66ca4d147ab9a3762667d7ceec5d591bc2`, pinned in `manifests/folds.sha256` in `sha256sum` format (`<hex>  config/folds.json`). `shasum -a 256 -c manifests/folds.sha256` prints `config/folds.json: OK`. Din approved the write prompt.
+
+**Subjects and scored DS1 beats per fold (class counts from the file; beat totals and F per subject from `load_ds1` on `data/prepared/`, by a one-off `uv run python -c` command, nothing saved):**
+
+| Fold | Subjects | N | S | V | F | Beats |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | s114, s118, s207, s208, s215 | 10302 | 219 | 1425 | 377 | 12323 |
+| 1 | s106, s115, s201, s205, s230 | 9911 | 131 | 790 | 13 | 10845 |
+| 2 | s101, s112, s124, s203 | 8454 | 38 | 491 | 6 | 8989 |
+| 3 | s108, s116, s119, s209 | 8198 | 388 | 571 | 2 | 9159 |
+| 4 | s109, s122, s220, s223 | 8959 | 167 | 511 | 16 | 9653 |
+| All | 22 | 45824 | 943 | 3788 | 414 | 50969 |
+
+The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 202; 202 is excluded) sits in fold 1.
+
+**Where 208 and its F beats landed:** s208 is in fold 0, with 372 of DS1's 414 scored F beats (90%); its other scored beats are N 1585, V 992, S 2. The remaining 42 F beats: s223 14 (fold 4), s205 11 (fold 1), s124 5 (fold 2), s114 4 (fold 0), s108 2 (fold 3), s109 2 (fold 4), s201 2 (fold 1), s203 1 (fold 2), s215 1 (fold 0). So when fold 0 is held out, the training folds hold 37 F beats; when fold 3 is held out, its validation set holds 2. This is the concentration C1 expected; it is reported, not engineered around, and the folds stand as made (C1, Phase 2 settling 5). It bears on how far per-fold F numbers can be read in Phase 3 and 4, and the out-of-fold F figures should be read with it in mind.
+
+**Test first (`tests/data/test_folds_committed.py`, layer L2):** written before the pin existed. `uv run pytest tests/data/test_folds_committed.py` then gave 5 passed and 1 failed: the R13 tests on the real file (every DS1 subject once, 22 subjects in 5 non-empty folds, no DS2 or excluded subject, s201 in a valid fold, manifest hashes equal today's, per-fold class counts equal a recount from the prepared DS1 using the file's own assignment) passed, and the R14 test (`check_folds` on the committed file and pin) failed with `manifests/folds.sha256 missing: the fold file has no pin`. After the pin: 6 passed.
+
+**Stop condition 8:** clear. The file passes `check_folds` and holds exactly the 22 DS1 subjects.
