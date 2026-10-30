@@ -1325,3 +1325,17 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Rejected:** the literal reading (percentages on tiny precision denominators); counts only for every precision cell (drops readable percentages where denominators are large).
 
 **Applied:** `docs/PRD.md` EVAL-08 item 4; `docs/MODEL_CARD.md` report list and per-patient table heading.
+
+## 2026-10-29: Phase 3 settling, 4: DS1 calibration numbers use the in-sample temperature, labeled (C4 clarification)
+
+**Gap:** EVAL-11 fits one temperature on pooled DS1 out-of-fold predictions and ships it; on DS2 that is a clean test. The DS1 calibration numbers Phase 3 writes to `results/` (S and V ECE, log loss, Brier, reliability data) would be scored on the same predictions the temperature was fitted to. Fixed before any result (rule 6).
+
+**Decision (Din):** in-sample, labeled. DS1 calibration numbers use the shipped temperature, and every one is labeled "temperature fitted on these predictions" in `results/` and anywhere it is quoted. Reason: one scalar fitted on about 50,000 beats; the AIC rule of thumb puts the optimism near 1e-5 nats per beat of log loss (a textbook estimate, not measured); one temperature keeps the results unambiguous; DS2 is the honest calibration test, and no DS1 calibration number is planned for public text (the model card shows only the fitted value).
+
+**Check owed (Phase 3):** the goal agent compares, once, the in-sample DS1 numbers with a per-fold cross-fitted temperature in a throwaway scratchpad script, records both in the ledger, and stops to ask Din if they differ by more than the estimate suggests (stated threshold in the task plan).
+
+**Routine choices recorded with it (Claude):** each model gets its own temperature, fitted by minimizing log loss over log T with a bounded scalar search; the baseline's logits are scikit-learn's `decision_function`; each fold's out-of-fold logits are adjusted with that fold's own training class weights; no bootstrap intervals on calibration metrics (EVAL-09 covers classification metrics).
+
+**Rejected:** cross-fitting per fold for the reported numbers (strictly out of sample, but two temperatures a reader could confuse, for an effect estimated at about 1e-5 nats).
+
+**Applied:** no requirement text changes; EVAL-11 and EVAL-12 hold as written. The label goes into the Phase 3 task plan.
