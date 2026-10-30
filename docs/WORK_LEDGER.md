@@ -1539,3 +1539,23 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Rejected:** one temperature fitted on all three seeds' pooled out-of-fold logits (steadier, but fitted on predictions of models other than the one it calibrates).
 
 **Applied:** `docs/PRD.md` EVAL-11.
+
+## 2026-10-30: Phase 4 settling, 4: the augmentation's noise level and order (C3 clarification)
+
+**Gap:** C3 fixed "random time shift of up to 5 samples each way, and light Gaussian noise", fixed and untuned, but gave the noise no value and the steps no order. Fixed here, before any training run (rule 6).
+
+**Measured (throwaway script in the session scratchpad, read `data/prepared/` only, all 22 DS1 records, deleted after):** 50,977 kept windows; window standard deviation 0.169 mV at the 5th percentile, 0.336 mV median, 0.574 mV at the 95th; no kept beat lies within 5 samples of a record edge, so a shift of up to 5 never leaves the trace.
+
+**Decision (Din):**
+
+1. Shift: re-cut the 256-sample window from the int16 trace at the beat sample plus a uniform integer offset in [-5, 5]. A shifted window that would leave the record raises (none does today); no clamping or padding.
+2. Then the per-window z-score, with the same function and floor as inference (B3 amendment).
+3. Then Gaussian noise with standard deviation 0.05 in z-units, drawn fresh per sample per epoch. About 0.017 mV on a median beat (0.008 to 0.029 mV from the 5th to 95th percentile), a few int16 steps of 0.005 mV.
+4. Training batches only; validation and every evaluation see unaugmented windows.
+5. Shift and noise streams derive from the run's master seed through `SeedSequence` (CONVENTIONS section 2).
+
+**Reason:** re-cutting keeps every training window a real piece of signal; z-scoring after the shift keeps augmented inputs on the exact preprocessing path the browser runs; noise after the z-score scales with each beat, which matches C3's reason for leaving out amplitude scaling. 0.05 is the smaller of the two candidates, so it is less likely to blur the morphology the CNN is there to learn, given that it is never tuned.
+
+**Rejected:** standard deviation 0.1 (about 0.034 mV on a median beat, closer to visible EMG noise); noise in mV before the z-score (heavier on small-amplitude records for no stated reason); rolling or edge padding for the shift.
+
+**Applied:** `docs/PRD.md` MODEL-03.
