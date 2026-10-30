@@ -1295,3 +1295,21 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Rejected:** four-class macro F1 for selection (one patient's F beats would drive C and width).
 
 **Applied:** `docs/PRD.md` MODEL-01 and MODEL-04; `docs/MODEL_CARD.md` selection line.
+
+## 2026-10-29: Phase 3 settling, 2: undefined metrics in bootstrap draws (C4 clarification)
+
+**Gap:** C4 and EVAL-09 cover one undefined case: a draw with no predicted S skips S precision and counts the skip. Draws with no predicted V or F, no true beats of a class, F1 at zero denominators and paired differences have no rule, and a library default (scikit-learn's `zero_division=0`) would quietly turn "undefined" into 0 and pull intervals down. Fixed before any result (rule 6).
+
+**Measured (2026-10-29, `manifests/mitdb-beat-counts.toml` with the AAMI map, DS1 only, annotation counts):** of 22 DS1 patients, 16 have S, 17 have V, 10 have F. The chance a 22-patient draw holds no patient with the class is 3.9e-13 for S, 7.0e-15 for V and 1.6e-6 for F (about 0.02 draws in 10,000). So no-true-beat draws are near impossible on DS1; no-predicted-beat draws are the realistic case, for any class.
+
+**Decision (Din):** the general rule.
+
+1. A metric whose denominator is zero in a draw is skipped for that metric only; its skip count is reported beside its interval.
+2. F1 per class is 2TP / (2TP + FP + FN), undefined only when the class is absent from both labels and predictions. A draw with no predicted S gives S F1 = 0, so macro F1 is in practice never skipped. This matches scikit-learn's current F1, so R16 holds.
+3. False positive rate needs no skip in practice (its denominator is every beat not of that class).
+4. A paired difference (CNN minus baseline) skips a draw where either model's value is undefined, counted separately.
+5. Point estimates (pooled, per fold, per patient) follow the same rule and show "undefined", never 0.
+
+**Rejected:** undefined counted as 0 (penalizes a missing denominator, contradicts C4); dropping the whole draw when any metric is undefined (shifts every metric's interval, against C4's "for S precision only").
+
+**Applied:** `docs/PRD.md` EVAL-09.
