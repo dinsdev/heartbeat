@@ -16,7 +16,7 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 ## Commands
 
-Working today (Phase 3):
+Working today (Phase 4):
 
 | What | Command |
 | --- | --- |
@@ -33,9 +33,13 @@ Working today (Phase 3):
 | Download and checksum the 132 pinned MIT-BIH files (about 82 MB, about 70 s the first time; skips matching files after) | `uv run heartbeat download` |
 | Prepare DS1 into `data/prepared/` with the floor-hit report (about 1.5 s) | `uv run heartbeat prepare` |
 | Check `config/folds.json` against its pin and the manifests | `uv run heartbeat check-folds` |
-| Rebuild the built stages (download, prepare, check-folds, cross-validate), skipping unchanged ones; cross-validate writes `results/cv_baseline.json` (about 6 s from a warm cache) | `uv run heartbeat rebuild` |
+| Rebuild the built stages (download, prepare, check-folds, cross-validate, cross-validate-cnn, select, exhibit, train-final), skipping unchanged ones, into the six `results/` files; run it in the background. Measured 108 minutes on 2026-10-30 when every training stage reran (cross-validate 5 s, cross-validate-cnn 74 min on MPS, select 1 s, exhibit 20 min, train-final 15 min on CPU); about 6 s when only the baseline reruns | `uv run heartbeat rebuild` |
 | Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
 | Baseline cross-validation into a new run folder under `runs/`, never `results/` (about 5 s) | `uv run heartbeat cross-validate --model baseline` |
+| CNN cross-validation of one width and seed into a run folder (all five folds on MPS: about 5 min at width 0.5, 7 min at width 1, 13 min at width 2); `--fold N` trains one fold (width 1 measured 69 to 78 s on MPS, 19 min with `--device cpu`) | `uv run heartbeat cross-validate --model cnn --width 1 --seed 0 [--fold 0] [--device cpu]` |
+| Select width and epoch count from the CV run folders into a new run folder (about 2 s; needs the `cross-validate-cnn` runs) | `uv run heartbeat select` |
+| The leakage exhibit into run folders (about 20 min on MPS, measured as a rebuild stage) | `uv run heartbeat exhibit` |
+| Three final models on CPU into run folders (about 5 min each at width 1 for 10 epochs, measured as a rebuild stage) | `uv run heartbeat train-final` |
 | Real-data tests only (layer L2, needs the download) | `uv run pytest -m realdata` |
 | Make the folds: done once by Din on 2026-10-29 and never run again (C1; F5 denies it to Claude) | `uv run heartbeat make-folds` |
 | Subcommands of later phases (stubs that exit 2 and name their phase) | `uv run heartbeat --help` |
@@ -50,12 +54,12 @@ Arriving in their phases (stubs today):
 | What | Command | Phase |
 | --- | --- | --- |
 | Quick integrity check: manifests, checksums, frozen-model parity, results against the test log | `uv run heartbeat verify` | 5 |
-| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch) | `uv run heartbeat rebuild` | 4 to 5 |
+| Rebuild every artifact, through `export` (cached stages, about 2 hours from scratch) | `uv run heartbeat rebuild` | 5 |
 | Web build with demo data from the rebuild | `pnpm -C web run build` | 6 |
 
 Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first) and a `web` job; `scripts/check.sh` skips the real-data tests, the build and Playwright.
 
-Long jobs: cross-validation takes about 1 hour on MPS, `train-final` 30 minutes to 2 hours on CPU, `rebuild --exact` about 15 hours. Run long jobs in the background and say how long they should take.
+Long jobs: CNN cross-validation takes about 74 minutes on MPS, the exhibit about 20 minutes, `train-final` about 15 minutes on CPU at the selected width 1 and 10 epochs (all measured 2026-10-30), `rebuild --exact` about 15 hours (a guess). Run long jobs in the background and say how long they should take.
 
 ## Layout
 

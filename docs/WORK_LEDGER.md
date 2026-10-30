@@ -1595,3 +1595,137 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Checked while drafting (by hand from MODEL-02, no code run):** the parameter counts of the C3 network are 14,724, 52,036 and 196,548 at widths 0.5, 1 and 2, equal to C7's measured counts, so Task 2 tests them exactly.
 
 **Approved (Din, 2026-10-30):** the Phase 4 task plan as committed in `daaa99c`, including its ten design calls, and the `/goal` prompt drafted in the planning session (3,168 characters, under the 4,000-character limit, clean under the wording lint). Execution is handed to a fresh Opus 5.5 session at high effort: one goal run on branch `phase-4-cnn`, ending at the push command for Din or at a stop-and-ask condition.
+
+## 2026-10-30: Phase 4 device checks (Task 9, settling 5)
+
+**Same-Mac MPS rerun (stop 2 clear):** `uv run heartbeat cross-validate --model cnn --width 1 --seed 0 --fold 0 --device mps`, twice at `7ec0457`: runs `20261030T061235Z-7ec0457-cv-cnn-w1-s0` (68.86 s) and `20261030T061346Z-7ec0457-cv-cnn-w1-s0` (77.94 s). All 32 arrays in `weights.npz` and all 13 in `oof.npz` (every epoch's logits included) are bit-identical. The full job's seed 0 run at `3b1116c` (`20261030T082322Z-3b1116c-cv-cnn-w1-s0`) gives fold 0 logits bit-identical to these, and the stopped rebuild at `7ec0457` and the committed one at `3b1116c` give identical `results/cv_cnn_curves.json`, `results/selection.json` and `results/cv_cnn.json` apart from run names and provenance (see the dirty-flag entry below).
+
+**MPS against CPU:** the same command with `--device cpu`, run `20261030T061519Z-7ec0457-cv-cnn-w1-s0`, 1157.55 s (19.3 minutes; the plan guessed about 12). Fold 0 holds 12,323 beats from records 114, 118, 207, 208 and 215. 28 of 32 weight arrays differ from the MPS run, so the two devices take different paths from epoch 1.
+
+**Seed spread (Task 10 step 4):** fold 0 rows of the full job's three width 1 runs (`20261030T082322Z-3b1116c-cv-cnn-w1-s0`, `20261030T083027Z-3b1116c-cv-cnn-w1-s1`, `20261030T083654Z-3b1116c-cv-cnn-w1-s2`). Every score below is macro F1 over N, S and V on fold 0 from the argmax of the raw logits, as the curves use; "DS1 out-of-fold, MPS" for the MPS columns, "DS1 out-of-fold, CPU" for the CPU column. Gap is the absolute difference between MPS seed 0 and CPU seed 0; "(over)" marks an epoch where it exceeds the seed spread (max minus min of the three MPS seeds). Label agreement and the max logit difference compare MPS seed 0 with CPU seed 0.
+
+| Epoch | MPS seed 0 | MPS seed 1 | MPS seed 2 | Seed spread | CPU seed 0 | Gap | Label agreement | Max logit difference |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 0.4342 | 0.3997 | 0.3934 | 0.0408 | 0.4824 | 0.0482 (over) | 0.8065 | 7.004 |
+| 2 | 0.4184 | 0.4950 | 0.4079 | 0.0871 | 0.4372 | 0.0188 | 0.9083 | 15.67 |
+| 3 | 0.5368 | 0.5057 | 0.3351 | 0.2017 | 0.4833 | 0.0535 | 0.8483 | 22.95 |
+| 4 | 0.3968 | 0.5423 | 0.4861 | 0.1455 | 0.3633 | 0.0334 | 0.7101 | 19.55 |
+| 5 | 0.5130 | 0.3463 | 0.4065 | 0.1667 | 0.5528 | 0.0397 | 0.8686 | 13.47 |
+| 6 | 0.4910 | 0.5575 | 0.5600 | 0.0691 | 0.4826 | 0.0084 | 0.9166 | 19.12 |
+| 7 | 0.4819 | 0.4515 | 0.4851 | 0.0337 | 0.5088 | 0.0269 | 0.8720 | 14.02 |
+| 8 | 0.5780 | 0.4428 | 0.6058 | 0.1630 | 0.5426 | 0.0354 | 0.8966 | 20.74 |
+| 9 | 0.4280 | 0.5339 | 0.5539 | 0.1259 | 0.4295 | 0.0015 | 0.9042 | 20.46 |
+| 10 | 0.6183 | 0.5818 | 0.5659 | 0.0524 | 0.5857 | 0.0326 | 0.8501 | 11.54 |
+| 11 | 0.4964 | 0.5698 | 0.5098 | 0.0734 | 0.5072 | 0.0108 | 0.8406 | 26.18 |
+| 12 | 0.3757 | 0.5887 | 0.5948 | 0.2191 | 0.4869 | 0.1112 | 0.7059 | 22.71 |
+| 13 | 0.5267 | 0.5975 | 0.4930 | 0.1045 | 0.4944 | 0.0323 | 0.7788 | 23.84 |
+| 14 | 0.4167 | 0.4806 | 0.3645 | 0.1160 | 0.5327 | 0.1160 | 0.6554 | 27.07 |
+| 15 | 0.5043 | 0.5055 | 0.4894 | 0.0161 | 0.5198 | 0.0156 | 0.9464 | 43.39 |
+| 16 | 0.4427 | 0.5370 | 0.5126 | 0.0943 | 0.4684 | 0.0257 | 0.8168 | 45.1 |
+| 17 | 0.5482 | 0.5230 | 0.5746 | 0.0516 | 0.5666 | 0.0184 | 0.8816 | 65.39 |
+| 18 | 0.4921 | 0.6116 | 0.5130 | 0.1195 | 0.4894 | 0.0027 | 0.8593 | 79.42 |
+| 19 | 0.5394 | 0.5921 | 0.5073 | 0.0848 | 0.5625 | 0.0230 | 0.9044 | 83.94 |
+| 20 | 0.5387 | 0.5435 | 0.5922 | 0.0535 | 0.5210 | 0.0177 | 0.7856 | 113.8 |
+| 21 | 0.5785 | 0.5430 | 0.5323 | 0.0462 | 0.5504 | 0.0281 | 0.9293 | 147.4 |
+| 22 | 0.5145 | 0.4549 | 0.5272 | 0.0724 | 0.5759 | 0.0613 | 0.8564 | 112.2 |
+| 23 | 0.5752 | 0.4967 | 0.4772 | 0.0980 | 0.5889 | 0.0137 | 0.9171 | 112 |
+| 24 | 0.4593 | 0.5063 | 0.4641 | 0.0470 | 0.5398 | 0.0804 (over) | 0.7230 | 81.35 |
+| 25 | 0.4964 | 0.5300 | 0.4854 | 0.0446 | 0.5384 | 0.0419 | 0.8780 | 91.36 |
+| 26 | 0.5026 | 0.5062 | 0.5945 | 0.0919 | 0.5277 | 0.0251 | 0.8451 | 107.4 |
+| 27 | 0.5061 | 0.5583 | 0.5733 | 0.0673 | 0.5645 | 0.0584 | 0.8159 | 119 |
+| 28 | 0.4841 | 0.5017 | 0.4716 | 0.0301 | 0.5446 | 0.0606 (over) | 0.8119 | 106.6 |
+| 29 | 0.5245 | 0.5197 | 0.4907 | 0.0338 | 0.5311 | 0.0066 | 0.8870 | 114.8 |
+| 30 | 0.5603 | 0.5379 | 0.5581 | 0.0224 | 0.5218 | 0.0386 (over) | 0.9003 | 99.86 |
+| 31 | 0.2924 | 0.5672 | 0.5470 | 0.2748 | 0.4708 | 0.1784 | 0.5702 | 115.7 |
+| 32 | 0.4639 | 0.4882 | 0.5189 | 0.0550 | 0.5536 | 0.0897 (over) | 0.7889 | 67.4 |
+| 33 | 0.5865 | 0.4689 | 0.4957 | 0.1176 | 0.5656 | 0.0209 | 0.9201 | 74 |
+| 34 | 0.5059 | 0.4825 | 0.5196 | 0.0371 | 0.5452 | 0.0393 (over) | 0.9133 | 74.08 |
+| 35 | 0.5306 | 0.4948 | 0.4955 | 0.0358 | 0.5651 | 0.0345 | 0.8534 | 81.1 |
+| 36 | 0.5200 | 0.3920 | 0.4922 | 0.1280 | 0.5523 | 0.0323 | 0.9180 | 67.98 |
+| 37 | 0.4957 | 0.4868 | 0.5208 | 0.0340 | 0.5027 | 0.0071 | 0.9611 | 78.3 |
+| 38 | 0.5171 | 0.5253 | 0.5221 | 0.0082 | 0.4422 | 0.0749 (over) | 0.6589 | 119.9 |
+| 39 | 0.5045 | 0.5095 | 0.5050 | 0.0050 | 0.5187 | 0.0142 (over) | 0.9199 | 128.2 |
+| 40 | 0.5130 | 0.4429 | 0.5347 | 0.0918 | 0.4976 | 0.0153 | 0.8531 | 96.99 |
+
+**Summary:** the gap exceeds the seed spread at 8 of 40 epochs (1, 24, 28, 30, 32, 34, 38, 39). At the selected epoch 10 the gap is 0.0326 against a spread of 0.0524. Medians over the 40 epochs: gap 0.0323, spread 0.0707. The CPU curve's 40-epoch mean is 0.5178 against 0.4977 for MPS seed 0 (a difference of 0.0201), while the three MPS seeds' 40-epoch means span 0.4977 to 0.5105 (a range of 0.0128). Label agreement ranges from 0.570 (epoch 31) to 0.961 (epoch 37), and the max logit difference grows from 7.0 at epoch 1 to as much as 147.4 at epoch 21.
+
+**Flagged to Din (stop 10, report, not a stop):** at most epochs, and at the selected one, the device gap is inside the seed spread. On the 40-epoch mean it is larger (0.020 against 0.013), with only three seeds behind that range. Reading: CPU and MPS give a different model of the same quality class rather than the same model (an opinion from one fold and three seeds); the final models train on CPU (C6), so the shipped models' DS1 quality is the CPU path's, not measured directly here.
+
+**Throwaway scripts:** `compare_runs.py`, `seed_spread.py` and `cmp_json.py` lived in the session scratchpad and were deleted after these numbers were recorded.
+
+## 2026-10-30: Phase 4 dirty-flag fix and the rerun (rule 5)
+
+**Found:** the first full `uv run heartbeat rebuild` (started 06:34:47Z on a clean tree at `7ec0457`) wrote `"dirty": true` into `results/selection.json` and every stage file after it. `cv_baseline.json` said `false`. Cause: `provenance()` counted any `git status` change as dirty, and each stage writes its results file before the next stage starts, so every stage after the first saw the earlier stages' results files. The code was unchanged; only the flag was wrong.
+
+**Decided (Din, 2026-10-30):** fix the flag and rerun, over keeping the files with a ledger note. Claude stopped the first rebuild at 08:06Z, in the exhibit stage, after cross-validate-cnn and select had finished; its results files are kept in `stash@{0}` and were never committed.
+
+**Fix (`3b1116c`):** the dirty flag and the diff hash now leave out the top-level `results/` only (git pathspecs `:(top)` and `:(top,exclude)results/`); any other change, tracked or untracked, still counts, including a folder named `results` elsewhere. Test first: `test_results_written_earlier_in_a_rebuild_leave_the_tree_clean` in `tests/unit/test_runs.py` failed (`assert True is False`), then passed; `scripts/check.sh` exit 0 (773 passed).
+
+**Rerun:** `uv run heartbeat rebuild` on a clean tree at `3b1116c` (the fix changed the training stages' fingerprints, so every stage from cross-validate reran), 08:08:38Z to 09:56:54Z (6496 s by `/usr/bin/time -p`). All six results files record `"dirty": false` and commit `3b1116c`. Against the stopped run's files in `stash@{0}`, `results/cv_baseline.json`, `results/cv_cnn_curves.json`, `results/selection.json` and `results/cv_cnn.json` are identical apart from run names, `commit` and `dirty` (scratchpad comparison, deleted after).
+
+## 2026-10-30: Phase 4 built and verified locally; CI waits for Din's push
+
+**Built (branch `phase-4-cnn`, one commit per plan step):** `fec4616` phase bump; `6159785` the seven-value C grid (settling 1); `dc2b99a` baseline results on that grid; `b9f091f` network, augmentation and derived seeds (TASKS 4.1); `c660604` deterministic setup and the epoch loop (R22); `1747cb9` splitters and the epoch driver (R21, R24); `17e6bb4` `select`; `4a577cd` the exhibit; `7a8a9ff` `train-final`; `7ec0457` stages, CLI and the real-data smoke test (R23); `3b1116c` the dirty-flag fix (entry above); `32fa004` the six results files alone; and this commit (AGENTS.md Commands, TASKS 4.1 to 4.4, these entries).
+
+**Task 1 (`results/cv_baseline.json` at `dc2b99a`, run `20261030T054128Z-6159785-cv-baseline`; DS1 out-of-fold, CPU):** chosen C 0.001, inside the grid, so stop 6 did not apply. Macro F1 over N, S, V and four-class by C: 0.0001: 0.5128, 0.4011; 0.001: 0.5323, 0.4121; 0.01: 0.5229, 0.4027; 0.1: 0.5160, 0.4031; 1: 0.5163, 0.4052; 10: 0.5161, 0.4058; 100: 0.5163, 0.4059. The committed file at `32fa004` (run `20261030T080840Z-3b1116c-cv-baseline`) has the same numbers: C 0.001, temperature 1.1744.
+
+**Task 4 reproduction (design call 9, stop 3 clear):** `uv run heartbeat rebuild --from cross-validate` at `1747cb9` (run `20261030T055232Z-1747cb9-cv-baseline`) changed `results/cv_baseline.json` only in `run` and `commit`, and its `metrics.json` was byte-identical to Task 1's. That copy is in `stash@{1}`.
+
+**Deviations from the plan, and why:**
+
+1. The CNN `ModelSpec` factory, `cnn_spec(traces, device)`, lives in `train/loop.py`, not `models/cnn.py`: it needs the epoch loop, and the R21 import check forbids `models/` importing `train/`.
+2. A module the file map did not list, `train/cnn_cv.py`, holds the CV run folders (`oof.npz` with float32 logits per epoch, `weights.npz`), the refusal to read a partial run, and the curves payload.
+3. `ModelSpec.fit` stays required; the CNN's `fit` is `epochs_only`, which raises `TypeError`. Making it optional pushed `None` checks into every Phase 3 call site.
+4. `cross_validate_epochs` takes `only_folds`, for `cross-validate --model cnn --fold N` development runs (Task 9).
+5. The leaky side uses the honest side's per-fold seed streams (fold k of each splitter gets the same seeds), so the two resolved configs differ only in the splitter (R24).
+6. `run_exhibit` takes the selected width, epoch and C as values, not a `Selection` object; `select_baseline_c` still takes the folds (baseline C is chosen on patient folds only).
+7. `rebuild --exact` stays for Phase 5; its message now says "is not built yet (Phase 5); running the default mode".
+8. Test changes beyond the approved C grid assertion: call sites updated to the new signatures (`patient_splitter(folds)`, `baseline_summary`, `TrainSettings` in the test helpers) and the stage and CLI expectations the plan changes (the pipeline list, the planned stages, `export (Phase 5)` as next stage, the stub list, `svm` replacing `cnn` as the unknown-model example). No expected value, tolerance, grid, seed, epoch cap or noise level changed.
+9. The dirty-flag fix, `3b1116c`, was not in the plan (entry above).
+10. Measured times differ from the plan's guesses: the CPU development run took 19.3 minutes (plan: about 12), the exhibit 20 minutes and `train-final` 15 minutes (plan: 15 to 35 and about 30); `train-final` is short because the selected epoch count is 10.
+
+**Stage times (`uv run heartbeat rebuild` at `3b1116c`, from the timestamped log):** cross-validate 5 s; cross-validate-cnn 73 min 51 s (width 0.5 about 4.9 min per seed, width 1 about 6.6 min, width 2 about 13 min, MPS); select 1 s; exhibit 19 min 36 s (three leaky CNN seeds about 6.5 min each on MPS, plus both baselines); train-final 14 min 40 s (293.6, 293.0 and 292.3 s per seed, CPU). Total 6496 s.
+
+**Selection (`results/selection.json`, run `20261030T092237Z-3b1116c-select`, from curves run `20261030T092236Z-3b1116c-cv-cnn`; DS1 out-of-fold, MPS):** width 1 at epoch 10, seed-mean macro F1 over N, S and V 0.6395, far from the epoch edge (stop 1 clear). Best point per width (seed mean, macro F1 N, S, V and four-class): width 0.5, epoch 7, 0.6314 and 0.4912; width 1, epoch 10, 0.6395 and 0.4911; width 2, epoch 11, 0.6202 and 0.4818. Per-seed temperatures: 1.7040, 1.6413, 1.6622, all well inside (0.05, 20) (stop 5 clear).
+
+**CNN headline (`results/cv_cnn.json`, run `20261030T092237Z-3b1116c-select`, CV runs `20261030T082322Z-3b1116c-cv-cnn-w1-s0` to `-s2`; DS1 out-of-fold, MPS; seed 0, width 1, epoch 10; 95% patient-bootstrap intervals, 10,000 draws):**
+
+| Metric               | Seed 0 | Interval         | Seeds 1 and 2 (range) |
+| -------------------- | ------ | ---------------- | --------------------- |
+| Macro F1, N, S, V    | 0.6583 | 0.5680 to 0.7782 | 0.6189 to 0.6412      |
+| Macro F1, four-class | 0.5030 | 0.4301 to 0.5969 | 0.4799 to 0.4903      |
+| S recall             | 0.3977 | 0.0711 to 0.6076 | 0.4337 to 0.4677      |
+| S precision          | 0.1495 | 0.0131 to 0.5801 | 0.1101 to 0.1732      |
+| V recall             | 0.8651 | 0.7658 to 0.9310 | 0.8738 to 0.9248      |
+| V precision          | 0.8119 | 0.6239 to 0.9639 | 0.6763 to 0.7076      |
+
+Calibration (seed 0): temperature 1.7040; log loss 0.2284 "temperature fitted on these predictions", 0.2370 "per-fold temperatures fitted on the other four folds"; ECE S 0.0084, V 0.0115.
+
+**Paired difference, CNN seed 0 minus baseline (`results/cv_cnn.json`, one draw matrix; DS1 out-of-fold):** macro F1 N, S, V +0.1259 (0.0116 to 0.2602); four-class +0.0909 (0.0008 to 0.1974); V recall +0.3501 (0.2299 to 0.4719); S recall +0.1697 (-0.4547 to 0.5114). Under EVAL-10's wording, the CNN is better on both macro F1s and on V recall; S recall shows no clear difference.
+
+**Baseline on the same rows (`results/cv_baseline.json`, run `20261030T080840Z-3b1116c-cv-baseline`; DS1 out-of-fold, CPU):** macro F1 N, S, V 0.5323 (0.4475 to 0.6153), four-class 0.4121 (0.3395 to 0.4827).
+
+**Exhibit (`results/exhibit.json`, run `20261030T092237Z-3b1116c-exhibit`; leaky CNN runs `20261030T092237Z-3b1116c-exhibit-cnn-w1-s0`, `20261030T092909Z-3b1116c-exhibit-cnn-w1-s1`, `20261030T093541Z-3b1116c-exhibit-cnn-w1-s2`; inside DS1 only; CNN rows MPS, baseline rows CPU; seed 0 for the CNN; not for public text until the case study):**
+
+| Model, folds | Macro F1 N, S, V | Four-class | S recall | V recall | Accuracy |
+| --- | --- | --- | --- | --- | --- |
+| CNN, patient | 0.6583 (0.5680 to 0.7782) | 0.5030 | 0.3977 | 0.8651 | 0.8534 |
+| CNN, beat | 0.8176 (0.7478 to 0.8573) | 0.7565 | 0.9629 | 0.9754 | 0.9512 |
+| Baseline, patient | 0.5323 (0.4475 to 0.6153) | 0.4121 | 0.2280 | 0.5150 | 0.7698 |
+| Baseline, beat | 0.6233 (0.5308 to 0.7070) | 0.4887 | 0.3892 | 0.6687 | 0.8053 |
+
+Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SHA256 `52bfe643...123e97` (in the file).
+
+**Final models (`results/train_final.json`; CPU, deterministic mode, 4 threads, width 1, 10 epochs, every DS1 row):** seed 0 `20261030T094214Z-3b1116c-train-final-s0`, SHA256 `3c1c9b9c0b66914483736b2e97e251e2fea0ea0bead29c6c04c01caf7ef342e8`, temperature 1.7040 (shipped seed); seed 1 `20261030T094707Z-3b1116c-train-final-s1`, `72279c113a9adf5d8784f0366f2c6ce1e78aeed7b6e8ed2d4c06c3de3c1a3182`, 1.6413; seed 2 `20261030T095201Z-3b1116c-train-final-s2`, `493ece36f72311a7fafa8af625559b8c1172e9d678b6bafa6fa92707e496404f`, 1.6622. Each SHA256 was checked against its file after the rebuild.
+
+**Task 10 reproduction (stop 3 clear):** `uv run heartbeat select` at `32fa004` (2.2 s, run `20261030T095819Z-32fa004-select`, `"dirty": false`) wrote `selection.json` and `cv_cnn.json` equal to the committed files apart from `run` and `commit`.
+
+**Flagged:**
+
+1. The MPS against CPU gap on width 1, fold 0 exceeds the seed spread at 8 of 40 epochs and on the 40-epoch mean, but not at the selected epoch (stop 10, report; device-check entry above).
+2. F stays weak: pooled F F1 0.0372 for CNN seed 0 (`results/cv_cnn.json`). Fold 0 holds record 208, most of DS1's F beats, so that fold's training rows have about 37 F beats and an F class weight of 261.1. F is outside the selection metric (Phase 3 settling 1); reported, not acted on.
+3. Two stashes for Din to drop: `stash@{0}` (the stopped rebuild's results) and `stash@{1}` (the Task 4 reproduction copy).
+
+**Verified (local, at this commit's parent `32fa004` plus these doc edits):** `scripts/check.sh` exit 0 (773 passed, 106 real-data deselected); `CI=1 uv run pytest` exit 0 (879 passed, real-data layer included); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R22 to R24 covered); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored.
+
+**Not verified:** CI on these commits (waits for Din's push). **Not accepted:** only Din sets Accepted.
