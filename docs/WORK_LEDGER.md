@@ -1269,3 +1269,9 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 - `web` job: 1 min 7 s, most of it `playwright install --with-deps` (36 s).
 
 **Phase 2 exit (PLAN section 3):** all four items met. R1 to R15 and R51 pass in CI with the real-data layer (item 1), R11 among them (item 2); items 3 and 4 were done before the push (2026-10-29 entries). TASKS 2.1 to 2.6 record the CI run. Phase 2 is Verified; Accepted waits on Din.
+
+## 2026-10-30: Phase 2 CI, the MIT-BIH cache restores
+
+**Run:** CI run 40986936397 on `c0e3a8d` (push), read with `gh run view 40986936397` (read-only): both jobs succeeded. It replaces the guess in the entry above with a measurement.
+
+**Timings (from the run's step timestamps, `gh run view --json jobs`):** wall clock 98 s (01:37:24Z to 01:39:02Z); `python` job 36 s. The cache step restored `mitdb-1.0.0-c5638e23...618c` in about 1 s. `uv run heartbeat download` took 5 s and printed "fetched 0, skipped 132, of 132 files", so every cached file was hash-checked and nothing was fetched (DATA-02). `uv run pytest`: 626 passed in 10.72 s. `web` job: 1 min 34 s.
