@@ -247,7 +247,8 @@ def test_export_models_writes_the_bundle_and_its_record(trained: Trained) -> Non
     assert record["opset"] == 20
     assert record["size_limit_bytes"] == 1_000_000
     assert record["parity"]["tolerance"] == 1e-5
-    assert record["parity"]["beats"] == beats.sample.size
+    assert record["parity"]["ds1_beats"] == beats.sample.size
+    assert record["parity"]["fixture_beats"] == 50
     assert {"torch", "onnx", "onnxruntime"} <= set(record["versions"])
     assert record["parameters"] > 0
     assert record["files"] == bundle_files(folder, repo)
@@ -257,7 +258,10 @@ def test_export_models_writes_the_bundle_and_its_record(trained: Trained) -> Non
         mine = by_seed[entry["seed"]]
         assert mine["checkpoint_sha256"] == entry["sha256"]
         assert mine["temperature"] == entry["temperature"]
-        assert mine["parity_max_abs_diff"] <= 1e-5
+        assert mine["fixture_max_abs_diff"] <= 1e-5
+        assert mine["ds1_label_changes"] == 0
+        assert mine["ds1_max_abs_diff"] >= 0
+        assert mine["ds1_beats_over_tolerance"] >= 0
         facts = next(f for f in record["files"] if f["path"] == mine["path"])
         assert facts["bytes"] < 1_000_000
     assert by_seed[0]["path"] == "main/models/heartbeat-v1/model.onnx"

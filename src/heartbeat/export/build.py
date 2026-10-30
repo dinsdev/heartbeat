@@ -2,8 +2,11 @@
 
 Loads each final checkpoint after checking its SHA256 against
 `results/train_final.json`, exports it, checks the file (R25) and PyTorch
-against ONNX Runtime on every DS1 kept beat (R26), writes `models/heartbeat-v1/`
-and `fixtures/parity/fixtures.json` (R27), and returns the `results/export.json`
+against ONNX Runtime: within 1e-5 with exact labels on the parity fixtures
+(R26), and exact labels on every DS1 kept beat, whose largest logit
+difference is recorded but not gated (float32 accumulation order differs
+between the two runtimes; Phase 5 ledger). Writes `models/heartbeat-v1/` and
+`fixtures/parity/fixtures.json` (R27) and returns the `results/export.json`
 payload (Phase 5 task plan, design calls 3 and 4).
 """
 
@@ -31,7 +34,12 @@ from heartbeat.export.bundle import (
     seed_folder,
     write_bundle,
 )
-from heartbeat.export.fixtures import FixtureModel, build_fixtures, write_fixtures
+from heartbeat.export.fixtures import (
+    FixtureModel,
+    build_fixtures,
+    draw_fixture_rows,
+    write_fixtures,
+)
 from heartbeat.export.onnx import (
     ExportError,
     check_onnx,
@@ -39,6 +47,7 @@ from heartbeat.export.onnx import (
     export_onnx,
     load_checkpoint,
     parameter_count,
+    parity_survey,
 )
 from heartbeat.models.augment import model_windows
 from heartbeat.models.inputs import RRScaler, apply_rr_scaler, rr_model_inputs
@@ -48,7 +57,7 @@ from heartbeat.train.torch_setup import configure_torch
 
 EXPORT_LABEL = (
     "frozen models from train-final, exported on CPU; parity: PyTorch against "
-    "Python ONNX Runtime on every DS1 kept beat (R26)"
+    "Python ONNX Runtime on the fixture beats (R26), labels on every DS1 beat"
 )
 
 
@@ -110,6 +119,7 @@ def export_models(
     scaler = RRScaler(mean=np.array(mean), std=np.array(std))
     windows = model_windows(beats.window_adu)
     rr = apply_rr_scaler(scaler, rr_model_inputs(beats.rr_s)).astype(np.float32)
+    fixture_rows = draw_fixture_rows(beats)
     seeds: list[SeedModel] = []
     networks: list[FixtureModel] = []
     rows: list[dict[str, Any]] = []
@@ -122,7 +132,9 @@ def export_models(
             raise ExportError(f"seed-{seed}: {error}") from error
         data = export_onnx(model)
         check_onnx(data)
-        diff = check_parity(model, data, windows, rr)
+        # R26 on the fixture beats; labels on every DS1 beat.
+        diff = check_parity(model, data, windows[fixture_rows], rr[fixture_rows])
+        survey = parity_survey(model, data, windows, rr)
         parameters = parameter_count(model)
         seeds.append(
             SeedModel(seed, data, entry["class_weights"], float(entry["temperature"]))
@@ -140,7 +152,10 @@ def export_models(
                 .as_posix(),
                 "checkpoint_sha256": entry["sha256"],
                 "temperature": entry["temperature"],
-                "parity_max_abs_diff": diff,
+                "fixture_max_abs_diff": diff,
+                "ds1_max_abs_diff": survey["max_abs_diff"],
+                "ds1_beats_over_tolerance": survey["over_tolerance"],
+                "ds1_label_changes": survey["label_changes"],
             }
         )
     baseline = train_final["baseline"]
@@ -163,8 +178,12 @@ def export_models(
         },
         "parity": {
             "tolerance": PARITY_TOLERANCE,
-            "beats": int(beats.sample.size),
-            "data": "every DS1 kept beat, CPU",
+            "gate": "fixture beats: logits within the tolerance, labels exact (R26)",
+            "fixture_beats": int(fixture_rows.size),
+            "survey": "every DS1 kept beat: labels exact (gated), largest difference "
+            "and beats over the tolerance recorded",
+            "ds1_beats": int(beats.sample.size),
+            "data": "DS1, CPU",
         },
         "models": rows,
         "baseline": {

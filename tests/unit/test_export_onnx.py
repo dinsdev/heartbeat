@@ -22,6 +22,7 @@ from heartbeat.export.onnx import (
     check_parity,
     export_onnx,
     load_checkpoint,
+    parity_survey,
     pytorch_logits,
 )
 from heartbeat.models.cnn import HeartbeatCNN
@@ -199,3 +200,25 @@ def test_a_checkpoint_is_loaded_only_when_its_sha256_matches(tmp_path: Path) -> 
     assert export_onnx(loaded) == export_onnx(_model())
     with pytest.raises(ExportError, match=r"results/train_final\.json"):
         load_checkpoint(path, WIDTH, "0" * 64)
+
+
+@pytest.mark.rule("R26")
+def test_the_survey_counts_differences_and_refuses_a_label_change(
+    exported: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    windows, rr = _inputs(6)
+    base = np.zeros((6, 4), dtype=np.float32)
+    base[:, 0] = 1.0
+    off = base.copy()
+    off[2, 3] += 3 * PARITY_TOLERANCE
+    monkeypatch.setattr(onnx_module, "pytorch_logits", lambda m, w, r: base)
+    monkeypatch.setattr(onnx_module, "onnx_logits", lambda s, w, r: off)
+    survey = parity_survey(_model(), exported, windows, rr)
+    assert survey["over_tolerance"] == 1
+    assert survey["label_changes"] == 0
+    assert survey["max_abs_diff"] == pytest.approx(3 * PARITY_TOLERANCE)
+    flipped = base.copy()
+    flipped[4, 1] = 2.0
+    monkeypatch.setattr(onnx_module, "onnx_logits", lambda s, w, r: flipped)
+    with pytest.raises(ParityError, match="label of 1 beats"):
+        parity_survey(_model(), exported, windows, rr)

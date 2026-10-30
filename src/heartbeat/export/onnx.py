@@ -216,3 +216,34 @@ def check_parity(
             "stop and ask Din (Phase 5 plan, stop 3)"
         )
     return diff
+
+
+def parity_survey(
+    model: HeartbeatCNN,
+    data: bytes,
+    windows: NDArray[np.float32],
+    rr: NDArray[np.float32],
+) -> dict[str, Any]:
+    """PyTorch against ONNX Runtime on many beats: labels gated, logits measured.
+
+    Returns:
+        The largest absolute logit difference, the beats whose difference is
+        above 1e-5, and the label changes (always 0 on return).
+
+    Raises:
+        ParityError: If any label (argmax) differs.
+    """
+    expected = pytorch_logits(model, windows, rr).astype(np.float64)
+    got = onnx_logits(onnx_session(data), windows, rr).astype(np.float64)
+    changed = int(np.sum(predict_labels(got) != predict_labels(expected)))
+    if changed:
+        raise ParityError(
+            f"ONNX Runtime changes the label of {changed} beats; "
+            "stop and ask Din (Phase 5 plan, stop 3)"
+        )
+    per_beat = np.max(np.abs(got - expected), axis=1) if got.size else np.zeros(0)
+    return {
+        "max_abs_diff": float(per_beat.max()) if per_beat.size else 0.0,
+        "over_tolerance": int(np.sum(per_beat > PARITY_TOLERANCE)),
+        "label_changes": changed,
+    }
