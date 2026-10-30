@@ -386,7 +386,7 @@
       "V": 3.1519682636557826
     }
   ],
-  "commit": "615978533a3d24115c68c5765ed7873c90f15f3b",
+  "commit": "3b1116c87b015d9df38e81dc641fe03019869ae9",
   "data": "DS1 out-of-fold, CPU",
   "dirty": false,
   "fold_spread": {
@@ -951,5 +951,5 @@
       }
     }
   },
-  "run": "20261030T054128Z-6159785-cv-baseline"
+  "run": "20261030T080840Z-3b1116c-cv-baseline"
 }
