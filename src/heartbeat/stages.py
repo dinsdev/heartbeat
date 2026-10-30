@@ -19,15 +19,20 @@ from typing import Any
 from heartbeat.config import Settings
 from heartbeat.data.download import download
 from heartbeat.data.folds import check_folds
+from heartbeat.data.loader import load_ds1
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FLOOR_HITS_FILE, prepare_ds1
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
     FOLDS_JSON,
     FOLDS_PIN,
+    RESULTS_DIR,
+    RUNS_DIR,
     SPLITS_MANIFEST,
     SUBJECTS_MANIFEST,
 )
+from heartbeat.results import write_result
+from heartbeat.train.cv import run_baseline
 
 log = logging.getLogger(__name__)
 
@@ -267,6 +272,23 @@ def _run_check_folds(context: Context) -> None:
     )
 
 
+CV_BASELINE_RESULT = "cv_baseline"
+
+
+def _run_cross_validate(context: Context) -> None:
+    # Rule 5: the only writer of results/; the run folder holds everything else.
+    splits = load_splits(SPLITS_MANIFEST)
+    subjects = load_subjects(SUBJECTS_MANIFEST)
+    folds = check_folds(FOLDS_JSON, FOLDS_PIN, splits, subjects)
+    beats = load_ds1(context.settings.data.prepared_dir, splits, subjects)
+    folds_sha256 = _sha256_file(FOLDS_JSON)
+    run, summary = run_baseline(
+        context.settings, beats, folds, folds_sha256, root=RUNS_DIR
+    )
+    path = write_result(CV_BASELINE_RESULT, summary, run)
+    log.info("wrote %s from run %s", path, run.name)
+
+
 PIPELINE: tuple[Stage, ...] = (
     Stage(
         name="download",
@@ -304,11 +326,33 @@ PIPELINE: tuple[Stage, ...] = (
         # C1, E4: rebuild checks the folds every time and never makes them.
         always_run=True,
     ),
+    Stage(
+        name="cross-validate",
+        settings_keys=("data.prepared_dir",),
+        upstream=("prepare", "check-folds"),
+        code=(
+            "data",
+            "signal",
+            "models",
+            "train",
+            "evaluate",
+            "runs.py",
+            "results.py",
+            *_SHARED_CODE,
+        ),
+        inputs=lambda context: (
+            FOLDS_JSON,
+            FOLDS_PIN,
+            SPLITS_MANIFEST,
+            SUBJECTS_MANIFEST,
+        ),
+        run=_run_cross_validate,
+        outputs=lambda context: (RESULTS_DIR / f"{CV_BASELINE_RESULT}.json",),
+    ),
 )
 
 # OPS-01's later stages with the phase that builds each.
 PLANNED: tuple[tuple[str, int], ...] = (
-    ("cross-validate", 3),
     ("select", 4),
     ("exhibit", 4),
     ("train-final", 4),

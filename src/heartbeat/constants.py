@@ -77,3 +77,30 @@ N_FOLDS = 5
 # Phase 2 task plan: more DS1 windows than this at the z-score floor stops the
 # run and goes back to Din (B3 amendment, point 3).
 FLOOR_HIT_LIMIT = 5
+
+# C4, Phase 3 settling 1: the headline and every selection step use macro F1
+# over N, S and V; four-class macro F1 is reported beside it.
+HEADLINE_CLASSES = ("N", "S", "V")
+
+# C2, MODEL-01: the baseline's C grid, chosen on the C1 folds.
+BASELINE_C_GRID = (0.01, 0.1, 1.0, 10.0, 100.0)
+# Phase 3 task plan, design call 5: lbfgs iterations; non-convergence stops the run.
+BASELINE_MAX_ITER = 10_000
+
+# C4, EVAL-09: paired patient bootstrap. The seed is fixed for every run
+# (Phase 3 task plan, design call 1) and differs from the fold seed.
+BOOTSTRAP_DRAWS = 10_000
+BOOTSTRAP_SEED = 20261029
+# Phase 3 settling 5: 95% percentile intervals.
+INTERVAL_PERCENTILES = (2.5, 97.5)
+
+# C4, EVAL-12: equal-mass bins for ECE and reliability data.
+ECE_BINS = 10
+
+# C4, EVAL-08 item 4 (Phase 3 settling 3): a per-patient cell shows a
+# percentage only when its own denominator is at least this many beats.
+PER_PATIENT_MIN_BEATS = 10
+
+# EVAL-11: the bounded search for the temperature; an optimum within 1% of
+# either bound stops the run (Phase 3 task plan, stop condition 5).
+TEMPERATURE_BOUNDS = (0.05, 20.0)

@@ -23,7 +23,7 @@ A block that reads "Pending" has no run behind it yet. DS1 blocks fill in during
 - **Inputs:** a 256-sample window of the filtered MLII signal (96 samples before the beat annotation, 160 after), z-scored per window, plus six RR interval features (pre-RR, post-RR, local and long average RR, and two ratios, the ratios on a log scale), standardized with a scaler fitted on the training data. Details in `docs/DATA_CARD.md`.
 - **Architecture (MODEL-02):** four blocks of Conv1d (kernel 7), batch norm, ReLU and max-pool by 2; global average pooling; the six RR features concatenated; a 64-unit layer with dropout 0.3; four outputs.
 - **Training (MODEL-03, MODEL-06):** cross-entropy with balanced class weights; fixed augmentation (time shift up to 5 samples each way, light Gaussian noise); AdamW at a constant learning rate of 1e-3, weight decay 1e-4, batch 256; no early stopping. The frozen model trains on all of DS1 on CPU in PyTorch deterministic mode.
-- **Selection (MODEL-04):** width multiplier (0.5, 1 or 2) and epoch count chosen on the five patient-grouped DS1 folds by the seed mean of pooled out-of-fold macro F1.
+- **Selection (MODEL-04):** width multiplier (0.5, 1 or 2) and epoch count chosen on the five patient-grouped DS1 folds by the seed mean of pooled out-of-fold macro F1 over N, S and V (four-class reported beside it).
 - **Outputs:** a label (argmax of the weighted model) and a calibrated probability per class (logit adjustment, then one temperature fitted on DS1 out-of-fold predictions). Calibration never changes a label (EVAL-11).
 - **Format:** one ONNX file (opset 20, batch norm folded), with the scaler and calibration as JSON and the freeze record, all under `models/heartbeat-v1/`. The same file runs in Python and in the browser with ONNX Runtime 1.30.0.
 - **Baseline:** multinomial logistic regression on the six RR features only (MODEL-01), tuned on the same folds with the same budget and reported beside the CNN everywhere. It does not ship to the browser.
@@ -74,7 +74,7 @@ Pre-registered in A3, B4 and C4 before any test result existed.
 - Headline: S and V recall and precision on the 21 DS2 patients; macro F1 over N, S and V, with four-class macro F1 beside it. N, S and V make the headline because DS2's F beats come almost entirely from one patient.
 - False positive rates for S and V, for comparison with published work. Beside de Chazal's numbers, S and V sensitivity, positive predictivity and false positive rate follow AAMI EC57's definitions (de Chazal's Table V).
 - S recall and precision without record 232.
-- A per-patient table of S and V results: raw counts in every cell, a percentage only when the patient has at least 10 beats of that class.
+- A per-patient table of S and V results: raw counts in every cell, a percentage only when the patient has at least 10 beats of that class (recall cells), or at least 10 beats flagged as that class (precision cells).
 - A four-by-four confusion matrix (Q test beats noted as not scored), and N and F recall and precision with the F caveat.
 - Calibration: one-vs-rest calibration error for S and V with 10 equal-mass bins, reliability diagrams, log loss and Brier score.
 - Accuracy appears only in the leakage exhibit (section 7.4), labeled as the number papers often lead with. It is dominated by N beats and is not a measure of this model.
@@ -143,7 +143,7 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:end test_s_without_232 -->
 
-**Per-patient S and V results.** Raw counts in every cell ("41 of 50"); a percentage only when the patient has at least 10 beats of that class.
+**Per-patient S and V results.** Raw counts in every cell ("41 of 50"); a percentage only when the patient has at least 10 beats of that class (recall cells), or at least 10 beats flagged as that class (precision cells).
 
 <!-- card:begin test_per_patient -->
 

@@ -16,14 +16,14 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 ## Commands
 
-Working today (Phase 2):
+Working today (Phase 3):
 
 | What | Command |
 | --- | --- |
 | Install (Python) | `uv sync --frozen` |
 | Install (web) | `pnpm -C web install --frozen-lockfile` |
 | Playwright browsers, once per machine | `pnpm -C web exec playwright install chromium webkit` |
-| Lint and unit tests, both toolchains, under 2 minutes (about 7.5 s warm); run before every commit | `scripts/check.sh` |
+| Lint and unit tests, both toolchains, under 2 minutes (about 10 s warm); run before every commit | `scripts/check.sh` |
 | Every Python test (includes the guard hook tests and the real-data tests, which need the download) | `uv run pytest` |
 | One Python test | `uv run pytest tests/unit/test_wording.py::test_repo_is_clean` |
 | Python lint, format, types | `uv run ruff check`, `uv run ruff format --check`, `uv run mypy` |
@@ -33,8 +33,9 @@ Working today (Phase 2):
 | Download and checksum the 132 pinned MIT-BIH files (about 82 MB, about 70 s the first time; skips matching files after) | `uv run heartbeat download` |
 | Prepare DS1 into `data/prepared/` with the floor-hit report (about 1.5 s) | `uv run heartbeat prepare` |
 | Check `config/folds.json` against its pin and the manifests | `uv run heartbeat check-folds` |
-| Rebuild the built stages (download, prepare, check-folds), skipping unchanged ones | `uv run heartbeat rebuild` |
+| Rebuild the built stages (download, prepare, check-folds, cross-validate), skipping unchanged ones; cross-validate writes `results/cv_baseline.json` (about 6 s from a warm cache) | `uv run heartbeat rebuild` |
 | Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
+| Baseline cross-validation into a new run folder under `runs/`, never `results/` (about 5 s) | `uv run heartbeat cross-validate --model baseline` |
 | Real-data tests only (layer L2, needs the download) | `uv run pytest -m realdata` |
 | Make the folds: done once by Din on 2026-10-29 and never run again (C1; F5 denies it to Claude) | `uv run heartbeat make-folds` |
 | Subcommands of later phases (stubs that exit 2 and name their phase) | `uv run heartbeat --help` |
@@ -49,7 +50,7 @@ Arriving in their phases (stubs today):
 | What | Command | Phase |
 | --- | --- | --- |
 | Quick integrity check: manifests, checksums, frozen-model parity, results against the test log | `uv run heartbeat verify` | 5 |
-| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch) | `uv run heartbeat rebuild` | 3 to 5 |
+| Rebuild every artifact (cached stages, about 2 to 3.5 hours from scratch) | `uv run heartbeat rebuild` | 4 to 5 |
 | Web build with demo data from the rebuild | `pnpm -C web run build` | 6 |
 
 Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first) and a `web` job; `scripts/check.sh` skips the real-data tests, the build and Playwright.

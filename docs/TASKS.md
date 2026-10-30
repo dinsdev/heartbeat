@@ -123,10 +123,10 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 3.1 | Metrics, per-patient table, paired patient bootstrap | Planned |
-| 3.2 | Calibration: logit adjustment, temperature, equal-mass ECE, reliability, log loss, Brier | Planned |
-| 3.3 | Run folders and the `results/` writer | Planned |
-| 3.4 | Baseline with C selection on the folds; results committed | Planned |
+| 3.1 | Metrics, per-patient table, paired patient bootstrap | Verified (2026-10-29), locally: R16 to R19 tests pass (`scripts/check.sh`, `uv run pytest`); passes in CI (run 41003567037, 2026-10-30) |
+| 3.2 | Calibration: logit adjustment, temperature, equal-mass ECE, reliability, log loss, Brier | Verified (2026-10-29), locally: R20 tests pass (`scripts/check.sh`); passes in CI (run 41003567037, 2026-10-30) |
+| 3.3 | Run folders and the `results/` writer | Verified (2026-10-29), locally: run-folder, writer, import-graph and committed-results tests pass (`scripts/check.sh`); `results/cv_baseline.json` records `"dirty": false` at `27b1250`; passes in CI (run 41003567037, 2026-10-30) |
+| 3.4 | Baseline with C selection on the folds; results committed | Verified (2026-10-29), locally: R21 and the real-data test pass (`uv run pytest`); `results/cv_baseline.json` written by `uv run heartbeat rebuild` on a clean tree (`58105d9`) and reproduced exactly by `uv run heartbeat rebuild --from cross-validate`; settling 4's check done and its amendment (both temperatures reported) applied; passes in CI (run 41003567037, 2026-10-30) |
 
 ### Phase 4: CNN and the leakage exhibit
 

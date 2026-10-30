@@ -8,6 +8,8 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from types import MappingProxyType
 
+from sklearn.exceptions import ConvergenceWarning
+
 from heartbeat.config import load_settings
 from heartbeat.constants import FLOOR_HIT_LIMIT, N_FOLDS
 from heartbeat.data import download as download_module
@@ -16,12 +18,14 @@ from heartbeat.data.folds import FoldCheckError, check_folds, make_folds, write_
 from heartbeat.data.loader import load_ds1
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
+from heartbeat.evaluate.calibration import TemperatureAtBoundError
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
     DEFAULT_CONFIG,
     FOLDS_JSON,
     FOLDS_PIN,
     PACKAGE_DIR,
+    RUNS_DIR,
     SPLITS_MANIFEST,
     STAGES_DIR,
     SUBJECTS_MANIFEST,
@@ -35,6 +39,7 @@ from heartbeat.stages import (
     UnknownStageError,
     run_pipeline,
 )
+from heartbeat.train.cv import run_baseline
 
 # Phase 2 settling 5: the manifests whose hashes the fold file records.
 FOLD_MANIFESTS = (SPLITS_MANIFEST, SUBJECTS_MANIFEST)
@@ -161,6 +166,37 @@ def _check_folds(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cross_validate(args: argparse.Namespace) -> int:
+    # Writes a run folder only; results/ is written by the rebuild stage (rule 5).
+    settings = load_settings(DEFAULT_CONFIG)
+    splits = load_splits(SPLITS_MANIFEST)
+    subjects = load_subjects(SUBJECTS_MANIFEST)
+    try:
+        folds = check_folds(
+            FOLDS_JSON, FOLDS_PIN, splits, subjects, manifest_paths=FOLD_MANIFESTS
+        )
+    except FoldCheckError as error:
+        print(f"heartbeat cross-validate: {error}", file=sys.stderr)
+        return 1
+    beats = load_ds1(settings.data.prepared_dir, splits, subjects)
+    folds_sha256 = hashlib.sha256(FOLDS_JSON.read_bytes()).hexdigest()
+    try:
+        run, summary = run_baseline(settings, beats, folds, folds_sha256, root=RUNS_DIR)
+    except (ConvergenceWarning, TemperatureAtBoundError) as error:
+        # Phase 3 plan, stop conditions 1 and 5.
+        print(f"heartbeat cross-validate: {error}", file=sys.stderr)
+        return 1
+    pooled = summary["pooled"]
+    print(
+        f"heartbeat cross-validate: {args.model}, chosen C {summary['chosen_c']}; "
+        f"DS1 out-of-fold macro F1 over N, S, V {pooled['macro_f1_nsv']:.4f}, "
+        f"four-class {pooled['macro_f1_all']:.4f}; "
+        f"temperature {summary['calibration']['temperature']:.4f}"
+    )
+    print(f"run folder {run.path}")
+    return 0
+
+
 def rebuild_context() -> Context:
     """Return the context `rebuild` runs in."""
     return Context(
@@ -181,8 +217,8 @@ def _rebuild(args: argparse.Namespace) -> int:
         )
         return 2
     if args.exact:
-        # E4: --exact changes how models train; no Phase 2 stage trains one.
-        print("heartbeat rebuild: --exact has no effect on the Phase 2 stages")
+        # E4: --exact changes how the CNN trains; no built stage trains one yet.
+        print("heartbeat rebuild: --exact has no effect before the Phase 4 stages")
     try:
         results = run_pipeline(PIPELINE, rebuild_context(), from_stage=args.from_stage)
     except UnknownStageError as error:
@@ -210,6 +246,7 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "make-folds": _make_folds,
         "check-folds": _check_folds,
         "rebuild": _rebuild,
+        "cross-validate": _cross_validate,
     }
 )
 
@@ -229,6 +266,13 @@ def build_parser() -> argparse.ArgumentParser:
                 "--out",
                 metavar="PATH",
                 help="where to write the folds (default config/folds.json)",
+            )
+        if name == "cross-validate":
+            sub.add_argument(
+                "--model",
+                choices=("baseline",),
+                default="baseline",
+                help="the model to cross-validate (the CNN arrives in Phase 4)",
             )
         if name == "rebuild":
             sub.add_argument(
