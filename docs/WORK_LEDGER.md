@@ -1281,3 +1281,17 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Decision (Din):** TASKS 2.1 to 2.6 are Accepted. Din pushed `phase-2-data`, opened and merged PR dinsdev/heartbeat#3 (merge commit `5643163` on `main`), deleted the branch, and asked for the rows to be marked Accepted.
 
 **State at acceptance:** every Phase 2 exit item in PLAN section 3 met, the CI items by runs 40986663297, 40986936397 and 40987265240 (push) and 40987268101 (pull request), all green. On `main` after the merge, `uv run heartbeat check-folds` exits 0. The two CI entries above are dated by the runs' UTC timestamps (2026-10-30); this entry uses Din's local date.
+
+## 2026-10-29: Phase 3 settling, 1: selection uses macro F1 over N, S and V (C2, C3 clarification)
+
+**Gap:** MODEL-01 (baseline C) and MODEL-04 (CNN width and epoch count) select on "pooled out-of-fold macro F1" without naming the classes. C4 later made macro F1 over N, S and V the headline, but the selection wording was never updated. No result exists yet, so this is fixed before any number is seen (rule 6).
+
+**Checked:** `config/folds.json` puts 377 of DS1's 415 F beats in fold 0, nearly all from record 208. A four-class selection metric would mostly reward whichever setting labels that one patient's F beats well after training without them.
+
+**Decision (Din):** every selection step uses pooled out-of-fold macro F1 over N, S and V: the baseline's C, the CNN's width, and the averaged validation curves that fix the epoch count (all part of MODEL-04's selection). Four-class macro F1 is computed and reported beside it wherever the selection metric appears. Reason: the same one as C4's headline, and one metric for selection and headline keeps the baseline and CNN comparable (R21).
+
+**Cost, stated:** selection ignores F, so a setting that is poor on F could win. F stays visible in every report.
+
+**Rejected:** four-class macro F1 for selection (one patient's F beats would drive C and width).
+
+**Applied:** `docs/PRD.md` MODEL-01 and MODEL-04; `docs/MODEL_CARD.md` selection line.
