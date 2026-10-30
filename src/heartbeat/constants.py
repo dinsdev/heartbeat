@@ -105,3 +105,36 @@ PER_PATIENT_MIN_BEATS = 10
 # EVAL-11: the bounded search for the temperature; an optimum within 1% of
 # either bound stops the run (Phase 3 task plan, stop condition 5).
 TEMPERATURE_BOUNDS = (0.05, 20.0)
+
+# C3, MODEL-02: the CNN. Channels of the four conv blocks at width 1; the
+# widths scale them, the hidden layer stays 64.
+CNN_WIDTHS = (0.5, 1.0, 2.0)
+CNN_CHANNELS = (16, 32, 64, 64)
+CNN_KERNEL = 7
+CNN_HIDDEN = 64
+CNN_DROPOUT = 0.3
+# C3, MODEL-03: AdamW at a constant rate, batch 256.
+LEARNING_RATE = 1e-3
+WEIGHT_DECAY = 1e-4
+BATCH_SIZE = 256
+
+# C6, MODEL-05: three master seeds; seed 0 ships.
+CNN_SEEDS = (0, 1, 2)
+SHIPPED_SEED = 0
+
+# Phase 4 settling 2: every run trains 40 epochs; a pick at epoch 36 or later
+# stops the run for Din.
+MAX_EPOCHS = 40
+EPOCH_EDGE_FIRST = 36
+
+# Phase 4 settling 4: shift by up to 5 samples each way, noise of standard
+# deviation 0.05 in z-units; training only, never tuned.
+SHIFT_MAX_SAMPLES = 5
+NOISE_STD_Z = 0.05
+
+# Phase 4 settling 5: every training run, MPS or CPU, uses 4 threads.
+TORCH_THREADS = 4
+
+# Phase 4 task plan, design call 1: the exhibit's beat-level split (C5), distinct
+# from the fold and bootstrap seeds.
+LEAKY_SPLIT_SEED = 20261030
