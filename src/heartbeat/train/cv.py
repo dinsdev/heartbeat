@@ -144,6 +144,8 @@ class EpochCVResult:
         scalers: Each fold's RR scaler.
         fitted: Each fold's model after the last epoch.
         config: The resolved config (R24).
+        folds_run: The folds trained, in order; all five except in a
+            development run. Weights, scalers and models follow this order.
     """
 
     model: str
@@ -154,6 +156,7 @@ class EpochCVResult:
     scalers: tuple[RRScaler, ...]
     fitted: tuple[Any, ...]
     config: Mapping[str, Any]
+    folds_run: tuple[int, ...] = tuple(range(N_FOLDS))
 
 
 @dataclass(frozen=True)
@@ -384,11 +387,14 @@ def cross_validate_epochs(
     splitter: Splitter,
     params: Mapping[str, Any],
     n_epochs: int,
+    only_folds: Sequence[int] | None = None,
 ) -> EpochCVResult:
     """Train on four folds for `n_epochs`, scoring the fifth after every epoch.
 
     The same folds, weights and scaler as `cross_validate` (R21); every run
-    trains all `n_epochs` (no early stopping, EVAL-07).
+    trains all `n_epochs` (no early stopping, EVAL-07). `only_folds` trains
+    just those folds, for development runs; the other rows stay NaN with
+    fold -1, and such a run feeds no selection.
 
     Raises:
         ValueError: If the spec has no `fit_epochs`, on a label outside the
@@ -408,7 +414,10 @@ def cross_validate_epochs(
     weights: list[Mapping[str, float]] = []
     scalers: list[RRScaler] = []
     fitted: list[Any] = []
-    for k, (train, val) in enumerate(splitter.indices(beats)):
+    pairs = splitter.indices(beats)
+    folds_run = tuple(range(len(pairs)) if only_folds is None else only_folds)
+    for k in folds_run:
+        train, val = pairs[k]
         class_weight = balanced_class_weights(y[train])
         scaler = fit_rr_scaler(rr[train])
         x_train = spec.inputs(beats, train, apply_rr_scaler(scaler, rr[train]))
@@ -428,7 +437,12 @@ def cross_validate_epochs(
         weights.append(class_weight)
         scalers.append(scaler)
         fitted.append(model)
-    if np.any(predicted != 1):
+    expected = np.ones(n, dtype=np.int64)
+    if only_folds is not None:
+        expected = np.zeros(n, dtype=np.int64)
+        for k in folds_run:
+            expected[pairs[k][1]] += 1
+    if np.any(predicted != expected):
         raise ValueError("the folds do not give every beat exactly one prediction")
     return EpochCVResult(
         model=spec.name,
@@ -439,6 +453,7 @@ def cross_validate_epochs(
         scalers=tuple(scalers),
         fitted=tuple(fitted),
         config=resolved_config(spec, splitter, params, n_epochs),
+        folds_run=folds_run,
     )
 
 

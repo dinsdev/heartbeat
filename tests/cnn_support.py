@@ -1,11 +1,15 @@
 """Synthetic traces for the CNN tests: windows cut from them, no record read."""
 
+from collections.abc import Iterator, Mapping
+from typing import Any
+
 import numpy as np
 from cv_support import synthetic_beats
 from numpy.typing import NDArray
 
 from heartbeat.constants import WINDOW_AFTER_SAMPLES
 from heartbeat.data.loader import BeatTable
+from heartbeat.models.spec import ModelSpec, epochs_only
 from heartbeat.signal.windows import extract_windows
 
 MARGIN_SAMPLES = 200
@@ -56,4 +60,44 @@ def beats_with_traces(
             beats.rr_s,
         ),
         traces,
+    )
+
+
+def epoch_spec(calls: list[dict[str, Any]] | None = None) -> ModelSpec:
+    """A fast model that trains in epochs, for driver and selection tests.
+
+    Logits are the RR inputs times the epoch, plus the fold; a nonzero
+    `params["seed"]` adds a seed-dependent term so seeds differ.
+    """
+
+    def inputs(
+        b: BeatTable, rows: NDArray[np.int64], rr: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
+        return rr
+
+    def fit_epochs(
+        x: NDArray[np.float64],
+        y: NDArray[np.str_],
+        w: Mapping[str, float],
+        params: Mapping[str, Any],
+        fold: int,
+        n_epochs: int,
+    ) -> Iterator[Any]:
+        if calls is not None:
+            calls.append({"n": y.size, "weights": dict(w), "fold": fold})
+        for epoch in range(1, n_epochs + 1):
+            yield {"epoch": epoch, "fold": fold, "seed": params.get("seed", 0)}
+
+    def logits(model: Any, x: NDArray[np.float64]) -> NDArray[np.float64]:
+        out: NDArray[np.float64] = (
+            x[:, :4] * model["epoch"] + model["fold"] + model["seed"] * x[:, 2:6]
+        )
+        return out
+
+    return ModelSpec(
+        name="epochs",
+        inputs=inputs,
+        fit=epochs_only,
+        logits=logits,
+        fit_epochs=fit_epochs,
     )

@@ -174,6 +174,7 @@ def create_run(
     root: Path = RUNS_DIR,
     repo: Path = REPO_ROOT,
     now: datetime | None = None,
+    torch_info: Mapping[str, Any] | None = None,
 ) -> RunFolder:
     """Make a run folder with `config.json`, `provenance.json` and `log.txt`.
 
@@ -184,12 +185,17 @@ def create_run(
         root: Parent of run folders.
         repo: The git checkout whose state the provenance records.
         now: Start time; the current UTC time by default.
+        torch_info: For a training run, the torch version, device, thread count
+            and deterministic flag (Phase 4 design call 7); they replace the
+            CPU default in the provenance.
 
     Raises:
         FileExistsError: If the folder already exists.
     """
     created = (now or datetime.now(UTC)).replace(microsecond=0)
     prov = provenance(repo, created)
+    if torch_info is not None:
+        prov.update(torch_info)
     short = _git(repo, "rev-parse", "--short", "HEAD").decode().strip()
     path = root / f"{created.strftime('%Y%m%dT%H%M%SZ')}-{short}-{name}"
     path.mkdir(parents=True, exist_ok=False)

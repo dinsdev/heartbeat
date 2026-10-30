@@ -136,3 +136,27 @@ def test_two_runs_with_one_name_in_one_second_do_not_share_a_folder(
             repo=repo,
             now=first.created,
         )
+
+
+def test_a_torch_run_records_torch_device_threads_and_the_flag(repo: Path) -> None:
+    # Phase 4 design call 7: provenance adds the torch version, device, thread
+    # count and the deterministic flag.
+    info = {
+        "torch": "2.14.1",
+        "device": "mps",
+        "torch_threads": 4,
+        "deterministic": True,
+    }
+    with create_run(
+        "cv-cnn-w1-s0",
+        settings(repo.parent),
+        {},
+        root=repo / "runs",
+        repo=repo,
+        torch_info=info,
+    ) as run:
+        provenance = json.loads(
+            (run.path / "provenance.json").read_text(encoding="utf-8")
+        )
+    for key, value in info.items():
+        assert provenance[key] == value

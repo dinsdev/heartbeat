@@ -7,13 +7,13 @@ inputs, `fit` and `logits`. Phase 4 adds the CNN spec to these tests.
 
 import ast
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
-from cnn_support import beats_with_traces
+from cnn_support import beats_with_traces, epoch_spec
 from cv_support import subset_rows, synthetic_beats, synthetic_folds
 from numpy.typing import NDArray
 from scipy.special import log_softmax, softmax
@@ -30,7 +30,7 @@ from heartbeat.evaluate.calibration import (
 from heartbeat.evaluate.metrics import class_indices
 from heartbeat.models.baseline import BASELINE
 from heartbeat.models.inputs import fit_rr_scaler, rr_model_inputs
-from heartbeat.models.spec import ModelSpec, epochs_only
+from heartbeat.models.spec import ModelSpec
 from heartbeat.paths import PACKAGE_DIR
 from heartbeat.signal.windows import zscore_windows
 from heartbeat.train import cv as cv_module
@@ -345,45 +345,11 @@ def test_summary_reports_a_cross_fitted_calibration_block(
 # Phase 4, Task 4: splitters, the epoch driver and the CNN in the same driver.
 
 
-def _epoch_spec(calls: list[dict[str, Any]] | None = None) -> ModelSpec:
-    """A fast model that trains in epochs: logits are RR inputs times the epoch."""
-
-    def inputs(
-        b: BeatTable, rows: NDArray[np.int64], rr: NDArray[np.float64]
-    ) -> NDArray[np.float64]:
-        return rr
-
-    def fit_epochs(
-        x: NDArray[np.float64],
-        y: NDArray[np.str_],
-        w: Mapping[str, float],
-        params: Mapping[str, Any],
-        fold: int,
-        n_epochs: int,
-    ) -> Iterator[Any]:
-        if calls is not None:
-            calls.append({"n": y.size, "weights": dict(w), "fold": fold})
-        for epoch in range(1, n_epochs + 1):
-            yield {"epoch": epoch, "fold": fold}
-
-    def logits(model: Any, x: NDArray[np.float64]) -> NDArray[np.float64]:
-        out: NDArray[np.float64] = x[:, :4] * model["epoch"] + model["fold"]
-        return out
-
-    return ModelSpec(
-        name="epochs",
-        inputs=inputs,
-        fit=epochs_only,
-        logits=logits,
-        fit_epochs=fit_epochs,
-    )
-
-
 def test_cross_validate_epochs_gives_every_beat_one_prediction_per_epoch(
     beats: BeatTable, folds: Folds
 ) -> None:
     result = cross_validate_epochs(
-        _epoch_spec(), beats, patient_splitter(folds), {}, n_epochs=3
+        epoch_spec(), beats, patient_splitter(folds), {}, n_epochs=3
     )
     n = beats.sample.size
     assert result.logits.shape == (3, n, 4)
@@ -418,7 +384,7 @@ def test_the_epoch_driver_takes_folds_only_from_the_splitter(
         return planted
 
     splitter = Splitter(name="planted", config={"name": "planted"}, indices=indices)
-    result = cross_validate_epochs(_epoch_spec(), beats, splitter, {}, n_epochs=1)
+    result = cross_validate_epochs(epoch_spec(), beats, splitter, {}, n_epochs=1)
     assert calls == [1]
     np.testing.assert_array_equal(result.fold, np.arange(n) % 5)
 
@@ -436,7 +402,7 @@ def test_the_epoch_driver_takes_weights_only_from_balanced_class_weights(
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(cv_module, "balanced_class_weights", weights_spy)
     result = cross_validate_epochs(
-        _epoch_spec(calls), beats, patient_splitter(folds), {}, n_epochs=1
+        epoch_spec(calls), beats, patient_splitter(folds), {}, n_epochs=1
     )
     assert len(seen) == 5
     for k, (train, _) in enumerate(fold_indices(beats, folds)):
@@ -460,7 +426,7 @@ def test_the_epoch_driver_fits_the_scaler_on_training_rows_only(
         beats.window_adu,
         rr_s,
     )
-    spec = _epoch_spec()
+    spec = epoch_spec()
     before = cross_validate_epochs(spec, beats, patient_splitter(folds), {}, 1)
     after = cross_validate_epochs(spec, planted, patient_splitter(folds), {}, 1)
     np.testing.assert_array_equal(after.scalers[0].mean, before.scalers[0].mean)
@@ -471,7 +437,7 @@ def test_cross_validate_needs_fit_and_the_epoch_driver_needs_fit_epochs(
     beats: BeatTable, folds: Folds
 ) -> None:
     with pytest.raises(ValueError, match="fit"):
-        cross_validate(_epoch_spec(), beats, patient_splitter(folds), {})
+        cross_validate(epoch_spec(), beats, patient_splitter(folds), {})
     no_epochs = ModelSpec(
         name="b", inputs=BASELINE.inputs, fit=BASELINE.fit, logits=BASELINE.logits
     )
@@ -658,3 +624,21 @@ def test_oof_predictions_calibrate_with_each_rows_fold_weights(
     assert oof.temperature == chosen.temperature
     np.testing.assert_array_equal(oof.labels, chosen.labels)
     np.testing.assert_array_equal(oof.probs, chosen.probs)
+
+
+def test_only_folds_trains_the_named_folds_and_leaves_the_rest_unscored(
+    beats: BeatTable, folds: Folds
+) -> None:
+    # Development runs (`cross-validate --model cnn --fold 0`, Task 9).
+    calls: list[dict[str, Any]] = []
+    result = cross_validate_epochs(
+        epoch_spec(calls), beats, patient_splitter(folds), {}, 2, only_folds=[0]
+    )
+    expected = np.array([folds.subject_fold[s] for s in beats.subject_id])
+    assert [c["fold"] for c in calls] == [0]
+    assert np.all(np.isfinite(result.logits[:, expected == 0]))
+    assert np.all(np.isnan(result.logits[:, expected != 0]))
+    np.testing.assert_array_equal(result.fold[expected == 0], 0)
+    np.testing.assert_array_equal(result.fold[expected != 0], -1)
+    assert result.folds_run == (0,)
+    assert len(result.class_weights) == len(result.fitted) == 1
