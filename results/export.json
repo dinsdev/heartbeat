@@ -1,0 +1,117 @@
+{
+  "baseline": {
+    "C": 0.001,
+    "path": "models/heartbeat-v1/baseline.json",
+    "temperature": 1.1743687510024545
+  },
+  "commit": "27fd028dda5134615260ab93a641d4ea81130d50",
+  "dirty": false,
+  "epochs": 10,
+  "files": [
+    {
+      "bytes": 673,
+      "path": "models/heartbeat-v1/NOTICE",
+      "sha256": "c95b0b52f290d975d59ab4c55bf0663c72bc9655ad1755e86dc6a82372c8bae4"
+    },
+    {
+      "bytes": 1758,
+      "path": "models/heartbeat-v1/baseline.json",
+      "sha256": "782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3"
+    },
+    {
+      "bytes": 386,
+      "path": "models/heartbeat-v1/calibration.json",
+      "sha256": "f090c4f02372bddf153ee19e6a49fd6415f6f93edbc66063162219830c7efa46"
+    },
+    {
+      "bytes": 235466,
+      "path": "models/heartbeat-v1/model.onnx",
+      "sha256": "b0292e6c4763b0bf6e70976aa9ddc754c70dc8c8eabd329576c9fa3ea5025e5f"
+    },
+    {
+      "bytes": 660,
+      "path": "models/heartbeat-v1/scaler.json",
+      "sha256": "88eaaabba777683e606452d2c3afc40c034232f06a29845e89feb220eb1a92d8"
+    },
+    {
+      "bytes": 386,
+      "path": "models/heartbeat-v1/seeds/seed-1/calibration.json",
+      "sha256": "e2765419ac4a5ed4680b2ee1f6dc54034e1696c241c1549de5d65f0db2dde115"
+    },
+    {
+      "bytes": 235466,
+      "path": "models/heartbeat-v1/seeds/seed-1/model.onnx",
+      "sha256": "e152852e78b5418184146a40dbf6c43450926dad033fcb0347e5411d6f2a8d24"
+    },
+    {
+      "bytes": 386,
+      "path": "models/heartbeat-v1/seeds/seed-2/calibration.json",
+      "sha256": "ac31fd6393356bf7364e59fb0c93b1c36a92c2d6a2853a0da2bff9d315c91567"
+    },
+    {
+      "bytes": 235466,
+      "path": "models/heartbeat-v1/seeds/seed-2/model.onnx",
+      "sha256": "783ca6f59fa225ab06b8594faf491fb8e76df33637265404b6ebe5d8509e1312"
+    }
+  ],
+  "fixtures": {
+    "beats": 50,
+    "bytes": 1007961,
+    "path": "fixtures/parity/fixtures.json",
+    "seed": 20261031,
+    "sha256": "66b6215514f3b0ad9e5d5f0bcaac4a5befc9b397f0d7550130e5bcb2f157c838"
+  },
+  "label": "frozen models from train-final, exported on CPU; parity: PyTorch against Python ONNX Runtime on the fixture beats (R26), labels on every DS1 beat",
+  "models": [
+    {
+      "checkpoint_sha256": "3c1c9b9c0b66914483736b2e97e251e2fea0ea0bead29c6c04c01caf7ef342e8",
+      "ds1_beats_over_tolerance": 0,
+      "ds1_label_changes": 0,
+      "ds1_max_abs_diff": 7.62939453125e-06,
+      "fixture_max_abs_diff": 3.814697265625e-06,
+      "path": "models/heartbeat-v1/model.onnx",
+      "seed": 0,
+      "temperature": 1.7039858431519221
+    },
+    {
+      "checkpoint_sha256": "72279c113a9adf5d8784f0366f2c6ce1e78aeed7b6e8ed2d4c06c3de3c1a3182",
+      "ds1_beats_over_tolerance": 0,
+      "ds1_label_changes": 0,
+      "ds1_max_abs_diff": 5.811452865600586e-06,
+      "fixture_max_abs_diff": 2.86102294921875e-06,
+      "path": "models/heartbeat-v1/seeds/seed-1/model.onnx",
+      "seed": 1,
+      "temperature": 1.6413402544410014
+    },
+    {
+      "checkpoint_sha256": "493ece36f72311a7fafa8af625559b8c1172e9d678b6bafa6fa92707e496404f",
+      "ds1_beats_over_tolerance": 1,
+      "ds1_label_changes": 0,
+      "ds1_max_abs_diff": 1.52587890625e-05,
+      "fixture_max_abs_diff": 4.5299530029296875e-06,
+      "path": "models/heartbeat-v1/seeds/seed-2/model.onnx",
+      "seed": 2,
+      "temperature": 1.6622118286595837
+    }
+  ],
+  "opset": 20,
+  "parameters": 52036,
+  "parity": {
+    "data": "DS1, CPU",
+    "ds1_beats": 50969,
+    "fixture_beats": 50,
+    "gate": "fixture beats: logits within the tolerance, labels exact (R26)",
+    "survey": "every DS1 kept beat: labels exact (gated), largest difference and beats over the tolerance recorded",
+    "tolerance": 1e-05
+  },
+  "run": "20261030T223322Z-27fd028-export",
+  "shipped_seed": 0,
+  "size_limit_bytes": 1000000,
+  "versions": {
+    "onnx": "1.23.2",
+    "onnxruntime": "1.30.0",
+    "onnxscript": "0.7.2",
+    "torch": "2.14.1"
+  },
+  "width": 1.0
+}

@@ -10,7 +10,7 @@
     "shared": "one set of draws for every row",
     "unit": "patient"
   },
-  "commit": "3b1116c87b015d9df38e81dc641fe03019869ae9",
+  "commit": "27fd028dda5134615260ab93a641d4ea81130d50",
   "dirty": false,
   "folds_sha256": "9513124b1611b458b25ea29d1d191a66ca4d147ab9a3762667d7ceec5d591bc2",
   "label": "inside DS1 only: patient-grouped folds (honest) against beat-level stratified folds (leaky), same configuration, code and seeds (C5)",
@@ -187,9 +187,9 @@
         ]
       },
       "runs": [
-        "20261030T082322Z-3b1116c-cv-cnn-w1-s0",
-        "20261030T083027Z-3b1116c-cv-cnn-w1-s1",
-        "20261030T083654Z-3b1116c-cv-cnn-w1-s2"
+        "20261030T210208Z-27fd028-cv-cnn-w1-s0",
+        "20261030T210841Z-27fd028-cv-cnn-w1-s1",
+        "20261030T211518Z-27fd028-cv-cnn-w1-s2"
       ],
       "seed": 0,
       "side": "patient"
@@ -405,9 +405,9 @@
         ]
       },
       "runs": [
-        "20261030T092237Z-3b1116c-exhibit-cnn-w1-s0",
-        "20261030T092909Z-3b1116c-exhibit-cnn-w1-s1",
-        "20261030T093541Z-3b1116c-exhibit-cnn-w1-s2"
+        "20261030T220042Z-27fd028-exhibit-cnn-w1-s0",
+        "20261030T220710Z-27fd028-exhibit-cnn-w1-s1",
+        "20261030T221324Z-27fd028-exhibit-cnn-w1-s2"
       ],
       "seed": 0,
       "side": "beat"
@@ -485,7 +485,7 @@
       "side": "beat"
     }
   ],
-  "run": "20261030T092237Z-3b1116c-exhibit",
+  "run": "20261030T220041Z-27fd028-exhibit",
   "selection": {
     "C": 0.001,
     "epoch": 10,

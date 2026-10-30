@@ -31,7 +31,16 @@ A block that reads "Pending" has no run behind it yet. DS1 blocks fill in during
 
 <!-- card:begin model_details -->
 
-_Pending: chosen width and epoch count, parameter count, ONNX file size and SHA256, freeze commit, training date. Rendered from the export and freeze record (Phases 5 and 7)._
+Source: `results/selection.json` and `results/export.json` (width and epochs chosen on DS1 out-of-fold, MPS; frozen models, CPU).
+
+- Width multiplier 1, 10 epochs.
+- Parameters: 52036 (PyTorch, before batch-norm folding).
+- ONNX opset 20, one file per seed, each under 1000000 bytes:
+  - Seed 0 (shipped), `model.onnx`: 235466 bytes, SHA256 `b0292e6c4763b0bf6e70976aa9ddc754c70dc8c8eabd329576c9fa3ea5025e5f`.
+  - Seed 1, `seeds/seed-1/model.onnx`: 235466 bytes, SHA256 `e152852e78b5418184146a40dbf6c43450926dad033fcb0347e5411d6f2a8d24`.
+  - Seed 2, `seeds/seed-2/model.onnx`: 235466 bytes, SHA256 `783ca6f59fa225ab06b8594faf491fb8e76df33637265404b6ebe5d8509e1312`.
+- Baseline, `baseline.json`: SHA256 `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3`.
+- Freeze commit and date: Pending (Phase 7).
 
 <!-- card:end model_details -->
 
@@ -183,7 +192,18 @@ Probabilities: subtract the log class weights from the logits, then divide by on
 
 <!-- card:begin calibration_fit -->
 
-_Pending: rendered from the calibration fit (Phases 3 and 4)._
+Source: `results/cv_cnn.json` (DS1 out-of-fold, MPS). Source: `results/cv_baseline.json` (DS1 out-of-fold, CPU).
+
+Calibration error is one-vs-rest with 10 equal-mass bins. Plain rows use the temperature fitted on these predictions (the one that ships); cross-fitted rows fit each fold's temperature on the other four.
+
+| Model | Temperature | S calibration error | V calibration error | Log loss | Brier |
+| --- | --- | --- | --- | --- | --- |
+| CNN seed 0 | 1.7040 | 0.0084 | 0.0115 | 0.2284 | 0.0961 |
+| CNN seed 0, cross-fitted | one per fold | 0.0075 | 0.0124 | 0.2370 | not computed |
+| Baseline | 1.1744 | 0.0090 | 0.0332 | 0.2867 | 0.1153 |
+| Baseline, cross-fitted | one per fold | 0.0082 | 0.0289 | 0.2993 | not computed |
+
+CNN temperatures by seed: seed 0 1.7040, seed 1 1.6413, seed 2 1.6622.
 
 <!-- card:end calibration_fit -->
 
@@ -201,7 +221,34 @@ Used to choose the configuration. Slightly optimistic, since the epoch count was
 
 <!-- card:begin dev_selection -->
 
-_Pending: CNN width by seed table, chosen epoch count, baseline C, pooled out-of-fold metrics and fold spread. Rendered from cross-validation and selection (Phases 3 and 4)._
+Source: `results/selection.json` and `results/cv_cnn.json` (DS1 out-of-fold, MPS). Source: `results/cv_baseline.json` (DS1 out-of-fold, CPU).
+
+Chosen: width 1, 10 epochs, by the joint argmax over width and epoch of the seed mean of pooled out-of-fold macro F1 over N, S and V; ties to the smaller width, then fewer epochs (Phase 4 settling 2). Baseline C: 0.001.
+
+Macro F1 over N, S and V at each width's best epoch, per seed and as the seed mean:
+
+| Width | Best epoch | Seed 0 | Seed 1 | Seed 2 | Seed mean | Four-class seed mean |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.5 | 7 | 0.6545 | 0.5930 | 0.6467 | 0.6314 | 0.4912 |
+| 1 | 10 | 0.6583 | 0.6189 | 0.6412 | 0.6395 | 0.4911 |
+| 2 | 11 | 0.6137 | 0.6433 | 0.6035 | 0.6202 | 0.4818 |
+
+Pooled out-of-fold metrics with 95% patient bootstrap intervals (10000 draws), and the range across the five folds:
+
+| Metric | CNN seed 0 | CNN folds | Baseline | Baseline folds |
+| --- | --- | --- | --- | --- |
+| S recall | 0.3977 (0.0711 to 0.6076) | 0.0411 to 0.6289 | 0.2280 (0.0562 to 0.5995) | 0.0103 to 0.6073 |
+| S precision | 0.1495 (0.0131 to 0.5801) | 0.0172 to 0.9394 | 0.0831 (0.0186 to 0.2081) | 0.0024 to 0.3566 |
+| V recall | 0.8651 (0.7658 to 0.9310) | 0.7867 to 0.9937 | 0.5150 (0.3850 to 0.6445) | 0.2118 to 0.7203 |
+| V precision | 0.8119 (0.6239 to 0.9639) | 0.4596 to 0.9713 | 0.6865 (0.4301 to 0.8952) | 0.2865 to 0.8793 |
+| Macro F1 over N, S and V | 0.6583 (0.5680 to 0.7782) | 0.5098 to 0.8546 | 0.5323 (0.4475 to 0.6153) | 0.3806 to 0.6490 |
+| Four-class macro F1 | 0.5030 (0.4301 to 0.5969) | 0.3824 to 0.6410 | 0.4121 (0.3395 to 0.4827) | 0.2855 to 0.4867 |
+| S false positive rate | 0.0426 (0.0061 to 0.0949) | 0.0006 to 0.1152 | 0.0474 (0.0194 to 0.0838) | 0.0097 to 0.0916 |
+| V false positive rate | 0.0161 (0.0026 to 0.0374) | 0.0015 to 0.0582 | 0.0189 (0.0055 to 0.0350) | 0.0087 to 0.0305 |
+
+- Bootstrap draws skipped as undefined: none.
+- CNN seeds 1 and 2, macro F1 over N, S and V: 0.6189 to 0.6412.
+- CNN seed 0 minus the baseline on the same draws, macro F1 over N, S and V: 0.1259 (0.0116 to 0.2602).
 
 <!-- card:end dev_selection -->
 
@@ -211,7 +258,23 @@ Same model, same 22 patients, same code and seeds. The only change: whether beat
 
 <!-- card:begin exhibit -->
 
-_Pending: rendered from the exhibit runs (Phase 4)._
+Source: `results/exhibit.json` (DS1 out-of-fold; CNN MPS, baseline CPU).
+
+Configuration from the honest folds on both sides: width 1, 10 epochs, baseline C 0.001. Beat-level split: StratifiedKFold, 5 folds, seed 20261030. Intervals: 95%, one shared set of 10000 patient draws for every column.
+
+| Metric | CNN, patient-grouped | Baseline, patient-grouped | CNN, beat-level | Baseline, beat-level |
+| --- | --- | --- | --- | --- |
+| Accuracy | 0.8534 (0.7741 to 0.9233) | 0.7698 (0.6408 to 0.8876) | 0.9512 (0.9279 to 0.9727) | 0.8053 (0.6809 to 0.9166) |
+| S recall | 0.3977 (0.0711 to 0.6076) | 0.2280 (0.0562 to 0.5995) | 0.9629 (0.9216 to 0.9760) | 0.3892 (0.2209 to 0.6117) |
+| S precision | 0.1495 (0.0131 to 0.5801) | 0.0831 (0.0186 to 0.2081) | 0.3714 (0.2097 to 0.4753) | 0.2121 (0.0558 to 0.4613) |
+| V recall | 0.8651 (0.7658 to 0.9310) | 0.5150 (0.3850 to 0.6445) | 0.9754 (0.9583 to 0.9852) | 0.6687 (0.5473 to 0.7817) |
+| V precision | 0.8119 (0.6239 to 0.9639) | 0.6865 (0.4301 to 0.8952) | 0.9135 (0.8069 to 0.9768) | 0.7243 (0.4916 to 0.9108) |
+| Macro F1 over N, S and V | 0.6583 (0.5680 to 0.7782) | 0.5323 (0.4475 to 0.6153) | 0.8176 (0.7478 to 0.8573) | 0.6233 (0.5308 to 0.7070) |
+| Four-class macro F1 | 0.5030 (0.4301 to 0.5969) | 0.4121 (0.3395 to 0.4827) | 0.7565 (0.5919 to 0.8124) | 0.4887 (0.4034 to 0.5691) |
+| S false positive rate | 0.0426 (0.0061 to 0.0949) | 0.0474 (0.0194 to 0.0838) | 0.0307 (0.0146 to 0.0507) | 0.0272 (0.0094 to 0.0515) |
+| V false positive rate | 0.0161 (0.0026 to 0.0374) | 0.0189 (0.0055 to 0.0350) | 0.0074 (0.0017 to 0.0169) | 0.0204 (0.0059 to 0.0397) |
+
+Accuracy: the number papers often lead with; shown only in this exhibit (EXHIBIT-03).
 
 <!-- card:end exhibit -->
 
