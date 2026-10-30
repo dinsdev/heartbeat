@@ -271,6 +271,7 @@ def test_pipeline_has_the_built_stages_in_order() -> None:
         "describe-data",
         "export",
         "reproduce-test",
+        "cards",
     ]
     by_name = {s.name: s for s in PIPELINE}
     assert by_name["check-folds"].always_run
@@ -285,10 +286,12 @@ def test_pipeline_has_the_built_stages_in_order() -> None:
     assert by_name["reproduce-test"].upstream == ("export",)
     # reproduce-test decides from the freeze record and the log every time.
     assert by_name["reproduce-test"].always_run
+    assert by_name["cards"].upstream == ("describe-data", "select", "exhibit", "export")
+    assert by_name["cards"].always_run
     assert not any(
         s.always_run
         for s in PIPELINE
-        if s.name not in ("check-folds", "reproduce-test")
+        if s.name not in ("check-folds", "reproduce-test", "cards")
     )
     assert by_name["cross-validate-cnn"].settings_keys == (
         "data.prepared_dir",
@@ -321,6 +324,7 @@ def test_pipeline_code_folders_match_the_plan() -> None:
         "describe-data": {"data", "runs.py", "results.py", *shared},
         "export": {*training, "export", "sealed"},
         "reproduce-test": {*training, "export", "sealed"},
+        "cards": {"cards", "export", "sealed", *shared},
     }
 
 
@@ -659,6 +663,28 @@ def test_exact_mode_runs_cross_validation_on_cpu_and_changes_fingerprints() -> N
     assert fingerprint(stage, default, {"select": "u"}) == fingerprint(
         stage, exact, {"select": "u"}
     )
+
+
+def test_cards_reads_the_results_and_the_log_and_writes_both_cards() -> None:
+    from heartbeat.paths import DATA_CARD, MODEL_CARD, TEST_LOG
+
+    stage = {s.name: s for s in PIPELINE}["cards"]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == {
+        *(
+            RESULTS_DIR / f"{n}.json"
+            for n in (
+                "data_summary",
+                "selection",
+                "cv_cnn",
+                "cv_baseline",
+                "exhibit",
+                "export",
+            )
+        ),
+        TEST_LOG,
+    }
+    assert list(stage.outputs(context)) == [MODEL_CARD, DATA_CARD]
 
 
 def test_planned_stages_follow_with_their_phases() -> None:

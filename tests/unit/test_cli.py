@@ -43,13 +43,10 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-# The Phase 2 to 4 subcommands are built and have their own tests here and in
-# test_folds.py and test_stages.py; Phase 5's as they land; the rest stay stubs
-# until their phase.
-BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4} | {
-    "export",
-    "evaluate-test",
-}
+# The Phase 2 to 5 subcommands are built and have their own tests here and in
+# test_folds.py, test_stages.py, test_cards.py and test_verify.py; the rest stay
+# stubs until their phase.
+BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 5}
 
 
 @pytest.mark.parametrize(
@@ -456,3 +453,32 @@ def test_export_freeze_writes_the_record_for_the_repo_and_bundle(
     ((repo, models, record, _today),) = calls
     assert (repo, models, record) == (REPO_ROOT, MODELS_DIR, {"files": []})
     assert "commit it and push" in capsys.readouterr().out
+
+
+def test_verify_prints_each_check_and_exits_1_on_a_problem(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    results = [("first (R1)", []), ("second (R2)", ["something is off"])]
+    monkeypatch.setattr(cli, "verify", lambda paths: results)
+    monkeypatch.setattr(cli, "CHECKS", results)
+    assert main(["verify"]) == 1
+    out = capsys.readouterr().out
+    assert "ok: first (R1)" in out
+    assert "FAILED: second (R2)" in out
+    assert "  something is off" in out
+    assert "1 of 2 checks passed" in out
+    monkeypatch.setattr(cli, "verify", lambda paths: [("first (R1)", [])])
+    monkeypatch.setattr(cli, "CHECKS", [("first (R1)", [])])
+    assert main(["verify"]) == 0
+
+
+def test_cards_reports_the_changed_blocks(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        cli, "write_cards", lambda: {"MODEL_CARD.md": ["exhibit"], "DATA_CARD.md": []}
+    )
+    assert main(["cards"]) == 0
+    out = capsys.readouterr().out
+    assert "MODEL_CARD.md: exhibit" in out
+    assert "DATA_CARD.md: unchanged" in out

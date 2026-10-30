@@ -13,6 +13,7 @@ from types import MappingProxyType
 
 from sklearn.exceptions import ConvergenceWarning
 
+from heartbeat.cards.render import CardError
 from heartbeat.config import CV_DEVICES, Settings, load_settings
 from heartbeat.constants import CNN_WIDTHS, FLOOR_HIT_LIMIT, MAX_EPOCHS, N_FOLDS
 from heartbeat.data import download as download_module
@@ -32,10 +33,12 @@ from heartbeat.export.freeze import FreezeError, write_freeze
 from heartbeat.export.onnx import ExportError
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
+    DATA_CARD,
     DEFAULT_CONFIG,
     FIXTURES_DIR,
     FOLDS_JSON,
     FOLDS_PIN,
+    MODEL_CARD,
     MODELS_DIR,
     PACKAGE_DIR,
     REPO_ROOT,
@@ -62,12 +65,14 @@ from heartbeat.stages import (
     run_final_all,
     run_pipeline,
     run_select_all,
+    write_cards,
 )
 from heartbeat.train.cnn_cv import MissingRunError, run_cnn_cv
 from heartbeat.train.cv import run_baseline
 from heartbeat.train.loop import NonFiniteLossError
 from heartbeat.train.select import EpochEdgeError, UndefinedScoreError
 from heartbeat.train.torch_setup import DeviceUnavailableError
+from heartbeat.verify import CHECKS, VerifyPaths, verify
 
 # Phase 2 settling 5: the manifests whose hashes the fold file records.
 FOLD_MANIFESTS = (SPLITS_MANIFEST, SUBJECTS_MANIFEST)
@@ -375,6 +380,44 @@ def _export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cards(args: argparse.Namespace) -> int:
+    # F6: writes the generated blocks of both cards from committed files.
+    try:
+        changed = write_cards()
+    except (CardError, FileNotFoundError, KeyError) as error:
+        print(f"heartbeat cards: {error}", file=sys.stderr)
+        return 1
+    for name, blocks in changed.items():
+        print(f"heartbeat cards: {name}: {', '.join(blocks) or 'unchanged'}")
+    return 0
+
+
+def verify_paths() -> VerifyPaths:
+    """The paths `heartbeat verify` checks."""
+    return VerifyPaths(
+        repo=REPO_ROOT,
+        results_dir=RESULTS_DIR,
+        models_dir=MODELS_DIR,
+        fixtures_dir=FIXTURES_DIR,
+        model_card=MODEL_CARD,
+        data_card=DATA_CARD,
+        log_path=TEST_LOG,
+        raw_dir=load_settings(DEFAULT_CONFIG).data.raw_dir,
+    )
+
+
+def _verify(args: argparse.Namespace) -> int:
+    # OPS-04: minutes, no training.
+    failed = 0
+    for name, problems in verify(verify_paths()):
+        print(f"{'ok' if not problems else 'FAILED'}: {name}")
+        for problem in problems:
+            print(f"  {problem}")
+        failed += bool(problems)
+    print(f"heartbeat verify: {len(CHECKS) - failed} of {len(CHECKS)} checks passed")
+    return 1 if failed else 0
+
+
 def rebuild_context(exact: bool = False) -> Context:
     """Return the context `rebuild` runs in.
 
@@ -440,6 +483,8 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "train-final": _train_final,
         "export": _export,
         "evaluate-test": _evaluate_test,
+        "verify": _verify,
+        "cards": _cards,
     }
 )
 

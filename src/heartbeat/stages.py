@@ -19,6 +19,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from heartbeat.cards.blocks import CardSources, card_specs, render_blocks
+from heartbeat.cards.render import write_card
 from heartbeat.config import Settings
 from heartbeat.constants import CNN_SEEDS, CNN_WIDTHS
 from heartbeat.data.describe import describe_data
@@ -40,9 +42,11 @@ from heartbeat.export.fixtures import FIXTURES_NAME
 from heartbeat.paths import (
     BEAT_COUNTS_MANIFEST,
     CHECKSUM_MANIFEST,
+    DATA_CARD,
     FIXTURES_DIR,
     FOLDS_JSON,
     FOLDS_PIN,
+    MODEL_CARD,
     MODELS_DIR,
     REPO_ROOT,
     RESULTS_DIR,
@@ -689,6 +693,33 @@ def _run_reproduce_test(context: Context) -> None:
     )
 
 
+def write_cards(
+    results_dir: Path = RESULTS_DIR,
+    models_dir: Path = MODELS_DIR,
+    log_path: Path = TEST_LOG,
+    repo: Path = REPO_ROOT,
+    model_card: Path = MODEL_CARD,
+    data_card: Path = DATA_CARD,
+) -> dict[str, list[str]]:
+    """Render both cards' blocks from committed files (F6, R50).
+
+    Opens no run folder (Phase 5 design call 2): the cards carry their sources
+    in each block. Returns each card's changed block names.
+    """
+    sources = CardSources(results_dir, models_dir, log_path, repo)
+    return {
+        card.name: write_card(card, render_blocks(renderers, sources))
+        for card, renderers in card_specs(model_card, data_card)
+    }
+
+
+def _run_cards(context: Context) -> None:
+    for name, changed in write_cards(
+        RESULTS_DIR, MODELS_DIR, TEST_LOG, REPO_ROOT, MODEL_CARD, DATA_CARD
+    ).items():
+        log.info("%s: %s", name, ", ".join(changed) if changed else "unchanged")
+
+
 def _run_cross_validate_cnn(context: Context) -> None:
     run, payload = run_cnn_cv_all(context.settings)
     write_result(CV_CNN_CURVES_RESULT, payload, run)
@@ -869,6 +900,27 @@ PIPELINE: tuple[Stage, ...] = (
         run=_run_reproduce_test,
         outputs=lambda context: (),
         # Decided by the freeze record and the log each time, not a fingerprint.
+        always_run=True,
+    ),
+    Stage(
+        name="cards",
+        settings_keys=(),
+        upstream=("describe-data", "select", "exhibit", "export"),
+        code=("cards", "export", "sealed", *_SHARED_CODE),
+        inputs=lambda context: (
+            *_results(
+                DATA_SUMMARY_RESULT,
+                SELECTION_RESULT,
+                CV_CNN_RESULT,
+                CV_BASELINE_RESULT,
+                EXHIBIT_RESULT,
+                EXPORT_RESULT,
+            )(context),
+            TEST_LOG,
+        ),
+        run=_run_cards,
+        outputs=lambda context: (MODEL_CARD, DATA_CARD),
+        # Cheap and idempotent; a hand-edited block is put back every rebuild.
         always_run=True,
     ),
 )
