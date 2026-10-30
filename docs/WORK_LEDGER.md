@@ -1313,3 +1313,15 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Rejected:** undefined counted as 0 (penalizes a missing denominator, contradicts C4); dropping the whole draw when any metric is undefined (shifts every metric's interval, against C4's "for S precision only").
 
 **Applied:** `docs/PRD.md` EVAL-09.
+
+## 2026-10-29: Phase 3 settling, 3: the per-patient percentage gate (C4 clarification)
+
+**Gap:** C4 and EVAL-08 item 4 show a percentage only "when the patient has at least 10 beats of that class". That fits recall cells (denominator: true beats). Read literally for precision cells, a patient with 50 true S beats and 2 flagged would show "1 of 2 (50%)", a percentage on 2 beats, which the rule exists to prevent. Fixed before any result (rule 6).
+
+**Measured (2026-10-29, manifest counts, DS1 only):** 8 of 22 DS1 patients have 10 or more S beats and 15 have 10 or more V beats, so the gate removes real cells. DS2's per-patient counts were deliberately not looked at for this decision.
+
+**Decision (Din):** each cell is gated on its own denominator. Recall shows a percentage when the patient has at least 10 true beats of the class ("41 of 50, 82%"); precision when the model flagged at least 10 beats of the class for that patient ("41 of 45 flagged, 91%"). Below 10, counts only with the footnote. Zero flagged beats shows "none flagged" (precision undefined, settling 2).
+
+**Rejected:** the literal reading (percentages on tiny precision denominators); counts only for every precision cell (drops readable percentages where denominators are large).
+
+**Applied:** `docs/PRD.md` EVAL-08 item 4; `docs/MODEL_CARD.md` report list and per-patient table heading.

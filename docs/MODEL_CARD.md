@@ -74,7 +74,7 @@ Pre-registered in A3, B4 and C4 before any test result existed.
 - Headline: S and V recall and precision on the 21 DS2 patients; macro F1 over N, S and V, with four-class macro F1 beside it. N, S and V make the headline because DS2's F beats come almost entirely from one patient.
 - False positive rates for S and V, for comparison with published work. Beside de Chazal's numbers, S and V sensitivity, positive predictivity and false positive rate follow AAMI EC57's definitions (de Chazal's Table V).
 - S recall and precision without record 232.
-- A per-patient table of S and V results: raw counts in every cell, a percentage only when the patient has at least 10 beats of that class.
+- A per-patient table of S and V results: raw counts in every cell, a percentage only when the patient has at least 10 beats of that class (recall cells), or at least 10 beats flagged as that class (precision cells).
 - A four-by-four confusion matrix (Q test beats noted as not scored), and N and F recall and precision with the F caveat.
 - Calibration: one-vs-rest calibration error for S and V with 10 equal-mass bins, reliability diagrams, log loss and Brier score.
 - Accuracy appears only in the leakage exhibit (section 7.4), labeled as the number papers often lead with. It is dominated by N beats and is not a measure of this model.
@@ -143,7 +143,7 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:end test_s_without_232 -->
 
-**Per-patient S and V results.** Raw counts in every cell ("41 of 50"); a percentage only when the patient has at least 10 beats of that class.
+**Per-patient S and V results.** Raw counts in every cell ("41 of 50"); a percentage only when the patient has at least 10 beats of that class (recall cells), or at least 10 beats flagged as that class (precision cells).
 
 <!-- card:begin test_per_patient -->
 
