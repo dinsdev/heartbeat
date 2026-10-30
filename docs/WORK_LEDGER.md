@@ -1802,3 +1802,21 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Rejected:** seed 0 as ONNX with seeds 1 and 2 as checksummed PyTorch checkpoints (two runtimes in one sealed run, and the range is unverifiable from a clone); committing the `.pt` checkpoints (a second format nobody ships).
 
 **Applied:** `docs/PRD.md` PARITY-01; `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.1. Made before any DS2 result and before the Phase 7 gate (rule 6).
+
+## 2026-10-30: Phase 5 settling, 3: `evaluate-test`'s success path is rehearsed on DS1 in tests (EVAL-05, EVAL-06 clarification)
+
+**Gap:** PLAN.md Phase 5 said `evaluate-test` is "tested only for its refusals". Its success path (DS2 prepare in memory, scoring, the paired bootstrap, the EVAL-08 report, the log entry) would then run for the first time in the sealed run, where any crash or malformed entry becomes a permanent logged rerun (A3, EVAL-06).
+
+**Decision (Din):**
+
+1. `evaluate-test` is a thin CLI over one function that takes the record list, the record source, the models folder, the log path and the results folder. The CLI binds exactly one set: the DS2 list from `manifests/splits.toml`, `models/heartbeat-v1/` and `results/test_runs.jsonl`. A test checks that binding.
+2. A real-data test runs that function after the freeze and clean-tree gate, with DS1 records in DS2's place, a planted freeze record in a temporary git repo, and every output under the test's temporary folder. It goes through `prepare_record` in memory, ONNX scoring of the three seeds, the NumPy baseline, the paired bootstrap, the report and the log writer.
+3. The rehearsal asserts structure and invariants only: every EVAL-08 item present, per-class counts summing to the beat count, ordered intervals, skip counts reported, the log entry's schema, and append without rewrite on a second run (R42). Its numbers are in-sample DS1 scores: no test asserts their values and none is quoted anywhere (rule 2).
+4. No `--rehearse` flag on the CLI, so a DS1 headline report cannot be produced by a command and later quoted.
+5. A synthetic unit test covers the report's edge cases (for example a draw with no predicted S).
+
+**Reason:** the sealed path is the same code apart from the records it is given, so its first real use is not its first run. No DS2 signal, label or prediction is read (rule 1).
+
+**Rejected:** refusal tests only (the success path's first run would be the sealed run); a synthetic-only rehearsal (skips `prepare_record` on real recordings and real ONNX scoring, where shape and dtype bugs hide).
+
+**Applied:** `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.3.
