@@ -79,12 +79,15 @@ convention = "google"
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
-mypy_path = "src"
+mypy_path = "src:tests"
+# tests/conftest.py and tests/data/conftest.py share a file name; package bases
+# from mypy_path name them conftest and data.conftest.
+explicit_package_bases = true
 
-# scipy ships no type information, and scipy-stubs would be a new dependency
+# scipy and wfdb ship no type information; stubs would be a new dependency
 # (Phase 2 plan: none), so its imports are typed Any at the boundary.
 [[tool.mypy.overrides]]
-module = ["scipy", "scipy.*"]
+module = ["scipy", "scipy.*", "wfdb", "wfdb.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
