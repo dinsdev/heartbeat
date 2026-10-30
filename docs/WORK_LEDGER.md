@@ -1339,3 +1339,19 @@ The totals equal the scored DS1 counts in Goal A's entry. s201 (records 201 and 
 **Rejected:** cross-fitting per fold for the reported numbers (strictly out of sample, but two temperatures a reader could confuse, for an effect estimated at about 1e-5 nats).
 
 **Applied:** no requirement text changes; EVAL-11 and EVAL-12 hold as written. The label goes into the Phase 3 task plan.
+
+## 2026-10-29: Phase 3 settling, 5: 95% bootstrap intervals (C4 clarification), and Table V written out
+
+**Gap:** EVAL-09 says "percentile intervals" without a level. EVAL-10 lets the page say "CNN better than baseline" only when the paired-difference interval sits above zero, so the level sets the evidence bar for that claim. Fixed before any result (rule 6).
+
+**Decision (Din):** 95%, the 2.5th and 97.5th percentiles of the defined draws (settling 2), for every bootstrap interval: headline metrics, false positive rates, the without-232 line, the exhibit (EXHIBIT-03) and the paired differences. Reason: the convention readers expect, and the stricter bar for EVAL-10. **Rejected:** 90% (an easier bar for claiming a win).
+
+**Checked (de Chazal et al. 2004, Table V, p. 1202, Din's local copy in the gitignored `docs/references/`):** the full AAMI EC57 counts behind EVAL-08 item 2. Rows are the expert label, columns the model label. With this project's 4 by 4 matrix (Q rows not scored, no q output):
+
+- V: TP = Vv; FN = Vn + Vs + Vf; FP = Nv + Sv; TN = Nn + Ns + Nf + Sn + Ss + Sf + Fn + Fs + Ff. Fv is in none of the four.
+- S: TP = Ss; FN = Sn + Sv + Sf; FP = Ns + Vs + Fs; TN = Nn + Nv + Nf + Vn + Vv + Vf + Fn + Fv + Ff.
+- Se = TP / (TP + FN); +P = TP / (TP + FP); FPR = FP / (TN + FP). Gross statistics (every beat weighted equally), as the paper reports.
+
+This agrees with the 2026-10-29 Q2 entry, which named the false positives only; the FN and TN cells are added here for the Phase 3 task plan.
+
+**Applied:** `docs/PRD.md` EVAL-09.
