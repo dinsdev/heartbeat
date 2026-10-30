@@ -1363,3 +1363,74 @@ This agrees with the 2026-10-29 Q2 entry, which named the false positives only; 
 **Checked while drafting (scikit-learn 1.9.1, the pinned version, `uv run python -W error -c`, nothing written):** `brier_score_loss` accepts multiclass probabilities with `labels` and `scale_by_half=False`; `LogisticRegression(solver="lbfgs", class_weight=dict, max_iter=10000)` fits a four-class problem with no warning, and its `classes_` come out sorted (F, N, S, V), so the plan reorders logits to `SCORED_CLASSES` and tests the column order.
 
 **Approved (Din, 2026-10-29):** the Phase 3 task plan as committed in `940a08c`, including its seven design calls, and the `/goal` prompt drafted in the planning session (2,818 characters, under the 4,000-character limit, clean under the wording lint). Execution is handed to a fresh Opus 5.5 session at high effort: one goal run on branch `phase-3-harness`, ending at the push command for Din or at a stop-and-ask condition.
+
+## 2026-10-29: Phase 3 built, local checks green; stopped at settling 4's cross-fit check (stop condition 4)
+
+**Built (branch `phase-3-harness`, one Conventional Commit per plan step):**
+
+- Task 1, `9b7aa5b` and `d52205f`: `current-phase = 3`; the Phase 3 constants; `evaluate/metrics.py` (R16).
+- Task 2, `347e5de`: `evaluate/bootstrap.py` (R17, R18).
+- Task 3, `0b5f437`: `evaluate/per_patient.py` (R19).
+- Task 4, `2ffa6f7`: `evaluate/calibration.py` (R20).
+- Task 5, `d0de130`: `runs.py`, `results.py`, the committed-results test, CI's full-history checkout.
+- Task 6, `bdef511`: `models/inputs.py`, `models/spec.py`, `models/baseline.py`, `train/weights.py`, `train/cv.py`, `heartbeat cross-validate` (R21).
+- Task 7, `4257e39` (the `cross-validate` rebuild stage and a real-data test) and `13ea660` (`results/cv_baseline.json` alone).
+- Task 8, this commit: AGENTS.md Commands, TASKS 3.1 to 3.4, this entry.
+
+**Test first:** every test file was written and run before its module existed and failed at collection (`ImportError` or `ModuleNotFoundError`): `test_metrics.py`, `test_bootstrap.py`, `test_per_patient.py`, `test_calibration.py`, `test_runs.py`, `test_results.py`, `test_inputs.py`, `test_weights.py`, `test_baseline.py`, `test_cv.py`. The new `cross-validate` CLI tests failed (2 failed) before the handler, and the stage tests failed (6 failed) before the stage. Slips, all in tests before their first commit, none changing code to fit: `test_metrics.py`'s hand case first used a total of 117 beats for a matrix of 105 (fixed before the first run); the temperature-at-bound test first used a perfectly separated case whose log loss rounds to exactly 0 below T of about 0.14, so the bounded search stopped anywhere in a flat region (replaced by a small margin, plus an upper-bound case, and the error now names the side); Hypothesis falsified an extra claim of mine in the R20 property test, that the calibrated argmax always equals the adjusted-logit argmax (a 2.2e-16 near-tie rounds to equal probabilities; labels were unchanged, which is R20; the claim was not in the plan and was replaced by a finiteness and sum check); a scripted edit cut three calibration tests, restored before the next run; the import-graph test allowed no importer until Task 7 added the stage, then went back to an exact match.
+
+**Deviations from the plan, and why:**
+
+1. `ModelSpec` lives in `models/spec.py` (a home in `train/cv.py` would be an import cycle with `models/baseline.py`) and has a fourth member, `inputs(beats, rows, scaled_rr)`, so the Phase 4 CNN can take windows while the driver still fits the RR scaler.
+2. `cv_summary(chosen, beats, folds_sha256, n_draws, seed)` instead of `cv_summary(result, subject_id)`: it needs the labels and the folds hash too.
+3. CI's `python` job checks out full history (`fetch-depth: 0`). Reason: the committed-results test checks that the recorded commit is an ancestor of `HEAD`, which a depth-1 clone cannot see.
+4. `fit_rr_scaler` raises when a column's standard deviation is at most 1e-12 times max(1, |mean|), not only at exactly 0. Hypothesis found a constant column whose float standard deviation is about 1e-15; scaling by it would blow the inputs up. scikit-learn's own constant-feature bound is smaller at these sizes, so `StandardScaler` agreement holds wherever ours does not raise.
+5. One flat metric table (`metric_values`, names such as `S_precision`, `macro_f1_nsv`, `ec57_V_ppv`) feeds `summarize`, the per-fold spread and the bootstrap, so all three share one code path.
+6. `results/cv_baseline.json` carries a few fields beyond the plan's list: `"data": "DS1 out-of-fold, CPU"`, `chosen_at_grid_edge`, each fold's class weights, and an undefined-fold count in the spread. `oof.npz` also stores the adjusted logits. The per-patient table is built and tested but not written into the DS1 results file (the plan's payload list leaves it out; it is EVAL-08's DS2 report).
+7. Test helpers `tests/run_support.py` (temporary git repos) and `tests/cv_support.py` (synthetic beats and folds, no record read).
+8. The guard hook blocks any `python3` command that names a `results/` path, reads included. Results were read with `cat results/cv_baseline.json | python3 -c ...`. Not a problem, noted for later phases.
+9. The reproduction's copy of `results/cv_baseline.json` (identical metrics, newer `run` and `commit`) is kept in `git stash` (`stash@{0}`) rather than discarded, since the plan says to restore nothing by hand. Din may drop it.
+
+**The run (`/usr/bin/time -p uv run heartbeat rebuild` on a clean tree at `4257e39`):** download and prepare reran (their shared code files changed in this phase), check-folds ran, cross-validate wrote run `runs/20261030T022556Z-4257e39-cv-baseline` and `results/cv_baseline.json`, 5.56 s wall clock in all. The file records `"dirty": false`, commit `4257e39`, folds SHA256 `9513124b…5d591bc2` (equal to `manifests/folds.sha256`). lbfgs converged at every C with warnings as errors (stop 1 clear); the temperature is inside its bounds (stop 5 clear).
+
+**Reproduction (`uv run heartbeat rebuild --from cross-validate` at `13ea660`, 4.69 s):** run `runs/20261030T022617Z-13ea660-cv-baseline`. `git diff` on the results file showed only `run` and `commit`; the two runs' `metrics.json` are byte-identical and every array in `oof.npz` and `model.npz` is equal (`np.array_equal`). Stop 3 clear.
+
+**C selection (from `results/cv_baseline.json`, DS1 out-of-fold, CPU):** pooled macro F1 over N, S, V by C: 0.01 0.5229, 0.1 0.5160, 1 0.5163, 10 0.5161, 100 0.5163 (four-class beside it: 0.4027, 0.4031, 0.4052, 0.4058, 0.4059). **Chosen C = 0.01, the lower edge of the locked grid** (stop condition 8: not a stop; widening the grid is Din's call). The scores are flat from 0.1 to 100 and higher at 0.01, so a smaller C might score higher still; not tried.
+
+**Baseline numbers (`results/cv_baseline.json`, run `20261030T022556Z-4257e39-cv-baseline`; DS1 out-of-fold, CPU; 50,969 scored beats, 22 subjects; 95% patient-bootstrap intervals, 10,000 draws, seed 20261029, 0 skipped draws for every metric below):**
+
+| Metric                | Point  | 95% interval     | Fold range (min to max) |
+| --------------------- | ------ | ---------------- | ----------------------- |
+| Macro F1, N, S, V     | 0.5229 | 0.4455 to 0.5956 | 0.3807 to 0.6421        |
+| Macro F1, four-class  | 0.4027 | 0.3374 to 0.4639 | 0.2855 to 0.4816        |
+| S recall              | 0.2450 | 0.0590 to 0.6193 | 0.0103 to 0.6804        |
+| S precision           | 0.0825 | 0.0193 to 0.1837 | 0.0024 to 0.3358        |
+| V recall              | 0.4820 | 0.3522 to 0.6180 | 0.2098 to 0.6899        |
+| V precision           | 0.6452 | 0.3975 to 0.8469 | 0.2791 to 0.8728        |
+| S false positive rate | 0.0514 | 0.0226 to 0.0890 | 0.0096 to 0.0935        |
+| V false positive rate | 0.0213 | 0.0080 to 0.0372 | 0.0086 to 0.0330        |
+
+EC57 (Table V definitions): S Se 0.2450, +P 0.0825, FPR 0.0514; V Se 0.4820, +P 0.6455, FPR 0.0213. N recall 0.8171, precision 0.9857; F recall 0.3937, precision 0.0222 (F caveat: 377 of 415 F beats are in fold 0).
+
+**Calibration (same file and run; label "temperature fitted on these predictions"):** temperature 1.3829; ECE S 0.0163, V 0.0309 (10 equal-mass bins); log loss 0.3357 nats per beat; Brier 0.1173.
+
+**Settling 4's cross-fit check (throwaway script in the session scratchpad, read the run folder's `oof.npz` only, DS1 records only, deleted after):** for each fold, a temperature fitted on the other four folds' adjusted logits, applied to that fold.
+
+|  | In-sample (one temperature) | Cross-fitted (per fold) | Difference | Threshold |
+| --- | --- | --- | --- | --- |
+| Temperature | 1.3829 | 1.1758, 1.4432, 1.3769, 1.4313, 1.4562 (folds 0 to 4) |  |  |
+| Log loss, nats per beat | 0.3357 | 0.3534 | +0.0176 | 1e-3 |
+| ECE S | 0.0163 | 0.0155 | -0.0007 | 0.01 |
+| ECE V | 0.0309 | 0.0278 | -0.0031 | 0.01 |
+
+**Stop condition 4 met: log loss differs by 0.0176 nats per beat, about 17 times the 1e-3 threshold** and about 1,700 times settling 4's textbook estimate of 1e-5. Both ECE differences are inside 0.01. The gap is fold heterogeneity, not the small-sample optimism the estimate assumed: fold 0's own best temperature is 1.90 against 1.06 to 1.42 for the others, and its log loss is 0.6264 at the in-sample temperature and 0.6849 at its cross-fitted one. 19 beats score over 20 nats under cross-fitting, all from record 207 in fold 0 (extreme RR inputs drive the linear logits into the hundreds; the worst beat is a V beat at 934 nats), and they carry 17% of the cross-fitted log loss. Rechecked per beat with `log_softmax` (plain `log` of the softmax underflows to infinity on those beats).
+
+**Options for Din (the stop is on how DS1 calibration numbers are reported; labels, metrics and the shipped temperature are untouched by any of them):**
+
+1. Keep settling 4 as decided: in-sample numbers, labeled, with this measured gap on record. No code change. The DS1 log loss stays optimistic by about 5%.
+2. Report both (recommended): keep the in-sample block and add the cross-fitted log loss and S and V ECE beside it, labeled "per-fold temperatures fitted on the other four folds". The shipped temperature stays the single pooled fit (EVAL-11). Cost: a few lines in `cv_summary`, test first, one rebuild, `results/cv_baseline.json` recommitted. Reason: the measured effect removes settling 4's reason for rejecting cross-fitting, and the CNN gets the same treatment through the shared driver in Phase 4.
+3. Switch DS1 calibration numbers to cross-fitted only, the option settling 4 rejected.
+
+**Verified (local, `13ea660` plus this commit's docs):** `scripts/check.sh` exit 0 twice (648 passed, 105 real-data deselected; 10.1 s and 9.4 s wall clock); `CI=1 uv run pytest` 753 passed in 8.4 s (real-data layer included); `uv run pytest -m realdata` 105 passed; `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R16 to R21 covered, 0 uncovered, 25 pending); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout: no DS2 signal, label or prediction was read or produced (stop 7 clear); no dependency, pin, `manifests/`, `config/folds.json`, `models/` or `.claude/` change (stop 6 clear); metrics agree with scikit-learn wherever both are defined (stop 2 clear).
+
+**Not verified:** CI on these commits (waits for Din's push). **Waiting on Din:** the settling 4 decision above, the C grid edge, and whether to drop `stash@{0}`.

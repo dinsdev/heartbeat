@@ -123,10 +123,10 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 3.1 | Metrics, per-patient table, paired patient bootstrap | Planned |
-| 3.2 | Calibration: logit adjustment, temperature, equal-mass ECE, reliability, log loss, Brier | Planned |
-| 3.3 | Run folders and the `results/` writer | Planned |
-| 3.4 | Baseline with C selection on the folds; results committed | Planned |
+| 3.1 | Metrics, per-patient table, paired patient bootstrap | Verified (2026-10-29), locally: R16 to R19 tests pass (`scripts/check.sh`, `uv run pytest`); not yet in CI |
+| 3.2 | Calibration: logit adjustment, temperature, equal-mass ECE, reliability, log loss, Brier | Verified (2026-10-29), locally: R20 tests pass (`scripts/check.sh`); not yet in CI |
+| 3.3 | Run folders and the `results/` writer | Verified (2026-10-29), locally: run-folder, writer, import-graph and committed-results tests pass (`scripts/check.sh`); `results/cv_baseline.json` records `"dirty": false` at `4257e39`; not yet in CI |
+| 3.4 | Baseline with C selection on the folds; results committed | Blocked (2026-10-29): code, R21 and the real-data test pass (`uv run pytest`); `results/cv_baseline.json` committed by `uv run heartbeat rebuild` and reproduced exactly by `rebuild --from cross-validate`; settling 4's cross-fit check exceeded its log-loss threshold (stop condition 4), waiting on Din (ledger, 2026-10-29) |
 
 ### Phase 4: CNN and the leakage exhibit
 
