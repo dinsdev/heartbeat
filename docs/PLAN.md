@@ -91,7 +91,7 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 ### Phase 5: Export, parity and the rebuild (about 2 days)
 
-**Builds:** single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` (pre-freeze contents, including `NOTICE`: MIT for the weights and the ODC-By 1.0 notice for the training data); parity fixtures from DS1; the Python half of the parity chain; `rebuild` end to end up to export, stopping before DS2; `heartbeat verify`; `heartbeat cards`, which renders the generated blocks of `docs/MODEL_CARD.md` and `docs/DATA_CARD.md` from `results/`, with its check in `verify` (F6); `evaluate-test` with its freeze and clean-tree checks and the append-only log writer, tested only for its refusals (it never reads DS2 before Phase 7).
+**Builds:** the frozen baseline (fit on every DS1 row by `train-final`, exported as `baseline.json`; Phase 5 settling 1); single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` (pre-freeze contents, including `NOTICE`: MIT for the weights and the ODC-By 1.0 notice for the training data); parity fixtures from DS1; the Python half of the parity chain; `rebuild` end to end up to export, stopping before DS2; `heartbeat verify`; `heartbeat cards`, which renders the generated blocks of `docs/MODEL_CARD.md` and `docs/DATA_CARD.md` from `results/`, with its check in `verify` (F6); `evaluate-test` with its freeze and clean-tree checks and the append-only log writer, tested only for its refusals (it never reads DS2 before Phase 7).
 
 **Requirements:** PARITY-01, PARITY-02, PARITY-03 (Python half), PARITY-04, OPS-01, OPS-02, OPS-04, EVAL-05, EVAL-06.
 

@@ -141,7 +141,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 5.1 | Single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` with its `NOTICE` | Planned |
+| 5.1 | Frozen baseline on every DS1 row (settling 1); single-file ONNX export, scaler and calibration JSON, `models/heartbeat-v1/` with its `NOTICE` | Planned |
 | 5.2 | DS1 parity fixtures and the Python half of the parity chain | Planned |
 | 5.3 | `evaluate-test` refusals and the append-only log writer | Planned |
 | 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; clean-clone reproduction logged | Planned |

@@ -1766,3 +1766,21 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Cleanup (Din's go):** deleted the merged local branch `phase-4-cnn` and pruned the deleted remote branches (`origin/phase-4-cnn`, and `origin/phase-3-harness` from the Phase 3 merge). Two stashes remain for Din to drop, since `.claude/hooks/guard.py` blocks `git stash` for Claude: `stash@{0}` (the stopped first rebuild's `results/` files: `cv_baseline.json`, `cv_cnn.json`, `cv_cnn_curves.json`, `selection.json`) and `stash@{1}` (the Task 4 reproduction of `results/cv_baseline.json`). Both hold `results/` files only, already compared and recorded in the Phase 4 entries above.
 
 **Carried into Phase 5:** the two flags from the hand-off entry, report only: the MPS against CPU gap on width 1, fold 0 exceeds the seed spread at 8 of 40 epochs but not at the selected epoch 10, and F stays weak (pooled F1 0.0372, `results/cv_cnn.json`, DS1 out-of-fold, MPS) because fold 0 holds most of DS1's F beats.
+
+## 2026-10-30: Phase 5 settling, 1: the frozen baseline (EVAL-05, MODEL-01 clarification)
+
+**Gap:** EVAL-05 and C1 say the baseline and the CNN are frozen and tested in the same sealed run, but no baseline had been fit on all of DS1. `results/train_final.json` holds the three CNN seeds only, and PLAN.md's Phase 5 build list did not name a baseline, so `evaluate-test` would have had no fixed baseline to checksum.
+
+**Decision (Din):**
+
+1. `train-final` also fits the baseline on every DS1 row: C from `results/cv_baseline.json` (0.001 today), scaler and balanced class weights fitted on those rows, `lbfgs` as in MODEL-01. It is deterministic (no seed), one CPU fit.
+2. Its temperature is the baseline's DS1 out-of-fold temperature from `results/cv_baseline.json` (1.1744 today, "temperature fitted on these predictions"), the same rule the CNN seeds follow (Phase 4 settling 3).
+3. `heartbeat export` writes it as `models/heartbeat-v1/baseline.json`: coefficients, intercepts, scaler, log class weights and temperature. `evaluate-test` scores it with NumPy. A unit test checks the NumPy path against scikit-learn's own decision function on DS1 rows: labels exact, logits within 1e-5.
+
+**Reason:** a frozen model is one whose bytes the freeze record can checksum before DS2 is read. Refitting at test time would leave nothing fixed.
+
+**Rejected:** exporting the baseline to ONNX (needs `skl2onnx`, a new dependency, for a model the demo never runs); refitting the baseline inside `evaluate-test` (not frozen, not checksummable).
+
+**Cost:** the `train-final` stage's code changes, so it reruns (about 15 minutes, measured for the CNN seeds in Phase 4). The clean-clone rebuild reruns every stage anyway.
+
+**Applied:** `docs/PRD.md` MODEL-01; `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.1. Made before any DS2 result and before the Phase 7 gate (rule 6; not part of the pre-registered plan, which already said the baseline is tested in the sealed run).
