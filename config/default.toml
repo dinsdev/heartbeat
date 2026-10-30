@@ -18,3 +18,8 @@ sources = [
 # Phase 2 settling 5: fixed on 2026-10-29, before any fold exists (the C1 lock
 # date). Independent of the training seeds (C6). Read only by make-folds.
 seed = 20261026
+
+[train]
+# Phase 4 design call 7: the device for CNN cross-validation and the exhibit
+# ("mps" or "cpu"). Final models train on CPU whatever this says (C6, MODEL-06).
+cv_device = "mps"

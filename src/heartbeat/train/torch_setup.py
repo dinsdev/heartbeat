@@ -9,9 +9,8 @@ from typing import Any
 
 import torch
 
+from heartbeat.config import CV_DEVICES as DEVICES
 from heartbeat.constants import TORCH_THREADS
-
-DEVICES = ("cpu", "mps")
 
 
 class DeviceUnavailableError(RuntimeError):

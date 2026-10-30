@@ -323,3 +323,17 @@ def test_settings_type_errors_raise(tmp_path: Path) -> None:
     path = _write(tmp_path, "config.toml", text)
     with pytest.raises(SettingsError, match="seed"):
         load_settings(path)
+
+
+def test_the_cv_device_is_mps() -> None:
+    # Phase 4 design call 7: a run setting; final training is CPU by constant.
+    assert load_settings(DEFAULT_CONFIG).train.cv_device == "mps"
+
+
+def test_an_unknown_cv_device_raises(tmp_path: Path) -> None:
+    text = DEFAULT_CONFIG.read_text(encoding="utf-8").replace(
+        'cv_device = "mps"', 'cv_device = "cuda"'
+    )
+    path = _write(tmp_path, "config.toml", text)
+    with pytest.raises(SettingsError, match="cv_device"):
+        load_settings(path)

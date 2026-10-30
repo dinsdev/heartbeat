@@ -10,7 +10,7 @@ import pytest
 
 from heartbeat import cli
 from heartbeat.cli import main, rebuild_context
-from heartbeat.config import DataSettings, FoldSettings, Settings
+from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 from heartbeat.paths import (
     FOLDS_JSON,
     FOLDS_PIN,
@@ -54,6 +54,7 @@ class Counting:
                 sources=("https://a.example/",),
             ),
             folds=FoldSettings(seed=seed),
+            train=TrainSettings(cv_device="cpu"),
         )
         return Context(
             settings=settings,
@@ -250,37 +251,55 @@ def test_missing_input_file_has_its_own_fingerprint(counting: Counting) -> None:
 # The real pipeline
 
 
-def test_pipeline_has_the_four_built_stages_in_order() -> None:
+def test_pipeline_has_the_eight_built_stages_in_order() -> None:
+    # Phase 4 design call 8: four stages after the baseline's cross-validate.
     assert [s.name for s in PIPELINE] == [
         "download",
         "prepare",
         "check-folds",
         "cross-validate",
+        "cross-validate-cnn",
+        "select",
+        "exhibit",
+        "train-final",
     ]
     by_name = {s.name: s for s in PIPELINE}
     assert by_name["check-folds"].always_run
     assert by_name["prepare"].upstream == ("download",)
     assert by_name["cross-validate"].upstream == ("prepare", "check-folds")
-    assert not by_name["cross-validate"].always_run
+    assert by_name["cross-validate-cnn"].upstream == ("prepare", "check-folds")
+    assert by_name["select"].upstream == ("cross-validate", "cross-validate-cnn")
+    assert by_name["exhibit"].upstream == ("select",)
+    assert by_name["train-final"].upstream == ("select",)
+    assert not any(s.always_run for s in PIPELINE if s.name != "check-folds")
+    assert by_name["cross-validate-cnn"].settings_keys == (
+        "data.prepared_dir",
+        "train.cv_device",
+    )
 
 
 def test_pipeline_code_folders_match_the_plan() -> None:
     shared = {"constants.py", "config.py", "paths.py"}
+    training = {
+        "data",
+        "signal",
+        "models",
+        "train",
+        "evaluate",
+        "runs.py",
+        "results.py",
+        *shared,
+    }
     by_name = {s.name: set(s.code) for s in PIPELINE}
     assert by_name == {
         "download": {"data", *shared},
         "prepare": {"data", "signal", *shared},
         "check-folds": {"data", *shared},
-        "cross-validate": {
-            "data",
-            "signal",
-            "models",
-            "train",
-            "evaluate",
-            "runs.py",
-            "results.py",
-            *shared,
-        },
+        "cross-validate": training,
+        "cross-validate-cnn": training,
+        "select": training,
+        "exhibit": training,
+        "train-final": training,
     }
 
 
@@ -348,11 +367,117 @@ def test_cross_validate_reruns_when_its_code_or_inputs_change(
     assert not ran()
 
 
+FOLD_INPUTS = {FOLDS_JSON, FOLDS_PIN, SPLITS_MANIFEST, SUBJECTS_MANIFEST}
+
+
+@pytest.mark.parametrize(
+    ("name", "results_in", "results_out"),
+    [
+        ("cross-validate-cnn", set(), ["cv_cnn_curves"]),
+        ("select", {"cv_cnn_curves", "cv_baseline"}, ["selection", "cv_cnn"]),
+        ("exhibit", {"selection", "cv_cnn_curves", "cv_baseline"}, ["exhibit"]),
+        ("train-final", {"selection"}, ["train_final"]),
+    ],
+)
+def test_the_cnn_stages_read_the_folds_and_write_their_results(
+    name: str, results_in: set[str], results_out: list[str]
+) -> None:
+    stage = {s.name: s for s in PIPELINE}[name]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == FOLD_INPUTS | {
+        RESULTS_DIR / f"{r}.json" for r in results_in
+    }
+    assert list(stage.outputs(context)) == [
+        RESULTS_DIR / f"{r}.json" for r in results_out
+    ]
+
+
+@pytest.mark.parametrize(
+    "name", ["cross-validate-cnn", "select", "exhibit", "train-final"]
+)
+def test_the_cnn_stages_rerun_when_code_inputs_or_the_device_change(
+    name: str, tmp_path: Path
+) -> None:
+    stage = {s.name: s for s in PIPELINE}[name]
+    package = tmp_path / "pkg"
+    for entry in (*stage.code, "cli.py"):
+        target = package / entry
+        if entry.endswith(".py"):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(f"# {entry}\n", encoding="utf-8")
+        else:
+            target.mkdir(parents=True)
+            (target / "mod.py").write_text("x = 1\n", encoding="utf-8")
+    (tmp_path / "uv.lock").write_text("lock\n", encoding="utf-8")
+    inputs = [tmp_path / "input0"]
+    inputs[0].write_text("v1\n", encoding="utf-8")
+    runs: list[int] = []
+    local = replace(
+        stage,
+        upstream=(),
+        inputs=lambda context: inputs,
+        run=lambda context: runs.append(1),
+        outputs=lambda context: (),
+    )
+    base = rebuild_context().settings
+
+    def ran(device: str = "mps") -> bool:
+        context = Context(
+            settings=replace(base, train=TrainSettings(cv_device=device)),
+            package_dir=package,
+            state_dir=tmp_path / "stages",
+            uv_lock=tmp_path / "uv.lock",
+        )
+        before = len(runs)
+        run_pipeline((local,), context)
+        return len(runs) > before
+
+    assert ran()
+    assert not ran()
+    (package / "train" / "mod.py").write_text("x = 'train'\n", "utf-8")
+    assert ran()
+    inputs[0].write_text("v2\n", encoding="utf-8")
+    assert ran()
+    (package / "cli.py").write_text("# not declared\n", encoding="utf-8")
+    assert not ran()
+    if "train.cv_device" in stage.settings_keys:
+        assert ran("cpu")
+
+
+@pytest.mark.parametrize(
+    ("name", "function", "results"),
+    [
+        ("cross-validate-cnn", "run_cnn_cv_all", ["cv_cnn_curves"]),
+        ("select", "run_select_all", ["selection", "cv_cnn"]),
+        ("exhibit", "run_exhibit_all", ["exhibit"]),
+        ("train-final", "run_final_all", ["train_final"]),
+    ],
+)
+def test_each_cnn_stage_writes_its_results_from_its_run(
+    name: str,
+    function: str,
+    results: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heartbeat import stages as stages_module
+
+    run = object()
+    payloads = [{"which": r} for r in results]
+    monkeypatch.setattr(stages_module, function, lambda settings: (run, *payloads))
+    written: list[tuple[str, object, object]] = []
+
+    def spy(result: str, payload: object, source: object) -> Path:
+        written.append((result, payload, source))
+        return Path(result)
+
+    monkeypatch.setattr(stages_module, "write_result", spy)
+    stage = {s.name: s for s in PIPELINE}[name]
+    stage.run(rebuild_context())
+    assert written == [(r, p, run) for r, p in zip(results, payloads, strict=True)]
+
+
 def test_planned_stages_follow_with_their_phases() -> None:
     assert list(PLANNED) == [
-        ("select", 4),
-        ("exhibit", 4),
-        ("train-final", 4),
         ("export", 5),
         ("reproduce-test", 5),
         ("build-demo-data", 6),
@@ -376,7 +501,7 @@ def test_rebuild_stops_after_the_last_built_stage_and_names_the_next(
     assert main(["rebuild"]) == 0
     out = capsys.readouterr().out
     assert "first: ran" in out
-    assert "next stage select (Phase 4)" in out
+    assert "next stage export (Phase 5)" in out
     assert main(["rebuild"]) == 0
     assert "first: skipped (unchanged)" in capsys.readouterr().out
 

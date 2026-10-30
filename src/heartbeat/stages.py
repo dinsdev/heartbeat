@@ -16,23 +16,44 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+from numpy.typing import NDArray
+
 from heartbeat.config import Settings
+from heartbeat.constants import CNN_SEEDS, CNN_WIDTHS
 from heartbeat.data.download import download
-from heartbeat.data.folds import check_folds
-from heartbeat.data.loader import load_ds1
+from heartbeat.data.folds import Folds, check_folds
+from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FLOOR_HITS_FILE, prepare_ds1
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
     FOLDS_JSON,
     FOLDS_PIN,
+    REPO_ROOT,
     RESULTS_DIR,
     RUNS_DIR,
     SPLITS_MANIFEST,
     SUBJECTS_MANIFEST,
 )
 from heartbeat.results import write_result
-from heartbeat.train.cv import run_baseline
+from heartbeat.runs import RunFolder, create_run
+from heartbeat.train.cnn_cv import (
+    MissingRunError,
+    curves_payload,
+    data_label,
+    run_cnn_cv,
+)
+from heartbeat.train.cv import oof_predictions, run_baseline
+from heartbeat.train.exhibit import run_exhibit
+from heartbeat.train.final import final_payload, train_final
+from heartbeat.train.loop import cnn_spec
+from heartbeat.train.select import (
+    EpochEdgeError,
+    cnn_summary,
+    epoch_curves,
+    select_config,
+)
 
 log = logging.getLogger(__name__)
 
@@ -289,6 +310,262 @@ def _run_cross_validate(context: Context) -> None:
     log.info("wrote %s from run %s", path, run.name)
 
 
+CV_CNN_CURVES_RESULT = "cv_cnn_curves"
+SELECTION_RESULT = "selection"
+CV_CNN_RESULT = "cv_cnn"
+EXHIBIT_RESULT = "exhibit"
+TRAIN_FINAL_RESULT = "train_final"
+
+
+def _ds1(settings: Settings) -> tuple[BeatTable, Folds, str]:
+    splits = load_splits(SPLITS_MANIFEST)
+    subjects = load_subjects(SUBJECTS_MANIFEST)
+    folds = check_folds(FOLDS_JSON, FOLDS_PIN, splits, subjects)
+    beats = load_ds1(settings.data.prepared_dir, splits, subjects)
+    return beats, folds, _sha256_file(FOLDS_JSON)
+
+
+def _traces(settings: Settings) -> dict[str, NDArray[np.int16]]:
+    return load_ds1_traces(
+        settings.data.prepared_dir,
+        load_splits(SPLITS_MANIFEST),
+        load_subjects(SUBJECTS_MANIFEST),
+    )
+
+
+def _result(results_dir: Path, name: str) -> dict[str, Any]:
+    path = results_dir / f"{name}.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"{path} missing; run `uv run heartbeat rebuild`")
+    payload: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return payload
+
+
+def run_cnn_cv_all(
+    settings: Settings, root: Path = RUNS_DIR, repo: Path = REPO_ROOT
+) -> tuple[RunFolder, dict[str, Any]]:
+    """Cross-validate the CNN at every width and seed (MODEL-04, design call 8).
+
+    One run folder per width and seed, then one `cv-cnn` run folder holding
+    the curves payload (pooled confusions per epoch and the run names).
+    """
+    beats, folds, folds_sha256 = _ds1(settings)
+    traces = _traces(settings)
+    device = settings.train.cv_device
+    entries = []
+    for width in CNN_WIDTHS:
+        for seed in CNN_SEEDS:
+            _, entry = run_cnn_cv(
+                settings,
+                beats,
+                traces,
+                folds,
+                folds_sha256,
+                width,
+                seed,
+                device,
+                root=root,
+                repo=repo,
+            )
+            entries.append(entry)
+    payload = curves_payload(entries, device, folds_sha256)
+    extra = {"runs": [e["run"] for e in entries], "folds_sha256": folds_sha256}
+    with create_run("cv-cnn", settings, extra, root=root, repo=repo) as run:
+        run.write_json("metrics", payload)
+    return run, payload
+
+
+def run_select_all(
+    settings: Settings,
+    root: Path = RUNS_DIR,
+    repo: Path = REPO_ROOT,
+    results_dir: Path = RESULTS_DIR,
+) -> tuple[RunFolder, dict[str, Any], dict[str, Any]]:
+    """Select width and epoch, and summarize the CNN (settlings 2 and 3).
+
+    Reads the committed curves and baseline results and the run folders they
+    name. Writes `selection.json` and `cv_cnn.json` into a new `select` run
+    folder; on an epoch-edge stop it writes the selection there anyway, for
+    the ledger, and raises.
+
+    Raises:
+        EpochEdgeError: If the pick is epoch 36 or later (settling 2).
+        MissingRunError: If a named run folder is missing.
+        ValueError: If the curves came from another fold file.
+    """
+    curves_result = _result(results_dir, CV_CNN_CURVES_RESULT)
+    baseline_result = _result(results_dir, CV_BASELINE_RESULT)
+    beats, _, folds_sha256 = _ds1(settings)
+    for name, result in (("curves", curves_result), ("baseline", baseline_result)):
+        if result["folds_sha256"] != folds_sha256:
+            raise ValueError(f"the {name} results came from another fold file")
+    extra = {
+        "curves_run": curves_result["run"],
+        "baseline_run": baseline_result["run"],
+    }
+    curves = epoch_curves(curves_result)
+    with create_run("select", settings, extra, root=root, repo=repo) as run:
+        try:
+            selection = select_config(curves)
+        except EpochEdgeError as error:
+            run.write_json(
+                "selection", {**error.selection.payload(), "stopped": str(error)}
+            )
+            raise
+        oof_path = root / baseline_result["run"] / "oof.npz"
+        if not oof_path.is_file():
+            raise MissingRunError(
+                f"{oof_path} missing; rerun `uv run heartbeat rebuild --from "
+                "cross-validate`"
+            )
+        with np.load(oof_path, allow_pickle=False) as oof:
+            same = np.array_equal(oof["sample"], beats.sample) and np.array_equal(
+                oof["record"], beats.record_id
+            )
+            if not same:
+                raise ValueError(f"{oof_path} was made from other beats")
+            baseline = oof_predictions(
+                "baseline",
+                oof["raw_logits"],
+                oof["fold"],
+                baseline_result["class_weights"],
+                beats.beat_class,
+            )
+        if baseline.temperature != baseline_result["calibration"]["temperature"]:
+            raise ValueError("the baseline run does not reproduce its results file")
+        device = str(curves_result["device"])
+        run_paths = {s: root / curves.runs[(selection.width, s)] for s in CNN_SEEDS}
+        summary = cnn_summary(
+            selection, run_paths, beats, baseline, folds_sha256, device
+        )
+        selection_payload = {
+            **selection.payload(),
+            "data": data_label(device),
+            "temperatures": summary["temperatures"],
+            "curves_run": curves_result["run"],
+            "baseline_run": baseline_result["run"],
+            "folds_sha256": folds_sha256,
+        }
+        run.write_json("selection", selection_payload)
+        run.write_json("cv_cnn", summary)
+    return run, selection_payload, summary
+
+
+def run_exhibit_all(
+    settings: Settings,
+    root: Path = RUNS_DIR,
+    repo: Path = REPO_ROOT,
+    results_dir: Path = RESULTS_DIR,
+) -> tuple[RunFolder, dict[str, Any]]:
+    """The exhibit at the committed selection and chosen C (C5)."""
+    selection = _result(results_dir, SELECTION_RESULT)
+    baseline = _result(results_dir, CV_BASELINE_RESULT)
+    curves = _result(results_dir, CV_CNN_CURVES_RESULT)
+    width = float(selection["width"])
+    device = str(curves["device"])
+    cv_runs = {
+        int(e["seed"]): root / e["run"]
+        for e in curves["runs"]
+        if float(e["width"]) == width
+    }
+    beats, folds, folds_sha256 = _ds1(settings)
+    traces = _traces(settings)
+    return run_exhibit(
+        settings,
+        width=width,
+        epoch=int(selection["epoch"]),
+        chosen_c=float(baseline["chosen_c"]),
+        beats=beats,
+        folds=folds,
+        folds_sha256=folds_sha256,
+        cv_runs=cv_runs,
+        cnn=cnn_spec(traces, device),
+        device=device,
+        root=root,
+        repo=repo,
+    )
+
+
+def run_final_all(
+    settings: Settings,
+    root: Path = RUNS_DIR,
+    repo: Path = REPO_ROOT,
+    results_dir: Path = RESULTS_DIR,
+) -> tuple[RunFolder, dict[str, Any]]:
+    """Train the three final models on CPU at the committed selection (C6)."""
+    selection = _result(results_dir, SELECTION_RESULT)
+    width = float(selection["width"])
+    epochs = int(selection["epoch"])
+    temperatures = {int(t["seed"]): t["temperature"] for t in selection["temperatures"]}
+    beats, _, _ = _ds1(settings)
+    traces = _traces(settings)
+    models = [
+        train_final(
+            settings,
+            beats,
+            traces,
+            width=width,
+            epochs=epochs,
+            seed=seed,
+            temperature=float(temperatures[seed]),
+            root=root,
+            repo=repo,
+        )
+        for seed in CNN_SEEDS
+    ]
+    payload = final_payload(models, width=width, epochs=epochs, repo=repo)
+    extra = {"runs": [m.run for m in models], "selection_run": selection["run"]}
+    with create_run("train-final", settings, extra, root=root, repo=repo) as run:
+        run.write_json("metrics", payload)
+    return run, payload
+
+
+def _run_cross_validate_cnn(context: Context) -> None:
+    run, payload = run_cnn_cv_all(context.settings)
+    write_result(CV_CNN_CURVES_RESULT, payload, run)
+
+
+def _run_select(context: Context) -> None:
+    run, selection, summary = run_select_all(context.settings)
+    write_result(SELECTION_RESULT, selection, run)
+    write_result(CV_CNN_RESULT, summary, run)
+
+
+def _run_exhibit(context: Context) -> None:
+    run, payload = run_exhibit_all(context.settings)
+    write_result(EXHIBIT_RESULT, payload, run)
+
+
+def _run_train_final(context: Context) -> None:
+    run, payload = run_final_all(context.settings)
+    write_result(TRAIN_FINAL_RESULT, payload, run)
+
+
+# Code folders of every stage that trains or scores a model.
+_TRAINING_CODE = (
+    "data",
+    "signal",
+    "models",
+    "train",
+    "evaluate",
+    "runs.py",
+    "results.py",
+    *_SHARED_CODE,
+)
+
+
+def _fold_inputs(context: Context) -> tuple[Path, ...]:
+    return (FOLDS_JSON, FOLDS_PIN, SPLITS_MANIFEST, SUBJECTS_MANIFEST)
+
+
+def _results(*names: str) -> Callable[[Context], tuple[Path, ...]]:
+    return lambda context: tuple(RESULTS_DIR / f"{n}.json" for n in names)
+
+
+def _inputs_and_results(*names: str) -> Callable[[Context], tuple[Path, ...]]:
+    return lambda context: (*_fold_inputs(context), *_results(*names)(context))
+
+
 PIPELINE: tuple[Stage, ...] = (
     Stage(
         name="download",
@@ -349,13 +626,48 @@ PIPELINE: tuple[Stage, ...] = (
         run=_run_cross_validate,
         outputs=lambda context: (RESULTS_DIR / f"{CV_BASELINE_RESULT}.json",),
     ),
+    Stage(
+        name="cross-validate-cnn",
+        settings_keys=("data.prepared_dir", "train.cv_device"),
+        upstream=("prepare", "check-folds"),
+        code=_TRAINING_CODE,
+        inputs=_fold_inputs,
+        run=_run_cross_validate_cnn,
+        outputs=_results(CV_CNN_CURVES_RESULT),
+    ),
+    Stage(
+        name="select",
+        settings_keys=("data.prepared_dir",),
+        upstream=("cross-validate", "cross-validate-cnn"),
+        code=_TRAINING_CODE,
+        inputs=_inputs_and_results(CV_CNN_CURVES_RESULT, CV_BASELINE_RESULT),
+        run=_run_select,
+        outputs=_results(SELECTION_RESULT, CV_CNN_RESULT),
+    ),
+    Stage(
+        name="exhibit",
+        settings_keys=("data.prepared_dir", "train.cv_device"),
+        upstream=("select",),
+        code=_TRAINING_CODE,
+        inputs=_inputs_and_results(
+            SELECTION_RESULT, CV_CNN_CURVES_RESULT, CV_BASELINE_RESULT
+        ),
+        run=_run_exhibit,
+        outputs=_results(EXHIBIT_RESULT),
+    ),
+    Stage(
+        name="train-final",
+        settings_keys=("data.prepared_dir",),
+        upstream=("select",),
+        code=_TRAINING_CODE,
+        inputs=_inputs_and_results(SELECTION_RESULT),
+        run=_run_train_final,
+        outputs=_results(TRAIN_FINAL_RESULT),
+    ),
 )
 
 # OPS-01's later stages with the phase that builds each.
 PLANNED: tuple[tuple[str, int], ...] = (
-    ("select", 4),
-    ("exhibit", 4),
-    ("train-final", 4),
     ("export", 5),
     ("reproduce-test", 5),
     ("build-demo-data", 6),

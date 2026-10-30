@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from heartbeat.config import DataSettings, FoldSettings, Settings
+from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 from heartbeat.constants import ADU_PER_MV, FS_HZ, WINDOW_SAMPLES
 from heartbeat.data import prepare as prepare_module
 from heartbeat.data.loader import SealedRecordError
@@ -156,6 +156,7 @@ def _settings(tmp_path: Path) -> Settings:
             sources=("https://a.example/",),
         ),
         folds=FoldSettings(seed=1),
+        train=TrainSettings(cv_device="cpu"),
     )
 
 

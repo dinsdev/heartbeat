@@ -4,11 +4,12 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from heartbeat import cli
 from heartbeat.cli import SUBCOMMANDS, main
-from heartbeat.config import DataSettings, FoldSettings, Settings
+from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 from heartbeat.data import download as download_module
 
 EXPECTED_PHASES = {
@@ -42,10 +43,9 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-# The Phase 2 subcommands and cross-validate are built and have their own
-# tests here and in test_folds.py and test_stages.py; the rest stay stubs until
-# their phase.
-BUILT = {n for n, p in EXPECTED_PHASES.items() if p == 2} | {"cross-validate"}
+# The Phase 2 to 4 subcommands are built and have their own tests here and in
+# test_folds.py and test_stages.py; the rest stay stubs until their phase.
+BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4}
 
 
 @pytest.mark.parametrize(
@@ -87,6 +87,7 @@ def _tmp_settings(tmp_path: Path) -> Settings:
             sources=("https://a.example/", "https://b.example/"),
         ),
         folds=FoldSettings(seed=1),
+        train=TrainSettings(cv_device="cpu"),
     )
 
 
@@ -244,6 +245,104 @@ def test_cross_validate_exits_1_on_a_fold_check_failure(
 
 
 def test_cross_validate_rejects_an_unknown_model() -> None:
+    # The CNN arrived in Phase 4; any other model is still refused.
     with pytest.raises(SystemExit) as exit_info:
-        main(["cross-validate", "--model", "cnn"])
+        main(["cross-validate", "--model", "svm"])
     assert exit_info.value.code != 0
+
+
+# Phase 4: the CNN's development runs and the select, exhibit and train-final
+# subcommands, which write run folders only (rule 5).
+
+
+def test_cross_validate_cnn_runs_one_fold_into_a_run_folder(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from cnn_support import beats_with_traces
+    from cv_support import synthetic_folds
+
+    beats, traces = beats_with_traces(n_subjects=10, per_subject=140)
+    runs, _ = _patch_cross_validate(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "check_folds", lambda *a, **k: synthetic_folds(beats))
+    monkeypatch.setattr(cli, "load_ds1", lambda *a, **k: beats)
+    monkeypatch.setattr(cli, "load_ds1_traces", lambda *a, **k: traces)
+    monkeypatch.setattr(cli, "MAX_EPOCHS", 2)
+    argv = ["cross-validate", "--model", "cnn", "--width", "0.5", "--seed", "1"]
+    assert main([*argv, "--fold", "3", "--device", "cpu"]) == 0
+    out = capsys.readouterr().out
+    (run,) = runs.iterdir()
+    assert run.name.endswith("-cv-cnn-w0.5-s1")
+    with np.load(run / "oof.npz", allow_pickle=False) as data:
+        assert data["folds_run"].tolist() == [3]
+        assert data["logits"].shape[0] == 2
+    provenance = json.loads((run / "provenance.json").read_text(encoding="utf-8"))
+    assert provenance["device"] == "cpu"
+    assert "fold 3" in out
+    assert str(run) in out
+    assert not (tmp_path / "results").exists()
+
+
+def test_cross_validate_cnn_device_defaults_to_the_setting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, object] = {}
+
+    def fake(*args: object, **kwargs: object) -> tuple[object, dict[str, object]]:
+        seen.update(kwargs)
+        raise SystemExit(0)
+
+    _patch_cross_validate(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "load_ds1_traces", lambda *a, **k: {})
+    monkeypatch.setattr(cli, "run_cnn_cv", fake)
+    with pytest.raises(SystemExit):
+        main(["cross-validate", "--model", "cnn"])
+    # _tmp_settings sets cv_device = "cpu"; width 1 and seed 0 by default.
+    assert seen["device"] == "cpu"
+    assert seen["width"] == 1.0
+    assert seen["seed"] == 0
+    assert seen["only_folds"] is None
+
+
+@pytest.mark.parametrize(
+    ("command", "function", "n_payloads"),
+    [
+        ("select", "run_select_all", 2),
+        ("exhibit", "run_exhibit_all", 1),
+        ("train-final", "run_final_all", 1),
+    ],
+)
+def test_the_cnn_subcommands_write_a_run_folder_and_no_results(
+    command: str,
+    function: str,
+    n_payloads: int,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    class FakeRun:
+        path = tmp_path / "runs" / "the-run"
+
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    monkeypatch.setattr(
+        cli, function, lambda settings: (FakeRun(), *([{}] * n_payloads))
+    )
+    assert main([command]) == 0
+    assert str(FakeRun.path) in capsys.readouterr().out
+
+
+def test_select_exits_1_at_the_epoch_edge(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from heartbeat.train.select import EpochEdgeError
+
+    def edge(settings: object) -> None:
+        raise EpochEdgeError("selected epoch 38", selection=None)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(cli, "load_settings", lambda _: _tmp_settings(tmp_path))
+    monkeypatch.setattr(cli, "run_select_all", edge)
+    assert main(["select"]) == 1
+    assert "selected epoch 38" in capsys.readouterr().err
