@@ -1477,3 +1477,13 @@ Brier (0.1173) and reliability data are in-sample only. The cross-fitted values 
 **Phase 3 exit (PLAN.md section 8):** R16 to R21 pass in CI and `results/cv_baseline.json` is committed. Met.
 
 **Also done (Din):** both reproduction stashes dropped. **Next:** the pull request and its merge (Din).
+
+## 2026-10-30: Phase 3 accepted
+
+**Decision (Din):** TASKS 3.1 to 3.4 are Accepted. Din pushed `phase-3-harness`, opened and merged PR dinsdev/heartbeat#4 (merge commit `4dd4c0c` on `main`), deleted the branch, dropped both reproduction stashes, and asked for the rows to be marked Accepted.
+
+**State at acceptance:** every Phase 3 exit item met (PLAN.md section 8: R16 to R21 pass in CI and `results/cv_baseline.json` is committed). CI runs, all green: 41003500236 (push) and 41003567037 (pull request) at `07c738b`, 41006581134 (push) and 41006584502 (pull request) at `b3dfa3e`. The `main` run after the merge, 41006894896, was still running when this entry was written. On `main` after the merge, `uv run heartbeat check-folds` exits 0.
+
+**Correction:** the "Phase 3 CI, first run green" entry calls run 41003567037 the run from Din's push. It is the pull-request run for the same commit; the push run is 41003500236, also green. Its timings and test counts stand as recorded.
+
+**Carried into Phase 4:** the chosen C, 0.01, is the lower edge of the locked grid (Din's call whether to widen it).
