@@ -1784,3 +1784,21 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Cost:** the `train-final` stage's code changes, so it reruns (about 15 minutes, measured for the CNN seeds in Phase 4). The clean-clone rebuild reruns every stage anyway.
 
 **Applied:** `docs/PRD.md` MODEL-01; `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.1. Made before any DS2 result and before the Phase 7 gate (rule 6; not part of the pre-registered plan, which already said the baseline is tested in the sealed run).
+
+## 2026-10-30: Phase 5 settling, 2: all three seeds exported; the sealed run scores ONNX only (PARITY-01, C6 clarification)
+
+**Gap:** C6 has the sealed run score all three final CNN models (seed 0 headline, seeds 1 and 2 as a range) and claims inference with the shipped ONNX model reproduces the reported metrics exactly, while PARITY-01 speaks of "the final model". Seeds 1 and 2 existed only as PyTorch checkpoints in the gitignored `runs/`.
+
+**Decision (Din):**
+
+1. `heartbeat export` writes all three seeds as single-file ONNX models. Seed 0 is `models/heartbeat-v1/model.onnx` with its `calibration.json` (what the demo copies in Phase 6). Seeds 1 and 2 sit under `models/heartbeat-v1/seeds/`, each with its own calibration (per-seed temperatures, Phase 4 settling 3). One `scaler.json` serves all three, since every seed's scaler is fitted on the same DS1 rows. The exact file layout is fixed in the Phase 5 task plan.
+2. `evaluate-test` scores only committed files: the three ONNX models through Python ONNX Runtime 1.30.0, and `baseline.json` through NumPy (settling 1).
+3. R26 (PyTorch against Python ONNX Runtime, 1e-5, labels exact) runs for all three seeds. R25's size gate applies per model file.
+
+**Reason:** every sealed number, the seed range included, then comes from a file the freeze record checksums and a clean clone contains; Phase 7's reproduction step can evaluate the committed models without first depending on bit-exact CPU retraining; and the seed range is not mixed with a PyTorch against ONNX difference.
+
+**Size:** about 238 KB per model at width 1 (measured at E2), so about 715 KB committed.
+
+**Rejected:** seed 0 as ONNX with seeds 1 and 2 as checksummed PyTorch checkpoints (two runtimes in one sealed run, and the range is unverifiable from a clone); committing the `.pt` checkpoints (a second format nobody ships).
+
+**Applied:** `docs/PRD.md` PARITY-01; `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.1. Made before any DS2 result and before the Phase 7 gate (rule 6).

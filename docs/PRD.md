@@ -199,7 +199,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 
 ### 8.5 Export and parity (PARITY)
 
-- **PARITY-01 (P0, E2, E3).** The final model exports to a single-file ONNX model (opset 20, batch norm folded), with the scaler and calibration as JSON and a freeze record, committed under `models/heartbeat-v1/`.
+- **PARITY-01 (P0, E2, E3).** The final model exports to a single-file ONNX model (opset 20, batch norm folded), with the scaler and calibration as JSON and a freeze record, committed under `models/heartbeat-v1/`. All three final seeds are exported and committed: seed 0 is the shipped `model.onnx`, seeds 1 and 2 sit beside it with their own calibration, and the sealed run scores only these committed ONNX files and `baseline.json` (Phase 5 settling 2, 2026-10-30).
 - **PARITY-02 (P0, E5).** Export writes shared fixtures of about 50 real DS1 beats (never DS2) to `fixtures/parity/`.
 - **PARITY-03 (P0, E5).** The parity chain must pass at a tolerance of 1e-5 on outputs and features with exact labels: PyTorch against Python ONNX Runtime; Python ONNX Runtime against ONNX Runtime Web in a real browser; TypeScript preprocessing (window, z-score, RR features, scaler, calibration) against Python step by step.
 - **PARITY-04 (P0, E1).** Python and the browser use the same ONNX Runtime version (1.30.0 at the time of writing).
