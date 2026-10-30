@@ -8,6 +8,9 @@ from typing import Any
 
 from heartbeat.paths import REPO_ROOT
 
+# The devices a CV run may use; kept here so the config module imports no torch.
+CV_DEVICES = ("mps", "cpu")
+
 
 class SettingsError(ValueError):
     """A settings file is malformed: unknown key, missing key or wrong type."""
@@ -40,11 +43,24 @@ class FoldSettings:
 
 
 @dataclass(frozen=True)
+class TrainSettings:
+    """Training settings (Phase 4 task plan, design call 7).
+
+    Attributes:
+        cv_device: "mps" or "cpu", for CNN cross-validation and the exhibit.
+            Final models train on CPU whatever this says (C6).
+    """
+
+    cv_device: str
+
+
+@dataclass(frozen=True)
 class Settings:
     """All run settings."""
 
     data: DataSettings
     folds: FoldSettings
+    train: TrainSettings
 
 
 def _table(
@@ -77,7 +93,7 @@ def load_settings(path: Path, root: Path = REPO_ROOT) -> Settings:
     """
     with path.open("rb") as f:
         raw = tomllib.load(f)
-    unknown = set(raw) - {"data", "folds"}
+    unknown = set(raw) - {"data", "folds", "train"}
     if unknown:
         raise SettingsError(f"{path}: unknown table: {sorted(unknown)}")
 
@@ -100,6 +116,10 @@ def load_settings(path: Path, root: Path = REPO_ROOT) -> Settings:
     if not isinstance(seed, int) or isinstance(seed, bool):
         raise SettingsError(f"{path}: [folds] seed must be an integer")
 
+    train = _table(raw, "train", {"cv_device"}, path)
+    if train["cv_device"] not in CV_DEVICES:
+        raise SettingsError(f"{path}: [train] cv_device must be one of {CV_DEVICES}")
+
     return Settings(
         data=DataSettings(
             raw_dir=root / data["raw_dir"],
@@ -107,4 +127,5 @@ def load_settings(path: Path, root: Path = REPO_ROOT) -> Settings:
             sources=tuple(sources),
         ),
         folds=FoldSettings(seed=seed),
+        train=TrainSettings(cv_device=train["cv_device"]),
     )

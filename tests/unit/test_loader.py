@@ -7,7 +7,12 @@ import numpy as np
 import pytest
 
 from heartbeat.constants import FS_HZ, WINDOW_SAMPLES
-from heartbeat.data.loader import SealedRecordError, load_ds1, require_ds1
+from heartbeat.data.loader import (
+    SealedRecordError,
+    load_ds1,
+    load_ds1_traces,
+    require_ds1,
+)
 from heartbeat.data.manifests import Splits, load_splits
 from heartbeat.data.prepare import prepare_record, save_prepared
 from heartbeat.data.records import RawRecord
@@ -122,6 +127,75 @@ def test_missing_prepared_file_names_the_command(tmp_path: Path) -> None:
     folder = _prepared_folder(tmp_path, ["101"])
     with pytest.raises(FileNotFoundError, match="heartbeat prepare"):
         load_ds1(folder, SPLITS, SUBJECTS)
+
+
+# Phase 4 design call 2: the traces for augmentation come through the same check.
+
+
+@pytest.mark.rule("R15")
+@pytest.mark.parametrize("record", ["100", "202", "102", "999"])
+def test_load_ds1_traces_refuses_a_non_ds1_record_even_with_its_file_present(
+    tmp_path: Path, record: str
+) -> None:
+    folder = _prepared_folder(tmp_path, ["101", "106"])
+    raw = _raw("101")
+    planted = RawRecord(record, raw.mlii_mv, raw.ann_sample, raw.ann_symbol)
+    save_prepared(
+        prepare_record(planted, SUBJECTS.get(record, "s999")),
+        folder / f"{record}.npz",
+    )
+    with pytest.raises(SealedRecordError, match=record):
+        load_ds1_traces(folder, SPLITS, SUBJECTS, records=[record])
+
+
+@pytest.mark.rule("R15")
+def test_load_ds1_traces_fails_on_a_stray_ds2_file_in_the_folder(
+    tmp_path: Path,
+) -> None:
+    folder = _prepared_folder(tmp_path, ["101", "106"])
+    raw = _raw("101")
+    stray = RawRecord("100", raw.mlii_mv, raw.ann_sample, raw.ann_symbol)
+    save_prepared(prepare_record(stray, "s100"), folder / "100.npz")
+    with pytest.raises(SealedRecordError, match=r"100\.npz"):
+        load_ds1_traces(folder, SPLITS, SUBJECTS)
+
+
+@pytest.mark.rule("R15")
+def test_load_ds1_traces_fails_on_a_ds2_file_renamed_to_a_ds1_name(
+    tmp_path: Path,
+) -> None:
+    folder = _prepared_folder(tmp_path, ["106"])
+    raw = _raw("101")
+    renamed = RawRecord("100", raw.mlii_mv, raw.ann_sample, raw.ann_symbol)
+    save_prepared(prepare_record(renamed, "s100"), folder / "101.npz")
+    with pytest.raises((SealedRecordError, ValueError), match="100"):
+        load_ds1_traces(folder, SPLITS, SUBJECTS)
+
+
+def test_load_ds1_traces_returns_each_records_int16_trace(tmp_path: Path) -> None:
+    folder = _prepared_folder(tmp_path, ["101", "106"])
+    traces = load_ds1_traces(folder, SPLITS, SUBJECTS)
+    assert list(traces) == ["101", "106"]
+    for record, trace in traces.items():
+        expected = prepare_record(_raw(record), SUBJECTS[record]).trace_adu
+        assert trace.dtype == np.int16
+        np.testing.assert_array_equal(trace, expected)
+    # The windows load_ds1 cuts are pieces of these traces.
+    beats = load_ds1(folder, SPLITS, SUBJECTS)
+    for row in range(beats.sample.size):
+        start = int(beats.sample[row]) - 96
+        np.testing.assert_array_equal(
+            beats.window_adu[row],
+            traces[str(beats.record_id[row])][start : start + WINDOW_SAMPLES],
+        )
+
+
+def test_load_ds1_traces_fails_on_a_wrong_subject(tmp_path: Path) -> None:
+    folder = tmp_path / "prepared"
+    folder.mkdir()
+    save_prepared(prepare_record(_raw("101"), "s999"), folder / "101.npz")
+    with pytest.raises(ValueError, match=r"101.*s999"):
+        load_ds1_traces(folder, SPLITS, SUBJECTS, records=["101"])
 
 
 def _imports_of(path: Path) -> list[str]:

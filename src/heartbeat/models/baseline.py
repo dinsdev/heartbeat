@@ -77,4 +77,10 @@ def coefficients(
     return coef, intercept
 
 
-BASELINE = ModelSpec(name="baseline", inputs=_inputs, fit=_fit, logits=_logits)
+BASELINE = ModelSpec(
+    name="baseline",
+    inputs=_inputs,
+    fit=_fit,
+    logits=_logits,
+    config={"solver": "lbfgs", "max_iter": BASELINE_MAX_ITER, "dtype": "float64"},
+)

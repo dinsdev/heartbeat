@@ -9,7 +9,7 @@ import pytest
 
 from heartbeat import cli
 from heartbeat.cli import main
-from heartbeat.config import DataSettings, FoldSettings, Settings
+from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 from heartbeat.constants import N_FOLDS, WINDOW_SAMPLES
 from heartbeat.data import folds as folds_module
 from heartbeat.data.folds import (
@@ -335,6 +335,7 @@ def _cli_settings(tmp_path: Path) -> Settings:
             sources=("https://a.example/",),
         ),
         folds=FoldSettings(seed=20261026),
+        train=TrainSettings(cv_device="cpu"),
     )
 
 

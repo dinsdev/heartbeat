@@ -10,12 +10,18 @@ from types import MappingProxyType
 
 from sklearn.exceptions import ConvergenceWarning
 
-from heartbeat.config import load_settings
-from heartbeat.constants import FLOOR_HIT_LIMIT, N_FOLDS
+from heartbeat.config import CV_DEVICES, Settings, load_settings
+from heartbeat.constants import CNN_WIDTHS, FLOOR_HIT_LIMIT, MAX_EPOCHS, N_FOLDS
 from heartbeat.data import download as download_module
 from heartbeat.data.download import ChecksumMismatchError, DownloadError, check_cache
-from heartbeat.data.folds import FoldCheckError, check_folds, make_folds, write_folds
-from heartbeat.data.loader import load_ds1
+from heartbeat.data.folds import (
+    FoldCheckError,
+    Folds,
+    check_folds,
+    make_folds,
+    write_folds,
+)
+from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
 from heartbeat.evaluate.calibration import TemperatureAtBoundError
@@ -37,9 +43,16 @@ from heartbeat.stages import (
     Context,
     StageFailedError,
     UnknownStageError,
+    run_exhibit_all,
+    run_final_all,
     run_pipeline,
+    run_select_all,
 )
+from heartbeat.train.cnn_cv import MissingRunError, run_cnn_cv
 from heartbeat.train.cv import run_baseline
+from heartbeat.train.loop import NonFiniteLossError
+from heartbeat.train.select import EpochEdgeError, UndefinedScoreError
+from heartbeat.train.torch_setup import DeviceUnavailableError
 
 # Phase 2 settling 5: the manifests whose hashes the fold file records.
 FOLD_MANIFESTS = (SPLITS_MANIFEST, SUBJECTS_MANIFEST)
@@ -180,6 +193,8 @@ def _cross_validate(args: argparse.Namespace) -> int:
         return 1
     beats = load_ds1(settings.data.prepared_dir, splits, subjects)
     folds_sha256 = hashlib.sha256(FOLDS_JSON.read_bytes()).hexdigest()
+    if args.model == "cnn":
+        return _cross_validate_cnn(args, settings, beats, folds, folds_sha256)
     try:
         run, summary = run_baseline(settings, beats, folds, folds_sha256, root=RUNS_DIR)
     except (ConvergenceWarning, TemperatureAtBoundError) as error:
@@ -193,6 +208,97 @@ def _cross_validate(args: argparse.Namespace) -> int:
         f"four-class {pooled['macro_f1_all']:.4f}; "
         f"temperature {summary['calibration']['temperature']:.4f}"
     )
+    print(f"run folder {run.path}")
+    return 0
+
+
+def _cross_validate_cnn(
+    args: argparse.Namespace,
+    settings: Settings,
+    beats: BeatTable,
+    folds: Folds,
+    folds_sha256: str,
+) -> int:
+    # A development run at one width and seed, all folds or one (Task 9).
+    device = args.device or settings.train.cv_device
+    only_folds = None if args.fold is None else [args.fold]
+    traces = load_ds1_traces(
+        settings.data.prepared_dir,
+        load_splits(SPLITS_MANIFEST),
+        load_subjects(SUBJECTS_MANIFEST),
+    )
+    try:
+        run, _ = run_cnn_cv(
+            settings,
+            beats,
+            traces,
+            folds,
+            folds_sha256,
+            width=args.width,
+            seed=args.seed,
+            device=device,
+            root=RUNS_DIR,
+            n_epochs=MAX_EPOCHS,
+            only_folds=only_folds,
+        )
+    except (DeviceUnavailableError, NonFiniteLossError) as error:
+        print(f"heartbeat cross-validate: {error}", file=sys.stderr)
+        return 1
+    folds_text = "all folds" if only_folds is None else f"fold {args.fold}"
+    print(
+        f"heartbeat cross-validate: cnn width {args.width:g} seed {args.seed}, "
+        f"{folds_text}, {MAX_EPOCHS} epochs on {device}"
+    )
+    print(f"run folder {run.path}")
+    return 0
+
+
+# Errors that stop a CNN subcommand with exit 1 (Phase 4 plan, stop conditions).
+_CNN_STOPS = (
+    EpochEdgeError,
+    UndefinedScoreError,
+    MissingRunError,
+    NonFiniteLossError,
+    DeviceUnavailableError,
+    TemperatureAtBoundError,
+    ConvergenceWarning,
+    FileNotFoundError,
+    ValueError,
+)
+
+
+def _select(args: argparse.Namespace) -> int:
+    # Writes a run folder only; results/ is written by the rebuild stage (rule 5).
+    try:
+        run, selection, _ = run_select_all(load_settings(DEFAULT_CONFIG))
+    except _CNN_STOPS as error:
+        print(f"heartbeat select: {error}", file=sys.stderr)
+        return 1
+    if selection:
+        print(
+            f"heartbeat select: width {selection['width']:g}, "
+            f"{selection['epoch']} epochs"
+        )
+    print(f"run folder {run.path}")
+    return 0
+
+
+def _exhibit(args: argparse.Namespace) -> int:
+    try:
+        run, _ = run_exhibit_all(load_settings(DEFAULT_CONFIG))
+    except _CNN_STOPS as error:
+        print(f"heartbeat exhibit: {error}", file=sys.stderr)
+        return 1
+    print(f"run folder {run.path}")
+    return 0
+
+
+def _train_final(args: argparse.Namespace) -> int:
+    try:
+        run, _ = run_final_all(load_settings(DEFAULT_CONFIG))
+    except _CNN_STOPS as error:
+        print(f"heartbeat train-final: {error}", file=sys.stderr)
+        return 1
     print(f"run folder {run.path}")
     return 0
 
@@ -217,8 +323,12 @@ def _rebuild(args: argparse.Namespace) -> int:
         )
         return 2
     if args.exact:
-        # E4: --exact changes how the CNN trains; no built stage trains one yet.
-        print("heartbeat rebuild: --exact has no effect before the Phase 4 stages")
+        # E4: --exact (every training run on CPU, checked bit for bit) is built
+        # with the reproduction checks in Phase 5.
+        print(
+            "heartbeat rebuild: --exact is not built yet (Phase 5); "
+            "running the default mode"
+        )
     try:
         results = run_pipeline(PIPELINE, rebuild_context(), from_stage=args.from_stage)
     except UnknownStageError as error:
@@ -247,6 +357,9 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "check-folds": _check_folds,
         "rebuild": _rebuild,
         "cross-validate": _cross_validate,
+        "select": _select,
+        "exhibit": _exhibit,
+        "train-final": _train_final,
     }
 )
 
@@ -270,9 +383,30 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "cross-validate":
             sub.add_argument(
                 "--model",
-                choices=("baseline",),
+                choices=("baseline", "cnn"),
                 default="baseline",
-                help="the model to cross-validate (the CNN arrives in Phase 4)",
+                help="the model to cross-validate",
+            )
+            sub.add_argument(
+                "--width",
+                type=float,
+                choices=CNN_WIDTHS,
+                default=1.0,
+                help="CNN width (development runs)",
+            )
+            sub.add_argument(
+                "--seed", type=int, default=0, help="CNN master seed (default 0)"
+            )
+            sub.add_argument(
+                "--fold",
+                type=int,
+                choices=range(N_FOLDS),
+                help="train this fold only (development runs)",
+            )
+            sub.add_argument(
+                "--device",
+                choices=CV_DEVICES,
+                help="CNN device (default: [train] cv_device)",
             )
         if name == "rebuild":
             sub.add_argument(

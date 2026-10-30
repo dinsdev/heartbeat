@@ -5,7 +5,7 @@ loader has no DS2 path: asking for any record outside DS1 raises before a file
 is opened, and a stray non-DS1 file in the prepared folder fails the load.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 
 from heartbeat.constants import RR_FEATURE_NAMES, SCORED_CLASSES, WINDOW_SAMPLES
 from heartbeat.data.manifests import Splits
-from heartbeat.data.npz import load_prepared
+from heartbeat.data.npz import PreparedRecord, load_prepared
 from heartbeat.signal.windows import extract_windows
 
 
@@ -72,6 +72,34 @@ def require_ds1(record_ids: Sequence[str], splits: Splits) -> None:
         raise SealedRecordError(f"record {record} {reason}; only DS1 can be loaded")
 
 
+def _ds1_records(
+    prepared_dir: Path,
+    splits: Splits,
+    subjects: Mapping[str, str],
+    records: Sequence[str] | None,
+) -> Iterator[tuple[str, PreparedRecord]]:
+    """Each asked-for DS1 record's prepared file, checked against the manifests."""
+    wanted = tuple(splits.ds1 if records is None else records)
+    require_ds1(wanted, splits)
+    for path in sorted(prepared_dir.glob("*.npz")):
+        if path.stem not in splits.ds1:
+            raise SealedRecordError(
+                f"{path}: a prepared file for a record outside DS1; delete it"
+            )
+    for record in wanted:
+        path = prepared_dir / f"{record}.npz"
+        if not path.is_file():
+            raise FileNotFoundError(f"{path} missing; run `uv run heartbeat prepare`")
+        prepared = load_prepared(path)
+        require_ds1([prepared.record_id], splits)
+        if prepared.subject_id != subjects[record]:
+            raise ValueError(
+                f"record {record}: subject {prepared.subject_id} in {path}, "
+                f"{subjects[record]} in the manifest"
+            )
+        yield record, prepared
+
+
 def load_ds1(
     prepared_dir: Path,
     splits: Splits,
@@ -96,27 +124,10 @@ def load_ds1(
         FileNotFoundError: If a DS1 record has not been prepared.
         ValueError: If a file's record or subject disagrees with the manifests.
     """
-    wanted = tuple(splits.ds1 if records is None else records)
-    require_ds1(wanted, splits)
-    for path in sorted(prepared_dir.glob("*.npz")):
-        if path.stem not in splits.ds1:
-            raise SealedRecordError(
-                f"{path}: a prepared file for a record outside DS1; delete it"
-            )
     allowed = set(SCORED_CLASSES) | ({"Q"} if include_q else set())
 
     parts: list[BeatTable] = []
-    for record in wanted:
-        path = prepared_dir / f"{record}.npz"
-        if not path.is_file():
-            raise FileNotFoundError(f"{path} missing; run `uv run heartbeat prepare`")
-        prepared = load_prepared(path)
-        require_ds1([prepared.record_id], splits)
-        if prepared.subject_id != subjects[record]:
-            raise ValueError(
-                f"record {record}: subject {prepared.subject_id} in {path}, "
-                f"{subjects[record]} in the manifest"
-            )
+    for record, prepared in _ds1_records(prepared_dir, splits, subjects, records):
         kept_class = prepared.beat_class[prepared.kept]
         chosen = np.isin(kept_class, sorted(allowed))
         sample = prepared.beat_sample[prepared.kept][chosen]
@@ -139,3 +150,29 @@ def load_ds1(
         window_adu=np.concatenate([p.window_adu for p in parts]),
         rr_s=np.concatenate([p.rr_s for p in parts]),
     )
+
+
+def load_ds1_traces(
+    prepared_dir: Path,
+    splits: Splits,
+    subjects: Mapping[str, str],
+    records: Sequence[str] | None = None,
+) -> dict[str, NDArray[np.int16]]:
+    """Load the canonical int16 trace of DS1 records, for augmentation.
+
+    The same checks as `load_ds1` (R15; Phase 4 task plan, design call 2): a
+    record outside DS1 raises before a file is opened, and a stray non-DS1
+    file in the folder fails the load.
+
+    Returns:
+        Record to trace, `(n_samples,)` each, records in the order asked for.
+
+    Raises:
+        SealedRecordError: For a record outside DS1, or a non-DS1 file in the folder.
+        FileNotFoundError: If a DS1 record has not been prepared.
+        ValueError: If a file's record or subject disagrees with the manifests.
+    """
+    return {
+        record: prepared.trace_adu
+        for record, prepared in _ds1_records(prepared_dir, splits, subjects, records)
+    }

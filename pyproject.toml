@@ -52,7 +52,7 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [tool.heartbeat]
 # Bumped as the first commit of each phase (Phase 1 settling, 1 of 4).
-current-phase = 3
+current-phase = 4
 
 [tool.ruff]
 line-length = 88

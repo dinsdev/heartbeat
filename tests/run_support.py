@@ -3,7 +3,7 @@
 import subprocess
 from pathlib import Path
 
-from heartbeat.config import DataSettings, FoldSettings, Settings
+from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 
 
 def git(repo: Path, *args: str) -> str:
@@ -40,4 +40,5 @@ def settings(tmp_path: Path) -> Settings:
             sources=("https://a.example/",),
         ),
         folds=FoldSettings(seed=7),
+        train=TrainSettings(cv_device="cpu"),
     )
