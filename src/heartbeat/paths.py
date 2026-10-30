@@ -25,3 +25,8 @@ FOLDS_PIN = MANIFESTS_DIR / "folds.sha256"
 
 # Gitignored: rebuild stage state (E4).
 STAGES_DIR = REPO_ROOT / "data" / "stages"
+
+# Gitignored: one folder per run (C6, MODEL-07).
+RUNS_DIR = REPO_ROOT / "runs"
+# Committed summaries, written only by the rebuild stages (rule 5).
+RESULTS_DIR = REPO_ROOT / "results"
