@@ -4,7 +4,7 @@
     "path": "models/heartbeat-v1/baseline.json",
     "temperature": 1.1743687510024545
   },
-  "commit": "27fd028dda5134615260ab93a641d4ea81130d50",
+  "commit": "dfb0300ffae3a393c7e6f01162ad4f8863f2df80",
   "dirty": false,
   "epochs": 10,
   "files": [
@@ -24,9 +24,9 @@
       "sha256": "f090c4f02372bddf153ee19e6a49fd6415f6f93edbc66063162219830c7efa46"
     },
     {
-      "bytes": 235466,
+      "bytes": 210503,
       "path": "models/heartbeat-v1/model.onnx",
-      "sha256": "b0292e6c4763b0bf6e70976aa9ddc754c70dc8c8eabd329576c9fa3ea5025e5f"
+      "sha256": "6e5237989d00aab52b4106bd11c458a3fa722e0e757161b96a7533535a26eba0"
     },
     {
       "bytes": 660,
@@ -39,9 +39,9 @@
       "sha256": "e2765419ac4a5ed4680b2ee1f6dc54034e1696c241c1549de5d65f0db2dde115"
     },
     {
-      "bytes": 235466,
+      "bytes": 210503,
       "path": "models/heartbeat-v1/seeds/seed-1/model.onnx",
-      "sha256": "e152852e78b5418184146a40dbf6c43450926dad033fcb0347e5411d6f2a8d24"
+      "sha256": "d3d02134e7f5a4c408382bddfb0da24c9d33bba0b4f9e73a0bc781ceb06f0e89"
     },
     {
       "bytes": 386,
@@ -49,9 +49,9 @@
       "sha256": "ac31fd6393356bf7364e59fb0c93b1c36a92c2d6a2853a0da2bff9d315c91567"
     },
     {
-      "bytes": 235466,
+      "bytes": 210503,
       "path": "models/heartbeat-v1/seeds/seed-2/model.onnx",
-      "sha256": "783ca6f59fa225ab06b8594faf491fb8e76df33637265404b6ebe5d8509e1312"
+      "sha256": "d03d6fa69d610ce5e9c26838a2758fd1dc8c3838ee635584bea859f63f912e16"
     }
   ],
   "fixtures": {
@@ -104,7 +104,7 @@
     "survey": "every DS1 kept beat: labels exact (gated), largest difference and beats over the tolerance recorded",
     "tolerance": 1e-05
   },
-  "run": "20261030T223322Z-27fd028-export",
+  "run": "20261031T005238Z-dfb0300-export",
   "shipped_seed": 0,
   "size_limit_bytes": 1000000,
   "versions": {

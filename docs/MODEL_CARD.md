@@ -36,9 +36,9 @@ Source: `results/selection.json` and `results/export.json` (width and epochs cho
 - Width multiplier 1, 10 epochs.
 - Parameters: 52036 (PyTorch, before batch-norm folding).
 - ONNX opset 20, one file per seed, each under 1000000 bytes:
-  - Seed 0 (shipped), `model.onnx`: 235466 bytes, SHA256 `b0292e6c4763b0bf6e70976aa9ddc754c70dc8c8eabd329576c9fa3ea5025e5f`.
-  - Seed 1, `seeds/seed-1/model.onnx`: 235466 bytes, SHA256 `e152852e78b5418184146a40dbf6c43450926dad033fcb0347e5411d6f2a8d24`.
-  - Seed 2, `seeds/seed-2/model.onnx`: 235466 bytes, SHA256 `783ca6f59fa225ab06b8594faf491fb8e76df33637265404b6ebe5d8509e1312`.
+  - Seed 0 (shipped), `model.onnx`: 210503 bytes, SHA256 `6e5237989d00aab52b4106bd11c458a3fa722e0e757161b96a7533535a26eba0`.
+  - Seed 1, `seeds/seed-1/model.onnx`: 210503 bytes, SHA256 `d3d02134e7f5a4c408382bddfb0da24c9d33bba0b4f9e73a0bc781ceb06f0e89`.
+  - Seed 2, `seeds/seed-2/model.onnx`: 210503 bytes, SHA256 `d03d6fa69d610ce5e9c26838a2758fd1dc8c3838ee635584bea859f63f912e16`.
 - Baseline, `baseline.json`: SHA256 `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3`.
 - Freeze commit and date: Pending (Phase 7).
 
