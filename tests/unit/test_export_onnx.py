@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import onnx
@@ -26,6 +27,7 @@ from heartbeat.export.onnx import (
     pytorch_logits,
 )
 from heartbeat.models.cnn import HeartbeatCNN
+from heartbeat.paths import REPO_ROOT
 from heartbeat.sealed.score import onnx_logits, onnx_session
 
 WIDTH = 0.5
@@ -138,6 +140,33 @@ def test_a_label_flip_within_tolerance_still_raises(
     monkeypatch.setattr(onnx_module, "onnx_logits", lambda s, w, r: flipped)
     with pytest.raises(ParityError, match="label"):
         check_parity(_model(), exported, windows, rr)
+
+
+def _metadata(model: onnx.ModelProto) -> list[str]:
+    graph = model.graph
+    holders: list[Any] = [model, graph, *graph.node, *graph.initializer]
+    holders += [*graph.input, *graph.output, *graph.value_info]
+    for function in model.functions:
+        holders += [function, *function.node]
+    found = [f"{type(h).__name__}: {p.key}" for h in holders for p in h.metadata_props]
+    return found + [f"{type(h).__name__} doc" for h in holders if h.doc_string]
+
+
+def test_the_export_carries_no_metadata_or_local_paths(exported: bytes) -> None:
+    # The exporter records stack traces with absolute paths; they made the
+    # bytes depend on the checkout's location (Phase 5 stop 2).
+    assert _metadata(onnx.load_model_from_string(exported)) == []
+    for path in (REPO_ROOT, Path.home(), Path(torch.__file__).parent):
+        assert str(path).encode() not in exported
+    assert b".py" not in exported
+
+
+def test_a_file_with_metadata_is_refused(exported: bytes) -> None:
+    model = onnx.load_model_from_string(exported)
+    entry = model.graph.node[0].metadata_props.add()
+    entry.key, entry.value = "pkg.torch.onnx.stack_trace", '"/somewhere/cnn.py"'
+    with pytest.raises(ExportError, match="metadata"):
+        check_onnx(model.SerializeToString())
 
 
 def test_two_exports_are_byte_identical(exported: bytes) -> None:

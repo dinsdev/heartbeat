@@ -4,9 +4,11 @@
 20 with a dynamic batch: inputs `window` `(batch, 1, 256)` and `rr`
 `(batch, 6)`, float32, output `logits` `(batch, 4)` in `SCORED_CLASSES` order
 (Phase 5 task plan, design call 3). The exporter's optimizer folds batch norm
-into the convolutions; `check_onnx` refuses a file that still has a
-BatchNormalization node, external data, other names or shapes, or 1 MB or
-more. `check_parity` compares PyTorch with Python ONNX Runtime within 1e-5
+into the convolutions; `export_onnx` drops the exporter's metadata (stack
+traces with absolute paths, which made the bytes depend on the checkout's
+location; Phase 5 stop 2). `check_onnx` refuses a file that still has a
+BatchNormalization node, metadata, external data, other names or shapes, or
+1 MB or more. `check_parity` compares PyTorch with Python ONNX Runtime within 1e-5
 with equal labels.
 """
 
@@ -100,6 +102,22 @@ def _rename_batch(model: onnx.ModelProto) -> None:
                 dim.dim_param = BATCH_DIM
 
 
+def _metadata_holders(model: onnx.ModelProto) -> list[Any]:
+    # Every message that can carry metadata_props or a doc_string.
+    graph = model.graph
+    holders: list[Any] = [model, graph, *graph.node, *graph.initializer]
+    holders += [*graph.input, *graph.output, *graph.value_info]
+    for function in model.functions:
+        holders += [function, *function.node]
+    return holders
+
+
+def _strip_metadata(model: onnx.ModelProto) -> None:
+    for holder in _metadata_holders(model):
+        del holder.metadata_props[:]
+        holder.doc_string = ""
+
+
 def export_onnx(model: HeartbeatCNN) -> bytes:
     """Export an eval-mode model to one ONNX file's bytes (deterministic)."""
     assert not model.training, "export in eval mode"
@@ -128,6 +146,7 @@ def export_onnx(model: HeartbeatCNN) -> bytes:
     assert program is not None
     proto = program.model_proto
     _rename_batch(proto)
+    _strip_metadata(proto)
     data: bytes = proto.SerializeToString()
     return data
 
@@ -145,9 +164,9 @@ def check_onnx(data: bytes) -> dict[str, Any]:
 
     Raises:
         SizeGateError: At 1 MB or more (R25).
-        ExportError: On external data, a BatchNormalization node, another
-            opset, or input and output names and shapes other than design
-            call 3's.
+        ExportError: On external data, a BatchNormalization node, metadata
+            or doc strings, another opset, or input and output names and
+            shapes other than design call 3's.
     """
     if len(data) >= MODEL_SIZE_LIMIT_BYTES:
         raise SizeGateError(
@@ -161,6 +180,8 @@ def check_onnx(data: bytes) -> dict[str, Any]:
     ops = sorted({node.op_type for node in model.graph.node})
     if "BatchNormalization" in ops:
         raise ExportError("model keeps a BatchNormalization node; it must be folded")
+    if any(h.metadata_props or h.doc_string for h in _metadata_holders(model)):
+        raise ExportError("model keeps metadata or doc strings; export strips them")
     opsets = [(o.domain, o.version) for o in model.opset_import]
     if opsets != [("", ONNX_OPSET)]:
         raise ExportError(f"model opsets {opsets}, expected opset {ONNX_OPSET}")
