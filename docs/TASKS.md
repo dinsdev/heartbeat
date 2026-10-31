@@ -141,11 +141,11 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 5.1 | Frozen baseline on every DS1 row (settling 1); single-file ONNX export of all three seeds (settling 2), scaler and calibration JSON, `models/heartbeat-v1/` with its `NOTICE` | Planned |
-| 5.2 | DS1 parity fixtures and the Python half of the parity chain | Planned |
-| 5.3 | `evaluate-test` refusals, the append-only log writer, and the DS1 rehearsal of the success path (settling 3) | Planned |
-| 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; `--exact` built, not run; clean-clone reproduction, exact on this Mac (settling 4), logged | Planned |
-| 5.5 | `heartbeat cards` renderer for the card blocks, and its `verify` check (R50); DS1 blocks and the exhibit rendered, test blocks pending (settling 5) | Planned |
+| 5.1 | Frozen baseline on every DS1 row (settling 1); single-file ONNX export of all three seeds (settling 2), scaler and calibration JSON, `models/heartbeat-v1/` with its `NOTICE` | Implemented (2026-10-30): R25, R26 and R52 tests pass (`scripts/check.sh`, `uv run pytest`); bundle written by `uv run heartbeat rebuild` at `27fd028`, committed in `7d97b86`. Blocked: a clean clone's ONNX files differ by embedded source paths (stop 2, ledger: "Phase 5 stopped at stop 2") |
+| 5.2 | DS1 parity fixtures and the Python half of the parity chain | Implemented (2026-10-30): R26 and R27 tests pass (`uv run pytest`, real-data layer included); fixtures committed in `7d97b86` and reproduced byte for byte by the clean clone (ledger: "Phase 5 stopped at stop 2") |
+| 5.3 | `evaluate-test` refusals, the append-only log writer, and the DS1 rehearsal of the success path (settling 3) | Implemented (2026-10-30): R41 and R42 tests and the DS1 rehearsal pass (`uv run pytest`); `evaluate-test` never run (ledger: "Phase 5 stopped at stop 2") |
+| 5.4 | `rebuild` end to end (stops before DS2) and `heartbeat verify`; `--exact` built, not run; clean-clone reproduction, exact on this Mac (settling 4), logged | Blocked (2026-10-30): `uv run heartbeat rebuild` stops after `cards` (R28) and `uv run heartbeat verify` passes 6 of 6; the clean-clone check fails on the three ONNX files (stop 2, ledger: "Phase 5 stopped at stop 2"). `--exact` built, not run |
+| 5.5 | `heartbeat cards` renderer for the card blocks, and its `verify` check (R50); DS1 blocks and the exhibit rendered, test blocks pending (settling 5) | Implemented (2026-10-30): R50 tests pass (`uv run pytest`); cards rendered in `7d97b86`; `docs/DATA_CARD.md` reproduced by the clean clone, `docs/MODEL_CARD.md` differs only in the ONNX SHA256s (ledger: "Phase 5 stopped at stop 2") |
 
 ### Phase 6: Demo on DS1
 

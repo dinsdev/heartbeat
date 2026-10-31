@@ -1876,3 +1876,70 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Approved (Din, 2026-10-30):** the Phase 5 task plan as committed in `4f303e0`, including its twelve design calls, and the `/goal` prompt drafted in the planning session (3,495 characters after Din asked for long jobs to run under `caffeinate -ims`, under the 4,000-character limit, clean under the wording lint; the guard was checked to block `evaluate-test`, `export --freeze` and `rebuild --exact` behind `caffeinate` too). Execution is handed to a fresh Opus 5.5 session at high effort: one goal run on branch `phase-5-export`, ending at the push command for Din or at a stop-and-ask condition.
 
 **Guard (design call 5, Din's go with the plan):** `.claude/hooks/guard.py` now blocks `heartbeat export --freeze` for Claude, beside `evaluate-test`, `make-folds` and `rebuild --exact`, so the freeze record is written only by Din in Phase 7. `.claude/hooks/test_guard.py` gains the blocked command and `uv run heartbeat export` as an allowed one; `uv run pytest .claude/hooks/test_guard.py` 98 passed; ruff check and format clean on `.claude/hooks`.
+
+## 2026-10-30: Phase 5 stopped at stop 2: the clean clone's ONNX files differ (embedded source paths)
+
+**Status:** Tasks 1 to 10 done; Task 11 ran and hit stop 2; Task 12 not started (AGENTS.md Commands and TASKS verification wait for Din's call). Nothing pushed.
+
+**Built (branch `phase-5-export`, one commit per plan step):** `918fd5e` phase bump; `529f539` constants, paths and the dirty-flag scope (design call 2); `036b01f` the frozen baseline (settling 1, TASKS 5.1); `b724927` header demographics and `describe-data` (TASKS 5.5), the last planned training-code change; `e9fb130` ONNX export of three seeds, the bundle and `NOTICE` (R25, R26, R52); `98f5a4a` DS1 parity fixtures (R26, R27); `66d16dd` the freeze record and gate (R41, R47 built); `f0bfc3c` `evaluate-test` with its log, report and the DS1 rehearsal (R42, settling 3); `587356b` parity gated on the fixture beats with a survey of every DS1 beat (deviation 4); `6680fdc` the four stages, `--exact` and the reproduction check (R28); `27fd028` `heartbeat cards` and `heartbeat verify` (R50) with the CI step; `7d97b86` the rebuild's outputs alone; and this commit (this entry and the TASKS statuses).
+
+**Deviations from the plan, and why:**
+
+1. `describe-data` has `prepare` upstream as well as `download`: its DS1 kept-beat counts read the prepared files.
+2. `data/prepare.py` gains `prepare_in_memory` (Task 3, inside the training-code window), so `run_sealed` prepares DS2 records without writing them to `data/prepared/`. A test allows only `sealed/run.py` to import it.
+3. A module the file map did not list, `export/build.py`, runs the export (checkpoints, ONNX, parity, bundle, fixtures). It breaks an import cycle between `bundle.py` and `fixtures.py`.
+4. Parity scope. The dry run on the Phase 4 checkpoints (scratchpad, CPU) showed PyTorch against ONNX Runtime within 1e-5 on the 50 fixture beats for all seeds, but one DS1 beat of seed 2 at 1.53e-5 when every DS1 beat is compared (a logit of about -164.5, relative difference about 9e-8; float32 accumulation order; batch-norm folding and ORT graph optimization ruled out by probes). The plan's R26 row is "parity test on fixtures", so the gate is the fixtures (R26) and labels on every DS1 beat; the all-DS1 largest difference and count over 1e-5 are recorded per seed in `results/export.json`, not gated. Tolerance unchanged. Flagged below.
+5. Training-code touch after Task 3: `train/exhibit.py` gains `card_row(payload)` in `27fd028`, so the card's accuracy row is built in the one module the existing test `test_accuracy_is_computed_only_in_the_exhibit` allows. The test is unchanged. The Task 10 rebuild reran training anyway (Tasks 1 to 3), so this cost nothing extra.
+6. New test helpers the file map did not list: `tests/card_support.py`, `tests/sealed_support.py`, and `annotated_beats_with_traces` in `tests/cnn_support.py` (irregular beat times, so the RR features vary).
+7. `pyproject.toml`: onnxruntime joins mypy's missing-imports overrides (it ships no type hints). No dependency or pin changed.
+8. `--exact` is applied through `rebuild_context(exact)`, which sets the CV device to CPU for every stage that reads it.
+9. `run_sealed` takes keyword arguments beyond design call 7's list (`repo`, `log_root`, `lead`, `subjects`, `data_label`, `require_remote`, `today`, `n_draws`), so the rehearsal points the same function at DS1 records and a temporary repo. `test_cli.py` checks the CLI binds the DS2 list, `MODELS_DIR`, `TEST_LOG` and `TEST_REPORTS_DIR`.
+10. Rendered card tables follow Prettier 3.9.10 with `proseWrap: never` (padded when every line fits in 80 columns, compact otherwise), so `pnpm -C web run format:check` stays green on the cards.
+
+**Task 10, the real rebuild (`uv run heartbeat rebuild` under `caffeinate -ims` at `27fd028`, clean tree, exit 0; stage times from the timestamped log):** download, prepare and check-folds about 1 s together (cache present); cross-validate 5 s; cross-validate-cnn 70 min 26 s (MPS); select under 1 s; exhibit 18 min 55 s (CNN on MPS, baseline CPU); train-final 13 min 46 s (CPU, 282.0, 273.0 and 270.0 s per seed, then the baseline); describe-data under 1 s; export 77 s (CPU); reproduce-test and cards under 1 s. Total 104 min 30 s. `reproduce-test` logged "no freeze record" and the rebuild stopped after `cards` (R28).
+
+**Reproduction of Phase 4 (stop 1 clear):** `cv_baseline`, `cv_cnn_curves`, `selection`, `cv_cnn` and `exhibit` equal `main`'s files apart from `VOLATILE_KEYS`, and so do `train_final`'s CNN entries; the three checkpoint SHA256s are identical (seed 0 `3c1c9b9c...ef342e8`, seed 1 `72279c11...1a3182`, seed 2 `493ece36...96404f`; `results/train_final.json`, runs `20261030T221936Z-27fd028-train-final-s0`, `20261030T222418Z-27fd028-train-final-s1`, `20261030T222852Z-27fd028-train-final-s2`; CPU). Compared with a scratchpad script using `heartbeat.checks.reproduction.strip_volatile`, deleted afterwards. So the Phase 5 changes to the training code left every Phase 4 number unchanged.
+
+**Frozen baseline (`results/train_final.json`, run `20261030T223322Z-27fd028-train-final-baseline`; CPU):** C 0.001 and temperature 1.1744, both from `results/cv_baseline.json` (stop 5 clear), fitted on 50,969 DS1 rows.
+
+**Export (`results/export.json`, run `20261030T223322Z-27fd028-export`; CPU; torch 2.14.1, onnx 1.23.2, onnxscript 0.7.2, onnxruntime 1.30.0; opset 20; 52,036 parameters before batch-norm folding):**
+
+| File | Bytes | SHA256 |
+| --- | --- | --- |
+| `models/heartbeat-v1/model.onnx` (seed 0, shipped) | 235466 | `b0292e6c4763b0bf6e70976aa9ddc754c70dc8c8eabd329576c9fa3ea5025e5f` |
+| `models/heartbeat-v1/seeds/seed-1/model.onnx` | 235466 | `e152852e78b5418184146a40dbf6c43450926dad033fcb0347e5411d6f2a8d24` |
+| `models/heartbeat-v1/seeds/seed-2/model.onnx` | 235466 | `783ca6f59fa225ab06b8594faf491fb8e76df33637265404b6ebe5d8509e1312` |
+| `models/heartbeat-v1/baseline.json` | 1758 | `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3` |
+| `models/heartbeat-v1/scaler.json` | 660 | `88eaaabba777683e606452d2c3afc40c034232f06a29845e89feb220eb1a92d8` |
+| `models/heartbeat-v1/NOTICE` | 673 | `c95b0b52f290d975d59ab4c55bf0663c72bc9655ad1755e86dc6a82372c8bae4` |
+| `fixtures/parity/fixtures.json` (50 DS1 beats, seed 20261031) | 1007961 | `66b6215514f3b0ad9e5d5f0bcaac4a5befc9b397f0d7550130e5bcb2f157c838` |
+
+Each ONNX file is under the 1,000,000-byte gate (stop 4 clear). Parity, PyTorch against Python ONNX Runtime on CPU (`results/export.json`, DS1): fixture beats, largest difference 3.8e-6 (seed 0), 2.9e-6 (seed 1), 4.5e-6 (seed 2), labels exact (R26, stop 3 clear); every DS1 kept beat (50,969), no label changes for any seed, largest difference 7.6e-6, 5.8e-6 and 1.53e-5, with 0, 0 and 1 beat over 1e-5.
+
+**Headers that did not parse (`results/data_summary.json`, record headers only):** record 103 (age) and record 219 (age), both DS2, rendered "unknown" (stop 9: not a stop). Sex parsed for all 43 DS1 and DS2 records.
+
+**Task 11, the clean clone (stop 2):** `git clone --branch phase-5-export` at `7d97b86` into the session scratchpad, `uv sync --frozen`, then `caffeinate -ims uv run heartbeat rebuild` there in the background, exit 0. Stage times: download 43 s (fresh, 132 pinned files); prepare 1 s; cross-validate 4 s; cross-validate-cnn 66 min 51 s (MPS); select under 1 s; exhibit 20 min 18 s; train-final 14 min 16 s (CPU, 295.5, 283.8 and 275.5 s per seed); describe-data and export 79 s; reproduce-test and cards under 1 s. Total 103 min 33 s.
+
+`uv run python -m heartbeat.checks.reproduction --other <clone>` exit 1: "20 files compared, 5 differ":
+
+- equal: every `results/*.json` apart from `export.json` (after `VOLATILE_KEYS`), so the clone's checkpoints carry the same three SHA256s; `fixtures/parity/fixtures.json`; `baseline.json`, `scaler.json`, the three `calibration.json` and `NOTICE`; `docs/DATA_CARD.md`.
+- differ: the three `model.onnx` files (235,466 bytes here, 240,068 in the clone); `results/export.json`, only in those files' sizes and SHA256s (its parity numbers are equal); `docs/MODEL_CARD.md`, only in `model_details`, which prints them.
+
+**Cause (read-only checks in the scratchpad, deleted afterwards):** the torch 2.14.1 dynamo exporter writes each node's stack trace into the ONNX node metadata (`metadata_props`), with absolute paths: `/Users/din/Develop/heartbeat/src/heartbeat/models/cnn.py` and `.venv/.../torch/nn/modules/*.py` here, the scratchpad path in the clone. With node, function and graph `metadata_props` cleared, `onnx.load` of each pair serializes to equal bytes for all three seeds, so the weights and graph are identical and only this metadata differs. The plan's "two exports byte-identical" test passes because both exports run from the same path.
+
+A side finding: the committed ONNX files at `7d97b86` hold Din's home path and the repo layout, and Phase 6 would ship `model.onnx` to the browser. Not pushed.
+
+**Recommended fix (Din's call; not started):** `export_onnx` clears the node, function and graph `metadata_props` before serializing, with a test that an exported file carries no metadata and no absolute path. That change sits in `export/`, which no training stage fingerprints, so `uv run heartbeat rebuild` reruns only export, reproduce-test and cards (about 80 s) and the training results stay as committed. Then commit the new outputs and repeat Task 11 (about 104 minutes). Whether the exporter has its own switch for this was not checked. Not recommended: comparing ONNX files without metadata in the reproduction check, which loosens settling 4's byte rule and keeps the paths in the files.
+
+**Flagged:**
+
+1. Design call 5's gate cannot pass for a later reproduction. The gate needs `git diff --name-only <freeze commit> HEAD` to be exactly `models/heartbeat-v1/freeze.json`. Once the sealed run's log line and report are committed (or any later commit lands), `reproduce-test` with both a record and a sealed entry runs `run_sealed`, whose gate refuses. Built as approved and tested; Din decides before Phase 7 whether the reproduction gate should also allow `results/test_runs.jsonl` and `results/test_runs/`.
+2. The all-DS1 parity survey: one DS1 beat of seed 2 differs by 1.53e-5 (deviation 4). R26 on the fixtures passes for every seed, and no DS1 label changes. If Din reads PARITY-03 as covering every beat, the tolerance or the gate needs Din's call; nothing was changed to get to green.
+3. The training-code touch in `train/exhibit.py` (deviation 5).
+4. Unrelated, not changed: `heartbeat --help` still says "(arrives in Phase N)" beside commands that are built.
+
+**Verified (local, at `7d97b86`):** `scripts/check.sh` exit 0; `uv run pytest` exit 0 (1022 passed, real-data layer, parity and the rehearsal included); `uv run heartbeat verify` exit 0 (6 of 6 checks, about 2 s); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (nothing uncovered; R25 to R28, R41, R42, R50 and R52 have tests); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. These pass with the path-bearing ONNX files; stop 2 is about byte reproduction, which no test covers across checkouts.
+
+DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored. DS2 was touched through its headers and `manifests/mitdb-beat-counts.toml` only (settling 5).
+
+**Not verified:** the clean-clone reproduction (stop 2 above); CI on these commits (nothing pushed; a push waits for Din's call on the fix). **Not accepted:** only Din sets Accepted.
