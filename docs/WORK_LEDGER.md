@@ -1943,3 +1943,48 @@ A side finding: the committed ONNX files at `7d97b86` hold Din's home path and t
 DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored. DS2 was touched through its headers and `manifests/mitdb-beat-counts.toml` only (settling 5).
 
 **Not verified:** the clean-clone reproduction (stop 2 above); CI on these commits (nothing pushed; a push waits for Din's call on the fix). **Not accepted:** only Din sets Accepted.
+
+## 2026-10-30: Phase 5 built and verified locally; CI waits for Din's push
+
+**Din's go on stop 2 (2026-10-30, "Yes, fix it"):** strip the exporter's metadata in `export_onnx` and repeat the clean-clone check, as the entry above recommended.
+
+**Built (branch `phase-5-export`):** `918fd5e` to `7d97b86` as listed in the stop-2 entry above; `a913770` that entry; `dfb0300` the fix: `export_onnx` clears `metadata_props` and doc strings on the model, graph, nodes, initializers, value infos and functions, and `check_onnx` refuses a file that keeps any (tests: no metadata and no repo, home or torch path in an export; a file with node metadata refused); `d545ad6` the rebuilt bundle and model card; and this commit (AGENTS.md Commands and Layout, TASKS 5.1 to 5.5, this entry).
+
+**Deviations:** the ten in the stop-2 entry, plus an eleventh: the metadata fix, which the plan did not foresee. It sits in `export/`, outside every training stage's code list, so no training reran.
+
+**Stage times:**
+
+- Task 10 (`uv run heartbeat rebuild` at `27fd028`, every training stage reran): 104 min 30 s, per stage in the stop-2 entry.
+- After the fix (`uv run heartbeat rebuild` at `dfb0300`): export 62 s (CPU), then reproduce-test and cards under 1 s; every training stage and describe-data skipped as unchanged.
+- Clean clone at `d545ad6` (scratchpad, `caffeinate -ims uv run heartbeat rebuild`, exit 0): download 70 s (fresh; one fetch of `123.hea` from the S3 mirror was reset and the downloader took the next source, checksums verified); prepare under 1 s; cross-validate 5 s; cross-validate-cnn 75 min 49 s (MPS); select under 1 s; exhibit 19 min 25 s; train-final 15 min 47 s (CPU, about 5 min per seed, then the baseline); describe-data and export 106 s; reproduce-test and cards under 1 s. Total 114 min 3 s. The first clean clone (stop 2) took 103 min 33 s; the cross-validation difference is MPS wall time, not results.
+
+**Reproduction results:**
+
+1. Phase 4 (Task 10, stop 1 clear): `cv_baseline`, `cv_cnn_curves`, `selection`, `cv_cnn`, `exhibit` and `train_final`'s CNN entries equal `main`'s apart from `VOLATILE_KEYS`; the three checkpoint SHA256s are identical (stop-2 entry).
+2. Clean clone (Task 11, settling 4): at `7d97b86`, 20 files compared, 5 differ (stop 2, the embedded paths); at `d545ad6`, `uv run python -m heartbeat.checks.reproduction --other <clone>` exit 0, "20 files compared, 0 differ". Every `results/*.json` equal apart from `VOLATILE_KEYS`, and the model files, fixtures and both cards byte-identical. The clone was deleted afterwards.
+
+**Model files (`results/export.json`, run `20261031T005238Z-dfb0300-export`; CPU; opset 20; 52,036 parameters before batch-norm folding):**
+
+| File | Bytes | SHA256 |
+| --- | --- | --- |
+| `models/heartbeat-v1/model.onnx` (seed 0, shipped) | 210503 | `6e5237989d00aab52b4106bd11c458a3fa722e0e757161b96a7533535a26eba0` |
+| `models/heartbeat-v1/seeds/seed-1/model.onnx` | 210503 | `d3d02134e7f5a4c408382bddfb0da24c9d33bba0b4f9e73a0bc781ceb06f0e89` |
+| `models/heartbeat-v1/seeds/seed-2/model.onnx` | 210503 | `d03d6fa69d610ce5e9c26838a2758fd1dc8c3838ee635584bea859f63f912e16` |
+| `models/heartbeat-v1/baseline.json` | 1758 | `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3` |
+| `fixtures/parity/fixtures.json` (50 DS1 beats) | 1007961 | `66b6215514f3b0ad9e5d5f0bcaac4a5befc9b397f0d7550130e5bcb2f157c838` |
+
+`scaler.json`, `NOTICE` and the three `calibration.json` are unchanged from the stop-2 entry's table. Parity (`results/export.json`, DS1, CPU) is unchanged by the fix: fixture beats within 1e-5 with exact labels for all seeds; every DS1 kept beat, no label changes, largest difference 7.6e-6, 5.8e-6 and 1.53e-5 (one beat over 1e-5, seed 2).
+
+**Headers that did not parse (`results/data_summary.json`):** record 103 (age) and record 219 (age), both DS2, rendered "unknown".
+
+**Flagged:**
+
+1. The freeze gate and a later reproduction (stop-2 entry, flag 1): Din decides before Phase 7.
+2. The all-DS1 parity survey, one seed-2 beat at 1.53e-5 (stop-2 entry, flag 2).
+3. The training-code touch in `train/exhibit.py` (stop-2 entry, deviation 5).
+4. Commit `7d97b86` still holds the path-bearing ONNX files (Din's home path and the repo layout) in its blobs, so pushing the branch as it stands publishes them in the history, and a squash merge leaves them visible on the pull request's commits. Rewriting the unpushed branch (folding `7d97b86`'s model files into `d545ad6`) would remove them; that is Din's call and was not done.
+5. Unrelated, not changed: `heartbeat --help` says "(arrives in Phase N)" beside built commands.
+
+**Verified (local, at `d545ad6` plus these doc edits; rerun on the clean tree after this commit):** `scripts/check.sh` exit 0 (909 passed, 115 real-data deselected); `CI=1 uv run pytest` exit 0 (1024 passed, real-data layer, parity and the rehearsal included); `uv run heartbeat verify` exit 0 (6 of 6); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R25 to R28, R41, R42, R50 and R52 covered); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored; DS2 was touched through its headers and `manifests/mitdb-beat-counts.toml` only.
+
+**Not verified:** CI on these commits (waits for Din's push). **Not accepted:** only Din sets Accepted.
