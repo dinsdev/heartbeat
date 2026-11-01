@@ -151,11 +151,11 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 6.1 | App shell: Svelte, full and embed modes, canvas trace, brand tokens and drift check | Planned |
-| 6.2 | Worker with ONNX Runtime Web, TypeScript preprocessing, chunked labeling, browser parity | Planned |
-| 6.3 | Parity counter, fallback, loading state | Planned |
+| 6.1 | App shell: Svelte, full and embed modes, canvas trace, brand tokens and drift check | In progress (Goal A done, 2026-11-01). Verified locally: vendored brand at dins.dev `d75677f` with `SOURCE.json` and the drift check (`uv run python -m heartbeat.checks.brand --source ~/Develop/dins.dev`: 7 files match); R34 contrast test (Vitest); the design probe on record 223, full and `?embed=page`, light and dark, screenshots at 375, 768 and 1280 px and both embed boxes sent to Din. Waiting on Din's sign-off of the probe; the full interface is Goal B |
+| 6.2 | Worker with ONNX Runtime Web, TypeScript preprocessing, chunked labeling, browser parity | In progress (Goal A done, 2026-11-01). Verified locally: R30 (Vitest, every step on the 50 fixtures within 1e-5); R29 (Playwright, the shipped Worker on the fixtures, largest difference 3.815e-6, labels exact, in Chromium, WebKit, Pixel 7 and iPhone 15 profiles); the all-records survey (50,977 DS1 beats, 0 mismatches, largest 9.308e-7 in all four); chunking around the playhead (Vitest). CI waits for Din's push |
+| 6.3 | Parity counter, fallback, loading state | In progress (Goal A done, 2026-11-01). Verified locally: the parity rule and label store (Vitest; a fallback is never counted); R33 (Playwright: no WebAssembly, a blocked runtime `.wasm`, a failing model URL) and the loading note, in all four projects. CI waits for Din's push |
 | 6.4 | Controls, legend, beat table, status line, reduced-motion paging, theme handling | Planned |
-| 6.5 | `build-demo-data` (DS1 only), manifest, size and performance gates, axe and keyboard tests | Planned |
+| 6.5 | `build-demo-data` (DS1 only), manifest, size and performance gates, axe and keyboard tests | In progress (Goal A done, 2026-11-01). Verified locally: `uv run heartbeat build-demo-data` (22 DS1 records, default 223 from 20 s, record 215's beats file 98,213 bytes at millionths); R31 and R32 (pytest, unit and real data); R39 size gates on the build (`pnpm -C web run build`) with Vitest tests on planted files. Open for Goal B: R38 (long tasks), R35 and R36 (axe and keyboard). CI waits for Din's push |
 | 6.6 | Headers and CSP; deploy workflow with Worker Previews on `workers.dev` (Din: Cloudflare token and secret) | Planned |
 | 6.7 | G4 handoff note to the dins.dev repo | Planned |
 

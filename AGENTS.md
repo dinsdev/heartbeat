@@ -16,7 +16,7 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 ## Commands
 
-Working today (Phase 5):
+Working today (Phase 6, Goal A):
 
 | What | Command |
 | --- | --- |
@@ -33,7 +33,7 @@ Working today (Phase 5):
 | Download and checksum the 132 pinned MIT-BIH files (about 82 MB, about 70 s the first time; skips matching files after) | `uv run heartbeat download` |
 | Prepare DS1 into `data/prepared/` with the floor-hit report (about 1.5 s) | `uv run heartbeat prepare` |
 | Check `config/folds.json` against its pin and the manifests | `uv run heartbeat check-folds` |
-| Rebuild every built stage (download, prepare, check-folds, cross-validate, cross-validate-cnn, select, exhibit, train-final, describe-data, export, reproduce-test, cards), skipping unchanged ones, into `results/`, `models/heartbeat-v1/`, `fixtures/parity/` and the card blocks; with no freeze record it stops after `cards`, before DS2 (R28). Run it in the background. Measured 104.5 minutes on 2026-10-30 when every training stage reran (cross-validate 5 s, cross-validate-cnn 70 min on MPS, select under 1 s, exhibit 19 min, train-final 14 min on CPU, export 77 s on CPU); about 65 s when only `export` reruns; a fresh clone about 104 to 114 minutes with the download | `uv run heartbeat rebuild` |
+| Rebuild every built stage (download, prepare, check-folds, cross-validate, cross-validate-cnn, select, exhibit, train-final, describe-data, export, reproduce-test, cards, build-demo-data), skipping unchanged ones, into `results/`, `models/heartbeat-v1/`, `fixtures/parity/`, the card blocks and `web/public/data/`; with no freeze record nothing touches DS2 (R28) and the demo data is DS1. Run it in the background. Measured 104.5 minutes on 2026-10-30 when every training stage reran (cross-validate 5 s, cross-validate-cnn 70 min on MPS, select under 1 s, exhibit 19 min, train-final 14 min on CPU, export 77 s on CPU); about 65 s when only `export` reruns; a fresh clone about 104 to 114 minutes with the download | `uv run heartbeat rebuild` |
 | Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
 | Baseline cross-validation into a new run folder under `runs/`, never `results/` (about 5 s) | `uv run heartbeat cross-validate --model baseline` |
 | CNN cross-validation of one width and seed into a run folder (all five folds on MPS: about 5 min at width 0.5, 7 min at width 1, 13 min at width 2); `--fold N` trains one fold (width 1 measured 69 to 78 s on MPS, 19 min with `--device cpu`) | `uv run heartbeat cross-validate --model cnn --width 1 --seed 0 [--fold 0] [--device cpu]` |
@@ -49,20 +49,21 @@ Working today (Phase 5):
 | Write the freeze record: Din only, in Phase 7 (F5 denies it to Claude) | `uv run heartbeat export --freeze` |
 | The sealed run on DS2: Din only, in Phase 7, once the freeze record's commit is on `origin/main` (F5 denies it to Claude) | `uv run heartbeat evaluate-test` |
 | Rebuild with CNN cross-validation and the exhibit on CPU: built, never run (about 15 hours, a guess; F5 denies it to Claude) | `uv run heartbeat rebuild --exact` |
-| Subcommands of later phases (`build-demo-data`, Phase 6: a stub that exits 2 and names its phase) | `uv run heartbeat --help` |
+| The DS1 demo data into `web/public/data/` (22 records, hashed files, `manifest.json`; about 4 s; needs `prepare` and the committed model; the web build and Playwright need it) | `uv run heartbeat build-demo-data` |
+| Brand drift against the dins.dev checkout (local only, not in CI); `--update` copies the files again | `uv run python -m heartbeat.checks.brand --source ~/Develop/dins.dev` |
 | Web lint, format (web files and every Markdown file), types, unit tests | `pnpm -C web run lint`, `pnpm -C web run format:check`, `pnpm -C web run check`, `pnpm -C web run test` |
 | One Vitest file | `pnpm -C web exec vitest run <file>` |
-| Web build | `pnpm -C web run build` |
-| Browser tests on the built page, Chromium and WebKit | `pnpm -C web run e2e` |
+| Web build, then the size gates on `dist/` (R39; needs the demo data) | `pnpm -C web run build` |
+| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; about 15 s) | `pnpm -C web run e2e` |
 | One Playwright file | `pnpm -C web exec playwright test <file>` |
 
-Arriving in their phases (stubs today):
+Arriving later in Phase 6 (Goal B):
 
-| What                                      | Command                 | Phase |
-| ----------------------------------------- | ----------------------- | ----- |
-| Web build with demo data from the rebuild | `pnpm -C web run build` | 6     |
+| What | Command | Phase |
+| --- | --- | --- |
+| Worker Preview deploys from pull requests (Goal B, Din's go) | `.github/workflows/deploy.yml` | 6 |
 
-Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first) and a `web` job; `scripts/check.sh` skips the real-data tests, the build and Playwright.
+Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first) and a `web` job (which builds the DS1 demo data from the same cache, then the gated build, the wording lint on `web/dist` and Playwright); `scripts/check.sh` skips the real-data tests, the build and Playwright.
 
 Long jobs: CNN cross-validation takes about 70 to 76 minutes on MPS, the exhibit about 20 minutes, `train-final` about 15 minutes on CPU at the selected width 1 and 10 epochs, a full `rebuild` about 104 minutes and a clean-clone rebuild about 104 to 114 minutes (all measured 2026-10-30), `rebuild --exact` about 15 hours (a guess). Run long jobs in the background under `caffeinate -ims` and say how long they should take.
 

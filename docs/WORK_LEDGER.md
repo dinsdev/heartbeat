@@ -2105,3 +2105,40 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Not in the probe (Goal B):** speeds, the scrub slider and drag, Next irregular beat and Next disagreement, the patient picker, the beat table and status summary, reduced-motion paging, embed deferred loading, theme messages, axe and keyboard tests.
 
 **Copy for Din's review (design call 21):** the lead, the legend lines, the about text (including "cardiologists annotated every beat", from PhysioNet's description, to recheck with the citations in Phase 8) and the footer. All pass the wording lint, whose published tier now covers the demo's source.
+
+## 2026-11-01: Phase 6 Goal A built and verified locally; waiting on Din's sign-off of the probe
+
+**Built (tasks A1 to A8, on `phase-6-demo`):**
+
+- A1, `61c611b`: `current-phase = 6`; the `heartbeat.demo` package.
+- A2, `b343584`: `heartbeat build-demo-data` and its rebuild stage (last, upstream `prepare` and `export`); hashed traces and columnar beats files, the model files, an attribution note and `manifest.json`; DS1 only with no sealed entry, refused before any file is opened (R31, R32).
+- A3, `6dee84d`: TypeScript preprocessing (R30).
+- A4, `86a1e2f`: the labeler Worker on ONNX Runtime Web 1.30.0, the parity rule and label store, chunked labeling, R29 and the all-records survey.
+- A5, `5390aff`: the loading note and the labeled fallback (R33).
+- A6, `2477414`: the vendored brand with `SOURCE.json` and the drift check, `heartbeat-tokens.css` and R34.
+- A7, `6019d14`: the size gates on the build (R39), CI's web job, the wording lint on the build, the two phone profiles.
+- A8, `ad30d4b`: the design probe; design read in the entry above.
+
+**Parity survey (design call 9; Playwright report from `pnpm -C web run e2e`, DS1, the shipped seed-0 model in the browser against the stored Python values):** every kept beat of the 22 DS1 records, 50,977 beats, in Desktop Chrome, Desktop Safari, Pixel 7 and iPhone 15 profiles: 0 label mismatches, 0 beats over 1e-5, largest probability difference 9.308e-7 in each (the stored probabilities are millionths, so up to 5e-7 of that is rounding). Largest per record 5.012e-7 (101) to 9.308e-7 (109). R29 on the 50 fixture beats against the fixture's seed-0 logits and probabilities: largest difference 3.815e-6, labels exact, in all four projects. No stop.
+
+**Probability precision and record 215 (design call 2; from `uv run heartbeat build-demo-data` and the real-data test, DS1, CPU):** ten-millionths put record 215's beats file at 111,657 bytes, over the 100 KB gate (203 also over, at 100,791), so the files store millionths: rounding moves a probability by at most 5e-7, a twentieth of the tolerance. Record 215's beats file is then 98,213 bytes, the largest, with 1.8% headroom under the gate; noted as a risk if the format grows. Default record 223 from 20 s by D4's rule on the kept beats (S 73, V 473, as settling 6 counted on the whole record; the dropped first and last beats are neither S nor V).
+
+**Size gates (`pnpm -C web run build`, local):** model 210,503 bytes; the demo's JavaScript without ONNX Runtime 24,975 bytes gzip (page 23,285 plus the Worker's own code 1,690); ONNX Runtime's chunk 23,483 bytes gzip and its `.wasm` 14.2 MB raw, both outside the JavaScript gate; largest beats file 98,213 bytes. All under their gates.
+
+**Deviations from the plan, each small:**
+
+1. CI (design call 18): the web job builds the demo data itself (download from the cache, prepare, build-demo-data) instead of receiving an artifact from the python job. An upload and download artifact pair would add two third-party actions, and the Goal A prompt rules out any new dependency. Same data (the build is byte-identical across runs, tested), only actions already pinned. Goal B or Din may switch to artifacts with Din's go.
+2. A1 left the CLI and stage wiring to A2, where the handler exists; git keeps no empty folders, so each web folder arrived with its first module.
+3. `PROBABILITY_SCALE`, `BEATS_SIZE_LIMIT_BYTES` and `DEMO_DATA_DIR` live in `heartbeat.demo.build`, not `constants.py` and `paths.py`: every rebuild stage fingerprints those two files, so adding there would have rerun the whole 104-minute rebuild for nothing. Checked: after A2 every existing stage's fingerprint equals its saved state, and `uv run heartbeat rebuild` ran only `build-demo-data` plus the always-run checks, in 4.1 s.
+4. `rebuild` now prints "stopped after build-demo-data; no freeze record: stopping before DS2" whenever no freeze record exists. The R28 real-data test expected a "stopped after" line, which only printed while a stage was still planned; the test is unchanged.
+5. The wording lint's published tier now covers the demo's own text (`web/src` components and modules, `web/index.html`, the built HTML and text files). Bundled JavaScript keeps the dash tier only: the Svelte runtime carries the `seamless` iframe attribute name.
+6. Vitest processes CSS (`css: true`) so R34 can read the token files, and `tsconfig.json` gains `resolveJsonModule` for the fixture imports. The R34 parser first read the light block wrongly; a planted 2.0:1 color caught it, and the test now pins the parsed paper colors.
+7. The probe's 1x clock and markers are in; speeds, scrubbing and paging stay Goal B as planned.
+
+**Verified (local, at `ad30d4b` plus this commit's docs):** `scripts/check.sh` exit 1 and `uv run pytest` exit 1, each on exactly one test, `test_every_row_due_by_the_current_phase_has_a_test`, which stays red until Goal B covers R35, R36, R37, R38 and R40 (the plan's stated Goal A end); every other test passes (`uv run pytest`: 1,068 passed, 1 failed, 70 s; the web half of `check.sh` passes: lint, format, svelte-check, Vitest 62 tests). `uv run heartbeat verify` 6 of 6. `pnpm -C web run build` exit 0 with the size gates. `pnpm -C web run e2e` 28 passed in 15.3 s (four projects). `uv run python -m heartbeat.checks.rule_coverage` exit 1: uncovered R35, R36, R37, R38, R40 (phase 6), pending R43; R29 to R34 and R39 covered. `uv run python -m heartbeat.checks.repo_config` exit 0. `uv run python -m heartbeat.checks.wording` exit 0 on the repo and on `web/dist`. `uv run python -m heartbeat.checks.brand --source ~/Develop/dins.dev` exit 0 (7 files). DS1 only throughout: no DS2 signal, label or prediction was read, plotted or shipped (stop 6 clear); no new dependency, pin change, download or edit to `manifests/`, `config/folds.json`, `.claude/`, `models/heartbeat-v1/` or `~/Develop/dins.dev` (stop 5 clear); no push, deploy or secret.
+
+**Throwaway checks (scratchpad, deleted):** a step-by-step runner of `check.sh` that continues past the red test; the screenshot script (Playwright, Chromium, device scale 2, the clock fast-forwarded 131 s for the disagreement frames); a probe of what Vitest returns for raw CSS imports (empty strings without `css: true`). Mutation checks, each reverted: the Worker's temperature times 1.001 failed R29 at 3.2e-4; a 2.0:1 light S color failed R34; a planted 100,000-byte beats file failed the size-gate script with exit 1.
+
+**Not verified:** CI (waits for Din's push); the timings of D5 (Goal B, task B6); any screen reader or keyboard pass (Goal B and Phase 8). Local Node is 24.21.0 while `.node-version` pins 24.22.0; CI uses the pin.
+
+**Waiting on Din:** the push of `phase-6-demo` so CI runs the engine (CI's python job will be red on the same coverage test until Goal B), and the sign-off of the probe (look, copy, the 375 px scale call in the design read). Goal B starts only after that sign-off is in this ledger.
