@@ -6,7 +6,7 @@
   import { clockTime, count } from "../lib/format";
   import type { LabelingSession } from "../lib/labeling";
   import type { ParityCounts } from "../lib/parity";
-  import { PlaybackClock } from "../lib/playback/clock";
+  import { PlaybackClock, SPEEDS } from "../lib/playback/clock";
   import { SPAN_S } from "../lib/trace/geometry";
   import Legend from "./Legend.svelte";
   import Trace from "./Trace.svelte";
@@ -53,8 +53,13 @@
     () => performance.now(),
     start + SPAN_S,
     duration,
+    SPAN_S,
   );
   let playing = $state(false);
+  let speed = $state(String(clock.speed));
+  let reducedMotion = $state(
+    matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   let shownSecond = $state(Math.floor(clock.position()));
   let redraw = $state(0);
   let lastFill = -Infinity;
@@ -69,15 +74,20 @@
     `ECG trace of record ${entry.record}, ${clockTime(shownSecond - SPAN_S)} to ${clockTime(shownSecond)}, with a label on each beat`,
   );
 
-  function onframe(position: number) {
+  function onframe(position: number, viewEnd: number) {
     const second = Math.floor(position);
     if (second !== shownSecond) shownSecond = second;
     if (playing !== clock.playing) playing = clock.playing;
     // DEMO-03: keep the visible span and the next 10 seconds labeled.
-    if (Math.abs(position - lastFill) >= 0.5) {
-      lastFill = position;
-      session.fill(Math.round(position * fs), fs);
+    if (Math.abs(viewEnd - lastFill) >= 0.5) {
+      lastFill = viewEnd;
+      session.fill(Math.round(viewEnd * fs), fs);
     }
+  }
+
+  function changeSpeed() {
+    clock.setSpeed(Number(speed));
+    redraw++;
   }
 
   function toggle() {
@@ -96,13 +106,17 @@
   });
 
   onMount(() => {
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotion = () => (reducedMotion = motion.matches);
+    motion.addEventListener("change", onMotion);
     // D6: the full page autoplays, silent, with a visible pause; never under
-    // reduced motion (its paged view arrives in Goal B).
-    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // reduced motion.
+    if (!motion.matches) {
       clock.play();
       playing = true;
       redraw++;
     }
+    return () => motion.removeEventListener("change", onMotion);
   });
 </script>
 
@@ -121,6 +135,8 @@
       {clock}
       {redraw}
       fill={embed}
+      scrub={!embed}
+      {reducedMotion}
       label={traceLabel}
       {onframe}
     />
@@ -131,9 +147,17 @@
       <span class="icon" class:pause={playing} aria-hidden="true"></span>
       {playing ? "Pause" : "Play"}
     </button>
+    <label class="speed t-small">
+      Speed
+      <select bind:value={speed} onchange={changeSpeed}>
+        {#each SPEEDS as option (option)}
+          <option value={String(option)}>{option}x</option>
+        {/each}
+      </select>
+    </label>
     <p class="where t-data">
       <span>Record {entry.record}</span>
-      <span class="time"
+      <span class="time" data-testid="playhead" data-seconds={shownSecond}
         >{clockTime(shownSecond)} of {clockTime(clock.duration)}</span
       >
     </p>
@@ -217,6 +241,23 @@
     height: 12px;
     border: 0;
     border-inline: 3px solid currentColor;
+  }
+
+  .speed {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-muted);
+  }
+
+  .speed select {
+    min-height: 32px;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-md);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font: inherit;
   }
 
   .where {
