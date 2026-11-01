@@ -2077,3 +2077,9 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Decided (Din):** Goal A ends with one considered design direction built in the real Svelte shell on the real engine (record 223, live labels), not static mockups or competing variants. Din gets a short design read (type, spacing, beat marker style, motion choices and the reasons), screenshots at 375, 768 and 1280 px wide in light and dark, the embed at 16:10 and 4:5, and a local URL to try. Goal B starts after Din signs it off.
 
 **Why:** BRAND.md and settlings 2 to 7 already pin most of the look, so variants would differ only in details, and this demo's look lives in the canvas, the data and the motion, which static mockups skip.
+
+## 2026-11-01: Phase 6 task plan approved; goal prompts drafted
+
+**Approved (Din, 2026-11-01):** the Phase 6 task plan as committed in `50d2426` (PLAN.md section 8), including its 22 design calls.
+
+**Drafted for Din's review:** two `/goal` prompts from the planning session, Goal A (engine and design probe, 3,749 characters) and Goal B (interface, accessibility and deploy, 3,905 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort on branch `phase-6-demo`; Goal A ends at Din's sign-off of the probe, Goal B starts only after that sign-off is in this ledger.
