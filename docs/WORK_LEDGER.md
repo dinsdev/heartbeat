@@ -2021,3 +2021,9 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 - **Goal B, after Din signs off the probe:** the full interface, the accessibility suite, headers and CSP, the deploy workflow and the G4 handoff note.
 
 **Why:** a `/goal` run continues until its end condition holds, so a mid-run design review is cleaner as a goal boundary. The engine and the look are independent, so Goal A builds both and Din sees the look before the interface is built and tested, when a redirect is cheap.
+
+## 2026-11-01: Phase 6 settling 2, the trace is drawn on ECG paper
+
+**Decided (Din):** the trace is drawn in ink on the page's paper color with a faint ECG grid (1 mm minor and 5 mm major lines at the standard 25 mm/s and 10 mm/mV), following the light or dark theme.
+
+**Why:** it uses the brand's own warm paper and "look closer", stays calm and editorial, gives honest time and voltage scale, and avoids the bedside-monitor look that D7's framing steers away from. Not chosen: a fixed dark screen panel (a dark slab in light mode, reads as a medical device) and a plain surface without a grid (loses the scale cue). Class colors must still pass 3:1 against both paper colors (D6, R34).
