@@ -2027,3 +2027,19 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Decided (Din):** the trace is drawn in ink on the page's paper color with a faint ECG grid (1 mm minor and 5 mm major lines at the standard 25 mm/s and 10 mm/mV), following the light or dark theme.
 
 **Why:** it uses the brand's own warm paper and "look closer", stays calm and editorial, gives honest time and voltage scale, and avoids the bedside-monitor look that D7's framing steers away from. Not chosen: a fixed dark screen panel (a dark slab in light mode, reads as a medical device) and a plain surface without a grid (loses the scale cue). Class colors must still pass 3:1 against both paper colors (D6, R34).
+
+## 2026-11-01: Phase 6 settling 3, class colors
+
+**Decided (Din):** N (normal) is neutral, drawn in the brand's muted text color. S, V and F use a heartbeat-only data palette kept in a heartbeat token file beside the vendored brand tokens (never inside the vendored copy, so the OPS-10 drift check stays clean). Teal is never a class color: it keeps meaning "interactive" (controls, links, the focus ring). Q beats get a grey dash. The hex values below are starting points the Goal A design probe may tune, as long as R34 (at least 3:1 against the paper color in light and dark) passes and teal stays out.
+
+| Class | Light, on `#F4F1EA` | Dark, on `#1F1E1C` |
+| --- | --- | --- |
+| N | `#4A555C` (6.8) | `#A29E95` (6.2) |
+| S | `#9A5B0C` (4.8) | `#E0A04A` (7.4, the brand amber) |
+| V | `#B23A26` (5.3) | `#F0806A` (6.4) |
+| F | `#7B4C9E` (5.5) | `#B79BDD` (6.9) |
+| Q dash | `#8A8780` (3.2) | `#6E6B65` (3.1) |
+
+**Why:** about nine in ten beats are N, so a neutral N lets irregular beats stand out with no extra marks. BRAND.md makes teal the one brand color for interaction, and brand amber is 2.0 on light paper, so light-mode S needs a darker amber. Brick and amber are close for red-green colorblind viewers; the letter on every beat (D6) carries the class, color only reinforces it.
+
+**Verified:** WCAG contrast ratios above computed with the relative-luminance formula in a throwaway scratchpad script (deleted after), against the BRAND.md background colors.
