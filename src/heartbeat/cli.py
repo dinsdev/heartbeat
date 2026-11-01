@@ -1,4 +1,4 @@
-"""The `heartbeat` command (E4). Each subcommand is a stub until its phase builds it."""
+"""The `heartbeat` command (E4). A subcommand is a stub until its phase builds it."""
 
 import argparse
 import hashlib
@@ -25,9 +25,15 @@ from heartbeat.data.folds import (
     make_folds,
     write_folds,
 )
-from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
+from heartbeat.data.loader import (
+    BeatTable,
+    SealedRecordError,
+    load_ds1,
+    load_ds1_traces,
+)
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
+from heartbeat.demo.build import DEMO_DATA_DIR, DemoSplitError
 from heartbeat.evaluate.calibration import TemperatureAtBoundError
 from heartbeat.export.freeze import FreezeError, write_freeze
 from heartbeat.export.onnx import ExportError
@@ -55,11 +61,14 @@ from heartbeat.sealed.log import LogError
 from heartbeat.sealed.run import SEALED_DATA_LABEL, run_sealed
 from heartbeat.stages import (
     EXPORT_RESULT,
+    NO_FREEZE_MESSAGE,
     PIPELINE,
     PLANNED,
     Context,
     StageFailedError,
     UnknownStageError,
+    freeze_exists,
+    run_build_demo_data,
     run_exhibit_all,
     run_export_all,
     run_final_all,
@@ -99,6 +108,9 @@ SUBCOMMANDS: Mapping[str, int] = MappingProxyType(
 
 # Exit code for a subcommand that exists in the interface but not yet in code.
 NOT_BUILT_EXIT = 2
+
+# Settling 6: every DS1 record (None); tests narrow it.
+DEMO_RECORDS: tuple[str, ...] | None = None
 
 
 def _download(args: argparse.Namespace) -> int:
@@ -392,6 +404,30 @@ def _cards(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_demo_data(args: argparse.Namespace) -> int:
+    # Design call 2: web/public/data/, DS1 only until the sealed run (R32).
+    try:
+        manifest = run_build_demo_data(
+            load_settings(DEFAULT_CONFIG),
+            records=DEMO_RECORDS,
+            out_dir=DEMO_DATA_DIR,
+            log_path=TEST_LOG,
+        )
+    except (SealedRecordError, DemoSplitError, FileNotFoundError, ValueError) as error:
+        print(f"heartbeat build-demo-data: {error}", file=sys.stderr)
+        return 1
+    records = manifest["records"]
+    largest = max(records, key=lambda r: r["beats"]["bytes"])
+    default = manifest["default"]
+    print(
+        f"heartbeat build-demo-data: {len(records)} {manifest['split']} records "
+        f"into {DEMO_DATA_DIR}; default record {default['record']} from "
+        f"{default['start_s']} s; largest beats file {largest['record']} at "
+        f"{largest['beats']['bytes']} bytes"
+    )
+    return 0
+
+
 def verify_paths() -> VerifyPaths:
     """The paths `heartbeat verify` checks."""
     return VerifyPaths(
@@ -461,6 +497,11 @@ def _rebuild(args: argparse.Namespace) -> int:
     for result in results:
         state = "ran" if result.ran else "skipped"
         print(f"{result.name}: {state} ({result.reason})")
+    if not freeze_exists():
+        # R28, OPS-02: the DS1 demo data is the last thing built before DS2.
+        print(
+            f"heartbeat rebuild: stopped after {results[-1].name}; {NO_FREEZE_MESSAGE}"
+        )
     if PLANNED:
         name, phase = PLANNED[0]
         print(
@@ -485,6 +526,7 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "evaluate-test": _evaluate_test,
         "verify": _verify,
         "cards": _cards,
+        "build-demo-data": _build_demo_data,
     }
 )
 

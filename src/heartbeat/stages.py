@@ -36,6 +36,8 @@ from heartbeat.data.manifests import (
 from heartbeat.data.npz import load_prepared
 from heartbeat.data.prepare import FLOOR_HITS_FILE, prepare_ds1
 from heartbeat.data.records import read_header_demographics
+from heartbeat.demo.build import DEMO_DATA_DIR, build_demo_data
+from heartbeat.demo.manifest import MANIFEST_NAME
 from heartbeat.export.build import export_models
 from heartbeat.export.bundle import FREEZE_NAME
 from heartbeat.export.fixtures import FIXTURES_NAME
@@ -636,6 +638,11 @@ def _run_export(context: Context) -> None:
 NO_FREEZE_MESSAGE = "no freeze record: stopping before DS2"
 
 
+def freeze_exists() -> bool:
+    """Whether the frozen model's freeze record exists (Phase 7, Din's)."""
+    return (MODELS_DIR / FREEZE_NAME).is_file()
+
+
 class SealedRunMissingError(RuntimeError):
     """A freeze record exists but no sealed run is logged yet (design call 8)."""
 
@@ -718,6 +725,41 @@ def _run_cards(context: Context) -> None:
         RESULTS_DIR, MODELS_DIR, TEST_LOG, REPO_ROOT, MODEL_CARD, DATA_CARD
     ).items():
         log.info("%s: %s", name, ", ".join(changed) if changed else "unchanged")
+
+
+def run_build_demo_data(
+    settings: Settings,
+    records: Sequence[str] | None = None,
+    out_dir: Path = DEMO_DATA_DIR,
+    log_path: Path = TEST_LOG,
+    models_dir: Path = MODELS_DIR,
+    results_dir: Path = RESULTS_DIR,
+) -> dict[str, Any]:
+    """Build the demo data from the prepared records and the committed model.
+
+    Every DS1 record by default (settling 6); DS1 only until a sealed run is
+    logged (DEMO-17, R32). Opens no run folder: the manifest names the model
+    by its SHA256 from `results/export.json`.
+    """
+    splits = load_splits(SPLITS_MANIFEST)
+    return build_demo_data(
+        splits.ds1 if records is None else records,
+        settings.data.prepared_dir,
+        models_dir,
+        _result(results_dir, EXPORT_RESULT),
+        log_path,
+        out_dir,
+        splits,
+    )
+
+
+def _run_build_demo_data(context: Context) -> None:
+    manifest = run_build_demo_data(context.settings)
+    log.info(
+        "demo data: %d records, default %s",
+        len(manifest["records"]),
+        manifest["default"]["record"],
+    )
 
 
 def _run_cross_validate_cnn(context: Context) -> None:
@@ -923,7 +965,36 @@ PIPELINE: tuple[Stage, ...] = (
         # Cheap and idempotent; a hand-edited block is put back every rebuild.
         always_run=True,
     ),
+    Stage(
+        name="build-demo-data",
+        settings_keys=("data.prepared_dir",),
+        # Design call 2: the prepared traces and the exported model. DS1 only
+        # until the log holds a sealed run (R32), so the log is an input.
+        upstream=("prepare", "export"),
+        code=(
+            "demo",
+            "data",
+            "signal",
+            "models",
+            "evaluate",
+            "sealed",
+            "export",
+            "runs.py",
+            *_SHARED_CODE,
+        ),
+        inputs=lambda context: (
+            SPLITS_MANIFEST,
+            RESULTS_DIR / f"{EXPORT_RESULT}.json",
+            TEST_LOG,
+            *(
+                MODELS_DIR / name
+                for name in ("model.onnx", "scaler.json", "calibration.json", "NOTICE")
+            ),
+        ),
+        run=_run_build_demo_data,
+        outputs=lambda context: (DEMO_DATA_DIR / MANIFEST_NAME,),
+    ),
 )
 
-# OPS-01's later stages with the phase that builds each.
-PLANNED: tuple[tuple[str, int], ...] = (("build-demo-data", 6),)
+# OPS-01's later stages with the phase that builds each; none since Phase 6.
+PLANNED: tuple[tuple[str, int], ...] = ()
