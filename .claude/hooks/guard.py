@@ -16,7 +16,7 @@ What it blocks (exit 2, reason on stderr):
 
 - Bash: commands only Din runs (AGENTS.md approvals): pushes, remotes, pull
   requests, releases, deploys, secrets, `evaluate-test`, `make-folds`,
-  `rebuild --exact`.
+  `rebuild --exact`, `export --freeze`.
 - Bash: commands that discard uncommitted work (`git clean`, `git reset
   --hard`, `git checkout -- path`, `git restore path`, `git stash drop`).
 - Bash: shell writes to paths only code may write (rule 5) or only Din may
@@ -348,6 +348,10 @@ def check_din_only(program: str, argv: list[str]) -> None:
     if program == "heartbeat" and words[:1] == ["rebuild"] and "--exact" in argv:
         raise BlockedError(
             f"`heartbeat rebuild --exact` takes about 15 hours: {DIN_ONLY_REASON}"
+        )
+    if program == "heartbeat" and words[:1] == ["export"] and "--freeze" in argv:
+        raise BlockedError(
+            f"`heartbeat export --freeze` writes the freeze record: {DIN_ONLY_REASON}"
         )
     if program == "pnpm" and any(word.startswith("deploy") for word in words[:2]):
         raise BlockedError(f"`pnpm ... deploy`: {DIN_ONLY_REASON}")

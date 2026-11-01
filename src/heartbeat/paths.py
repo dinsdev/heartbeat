@@ -30,3 +30,17 @@ STAGES_DIR = REPO_ROOT / "data" / "stages"
 RUNS_DIR = REPO_ROOT / "runs"
 # Committed summaries, written only by the rebuild stages (rule 5).
 RESULTS_DIR = REPO_ROOT / "results"
+
+# E3: the frozen model, written only by `heartbeat export` (and its freeze
+# record only by `heartbeat export --freeze`, Din's, Phase 7).
+MODELS_DIR = REPO_ROOT / "models" / "heartbeat-v1"
+FREEZE_RECORD = MODELS_DIR / "freeze.json"
+# E5, PARITY-02: DS1 parity fixtures, written only by `heartbeat export`.
+FIXTURES_DIR = REPO_ROOT / "fixtures" / "parity"
+# C6, EVAL-06: the append-only sealed-run log and its reports (R42).
+TEST_LOG = RESULTS_DIR / "test_runs.jsonl"
+TEST_REPORTS_DIR = RESULTS_DIR / "test_runs"
+
+# F6: the cards whose generated blocks `heartbeat cards` renders (R50).
+MODEL_CARD = REPO_ROOT / "docs" / "MODEL_CARD.md"
+DATA_CARD = REPO_ROOT / "docs" / "DATA_CARD.md"

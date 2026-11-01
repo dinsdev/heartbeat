@@ -52,7 +52,7 @@ torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [tool.heartbeat]
 # Bumped as the first commit of each phase (Phase 1 settling, 1 of 4).
-current-phase = 4
+current-phase = 5
 
 [tool.ruff]
 line-length = 88
@@ -84,10 +84,14 @@ mypy_path = "src:tests"
 # from mypy_path name them conftest and data.conftest.
 explicit_package_bases = true
 
-# scipy, scikit-learn and wfdb ship no type information; stubs would be a new dependency
-# (Phase 2 plan: none), so its imports are typed Any at the boundary.
+# scipy, scikit-learn, wfdb and onnxruntime ship no type information; stubs would
+# be a new dependency (Phase 2 plan: none), so their imports are typed Any at the
+# boundary.
 [[tool.mypy.overrides]]
-module = ["scipy", "scipy.*", "sklearn", "sklearn.*", "wfdb", "wfdb.*"]
+module = [
+    "scipy", "scipy.*", "sklearn", "sklearn.*", "wfdb", "wfdb.*",
+    "onnxruntime", "onnxruntime.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -1,5 +1,84 @@
 {
-  "commit": "3b1116c87b015d9df38e81dc641fe03019869ae9",
+  "baseline": {
+    "C": 0.001,
+    "class_weights": {
+      "F": 30.778381642512077,
+      "N": 0.2780693523044693,
+      "S": 13.512460233297984,
+      "V": 3.3638463569165786
+    },
+    "classes": [
+      "N",
+      "S",
+      "V",
+      "F"
+    ],
+    "coefficients": [
+      [
+        0.1320645624290785,
+        0.5176466224665963,
+        0.4788605480499347,
+        -0.08535135328858787,
+        1.0253316050796386,
+        -0.10593441902276743
+      ],
+      [
+        -0.6361459286916251,
+        -0.4010657195899068,
+        -0.6716117949134325,
+        0.7566107755312029,
+        -0.5815506714048857,
+        0.3849405086396434
+      ],
+      [
+        0.40828102294755264,
+        0.001441209768184846,
+        0.021220561159677662,
+        0.0036250350365404187,
+        -0.5786361685359499,
+        0.6878205194999493
+      ],
+      [
+        0.09580034331499475,
+        -0.1180221126448741,
+        0.17153068570382748,
+        -0.674884457279156,
+        0.13485523486120085,
+        -0.9668266091168526
+      ]
+    ],
+    "intercepts": [
+      0.9895849291490697,
+      -0.5777181280470363,
+      -0.38154804398396935,
+      -0.030318757117942005
+    ],
+    "label": "baseline on every DS1 row at the chosen C, CPU; temperature from its DS1 out-of-fold predictions (Phase 5 settling 1)",
+    "max_iter": 10000,
+    "n_rows": 50969,
+    "run": "20261030T223322Z-27fd028-train-final-baseline",
+    "scaler": {
+      "mean": [
+        0.7784395634819696,
+        0.778483326466442,
+        0.7785425358232895,
+        0.780864979544249,
+        -0.011964830765346548,
+        2.3688637488226735e-05
+      ],
+      "std": [
+        0.4954920486413921,
+        0.49560310535535396,
+        0.2272845207432629,
+        0.1691469718047225,
+        0.1559539493907285,
+        0.248986670916274
+      ]
+    },
+    "solver": "lbfgs",
+    "temperature": 1.1743687510024545
+  },
+  "commit": "27fd028dda5134615260ab93a641d4ea81130d50",
   "dirty": false,
   "epochs": 10,
   "label": "final models on every DS1 row, CPU, deterministic mode (MODEL-06)",
@@ -14,8 +93,8 @@
       "deterministic": true,
       "device": "cpu",
       "epochs": 10,
-      "path": "runs/20261030T094214Z-3b1116c-train-final-s0/model.pt",
-      "run": "20261030T094214Z-3b1116c-train-final-s0",
+      "path": "runs/20261030T221936Z-27fd028-train-final-s0/model.pt",
+      "run": "20261030T221936Z-27fd028-train-final-s0",
       "scaler": {
         "mean": [
           0.7784395634819696,
@@ -38,7 +117,7 @@
       "sha256": "3c1c9b9c0b66914483736b2e97e251e2fea0ea0bead29c6c04c01caf7ef342e8",
       "temperature": 1.7039858431519221,
       "torch_threads": 4,
-      "wall_s": 293.62013375002425,
+      "wall_s": 282.00251408305485,
       "width": 1.0
     },
     {
@@ -51,8 +130,8 @@
       "deterministic": true,
       "device": "cpu",
       "epochs": 10,
-      "path": "runs/20261030T094707Z-3b1116c-train-final-s1/model.pt",
-      "run": "20261030T094707Z-3b1116c-train-final-s1",
+      "path": "runs/20261030T222418Z-27fd028-train-final-s1/model.pt",
+      "run": "20261030T222418Z-27fd028-train-final-s1",
       "scaler": {
         "mean": [
           0.7784395634819696,
@@ -75,7 +154,7 @@
       "sha256": "72279c113a9adf5d8784f0366f2c6ce1e78aeed7b6e8ed2d4c06c3de3c1a3182",
       "temperature": 1.6413402544410014,
       "torch_threads": 4,
-      "wall_s": 293.01042404107284,
+      "wall_s": 272.99992224993184,
       "width": 1.0
     },
     {
@@ -88,8 +167,8 @@
       "deterministic": true,
       "device": "cpu",
       "epochs": 10,
-      "path": "runs/20261030T095201Z-3b1116c-train-final-s2/model.pt",
-      "run": "20261030T095201Z-3b1116c-train-final-s2",
+      "path": "runs/20261030T222852Z-27fd028-train-final-s2/model.pt",
+      "run": "20261030T222852Z-27fd028-train-final-s2",
       "scaler": {
         "mean": [
           0.7784395634819696,
@@ -112,11 +191,11 @@
       "sha256": "493ece36f72311a7fafa8af625559b8c1172e9d678b6bafa6fa92707e496404f",
       "temperature": 1.6622118286595837,
       "torch_threads": 4,
-      "wall_s": 292.3216571669327,
+      "wall_s": 270.0306586250663,
       "width": 1.0
     }
   ],
-  "run": "20261030T095653Z-3b1116c-train-final",
+  "run": "20261030T223322Z-27fd028-train-final",
   "shipped_seed": 0,
   "torch": "2.14.1",
   "width": 1.0

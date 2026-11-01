@@ -1,5 +1,6 @@
 """DATA-05 to DATA-10 per record: prepare_record, the .npz round trip, prepare_ds1."""
 
+import ast
 import json
 from pathlib import Path
 
@@ -16,10 +17,12 @@ from heartbeat.data.prepare import (
     PreparedRecord,
     load_prepared,
     prepare_ds1,
+    prepare_in_memory,
     prepare_record,
     save_prepared,
 )
 from heartbeat.data.records import RawRecord
+from heartbeat.paths import PACKAGE_DIR
 from heartbeat.signal.filter import bandpass_mv, to_adu
 from heartbeat.signal.rr import rr_features
 
@@ -234,3 +237,40 @@ def test_windows_are_256_samples_for_every_kept_beat() -> None:
     prepared: PreparedRecord = prepare_record(_raw(), "s101")
     windows = extract_windows(prepared.trace_adu, prepared.beat_sample[prepared.kept])
     assert windows.shape == (3, WINDOW_SAMPLES)
+
+
+# Phase 5 settling 3, Phase 2 settling 4: the sealed run prepares records in
+# memory with the same per-record function, and writes nothing.
+
+
+def test_prepare_in_memory_reads_one_record_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(prepare_module, "read_record", _fake_reader(calls))
+    before = sorted(tmp_path.rglob("*"))
+    prepared = prepare_in_memory(tmp_path / "raw", "101", "MLII", "s101")
+    assert calls == ["101"]
+    assert sorted(tmp_path.rglob("*")) == before
+    expected = prepare_record(_raw("101", seed=101), "s101")
+    np.testing.assert_array_equal(prepared.trace_adu, expected.trace_adu)
+    np.testing.assert_array_equal(prepared.rr_s, expected.rr_s)
+    assert prepared.subject_id == "s101"
+
+
+def _importers_of(name: str) -> list[str]:
+    found = []
+    for path in sorted(PACKAGE_DIR.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.ImportFrom)
+                and any(a.name == name for a in node.names)
+            ) or (isinstance(node, ast.Attribute) and node.attr == name):
+                found.append(path.relative_to(PACKAGE_DIR).as_posix())
+    return found
+
+
+def test_only_the_sealed_run_prepares_records_in_memory() -> None:
+    # Rule 1: before the sealed run nothing else may read a record this way.
+    assert set(_importers_of("prepare_in_memory")) <= {"sealed/run.py"}

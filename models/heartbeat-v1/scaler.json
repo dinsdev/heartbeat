@@ -1,0 +1,31 @@
+{
+  "features": [
+    "pre_rr_s",
+    "post_rr_s",
+    "local_avg_rr_s",
+    "long_avg_rr_s",
+    "pre_over_local",
+    "post_over_pre"
+  ],
+  "label": "RR inputs: the six features in this order, the log taken of log_features, then (x - mean) / std (population std)",
+  "log_features": [
+    "pre_over_local",
+    "post_over_pre"
+  ],
+  "mean": [
+    0.7784395634819696,
+    0.778483326466442,
+    0.7785425358232895,
+    0.780864979544249,
+    -0.011964830765346548,
+    2.3688637488226735e-05
+  ],
+  "std": [
+    0.4954920486413921,
+    0.49560310535535396,
+    0.2272845207432629,
+    0.1691469718047225,
+    0.1559539493907285,
+    0.248986670916274
+  ]
+}

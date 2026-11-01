@@ -1,0 +1,15 @@
+heartbeat-v1 model files
+
+The model weights in this folder are released under the MIT License, like the
+code of the repository they come from (see LICENSE at the repository root):
+Copyright (c) 2026 Dinesh Dawonauth.
+
+The models were trained on data from the MIT-BIH Arrhythmia Database. Notice
+under section 4.3 of the Open Data Commons Attribution License v1.0:
+
+Contains information from the MIT-BIH Arrhythmia Database (version 1.0.0,
+PhysioNet), which is made available under the ODC Attribution License v1.0.
+https://opendatacommons.org/licenses/by/1-0/
+
+Moody G, Mark R. MIT-BIH Arrhythmia Database (version 1.0.0). PhysioNet (2005).
+https://doi.org/10.13026/C2F305

@@ -12,8 +12,11 @@ from heartbeat import cli
 from heartbeat.cli import main, rebuild_context
 from heartbeat.config import DataSettings, FoldSettings, Settings, TrainSettings
 from heartbeat.paths import (
+    BEAT_COUNTS_MANIFEST,
+    FIXTURES_DIR,
     FOLDS_JSON,
     FOLDS_PIN,
+    MODELS_DIR,
     RESULTS_DIR,
     SPLITS_MANIFEST,
     SUBJECTS_MANIFEST,
@@ -22,10 +25,12 @@ from heartbeat.stages import (
     PIPELINE,
     PLANNED,
     Context,
+    SealedRunMissingError,
     Stage,
     StageResult,
     UnknownStageError,
     fingerprint,
+    reproduce_test,
     run_pipeline,
 )
 
@@ -251,8 +256,9 @@ def test_missing_input_file_has_its_own_fingerprint(counting: Counting) -> None:
 # The real pipeline
 
 
-def test_pipeline_has_the_eight_built_stages_in_order() -> None:
-    # Phase 4 design call 8: four stages after the baseline's cross-validate.
+def test_pipeline_has_the_built_stages_in_order() -> None:
+    # Phase 4 design call 8: four stages after the baseline's cross-validate;
+    # Phase 5 design call 8: the stages after train-final.
     assert [s.name for s in PIPELINE] == [
         "download",
         "prepare",
@@ -262,6 +268,10 @@ def test_pipeline_has_the_eight_built_stages_in_order() -> None:
         "select",
         "exhibit",
         "train-final",
+        "describe-data",
+        "export",
+        "reproduce-test",
+        "cards",
     ]
     by_name = {s.name: s for s in PIPELINE}
     assert by_name["check-folds"].always_run
@@ -271,7 +281,18 @@ def test_pipeline_has_the_eight_built_stages_in_order() -> None:
     assert by_name["select"].upstream == ("cross-validate", "cross-validate-cnn")
     assert by_name["exhibit"].upstream == ("select",)
     assert by_name["train-final"].upstream == ("select",)
-    assert not any(s.always_run for s in PIPELINE if s.name != "check-folds")
+    assert by_name["describe-data"].upstream == ("download", "prepare")
+    assert by_name["export"].upstream == ("train-final",)
+    assert by_name["reproduce-test"].upstream == ("export",)
+    # reproduce-test decides from the freeze record and the log every time.
+    assert by_name["reproduce-test"].always_run
+    assert by_name["cards"].upstream == ("describe-data", "select", "exhibit", "export")
+    assert by_name["cards"].always_run
+    assert not any(
+        s.always_run
+        for s in PIPELINE
+        if s.name not in ("check-folds", "reproduce-test", "cards")
+    )
     assert by_name["cross-validate-cnn"].settings_keys == (
         "data.prepared_dir",
         "train.cv_device",
@@ -300,6 +321,10 @@ def test_pipeline_code_folders_match_the_plan() -> None:
         "select": training,
         "exhibit": training,
         "train-final": training,
+        "describe-data": {"data", "runs.py", "results.py", *shared},
+        "export": {*training, "export", "sealed"},
+        "reproduce-test": {*training, "export", "sealed"},
+        "cards": {"cards", "export", "sealed", *shared},
     }
 
 
@@ -376,7 +401,9 @@ FOLD_INPUTS = {FOLDS_JSON, FOLDS_PIN, SPLITS_MANIFEST, SUBJECTS_MANIFEST}
         ("cross-validate-cnn", set(), ["cv_cnn_curves"]),
         ("select", {"cv_cnn_curves", "cv_baseline"}, ["selection", "cv_cnn"]),
         ("exhibit", {"selection", "cv_cnn_curves", "cv_baseline"}, ["exhibit"]),
-        ("train-final", {"selection"}, ["train_final"]),
+        # Phase 5 settling 1: the frozen baseline reads the chosen C and its
+        # out-of-fold temperature.
+        ("train-final", {"selection", "cv_baseline"}, ["train_final"]),
     ],
 )
 def test_the_cnn_stages_read_the_folds_and_write_their_results(
@@ -476,12 +503,192 @@ def test_each_cnn_stage_writes_its_results_from_its_run(
     assert written == [(r, p, run) for r, p in zip(results, payloads, strict=True)]
 
 
-def test_planned_stages_follow_with_their_phases() -> None:
-    assert list(PLANNED) == [
-        ("export", 5),
-        ("reproduce-test", 5),
-        ("build-demo-data", 6),
+def test_describe_data_reads_the_manifests_and_writes_its_summary() -> None:
+    stage = {s.name: s for s in PIPELINE}["describe-data"]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == {
+        SPLITS_MANIFEST,
+        SUBJECTS_MANIFEST,
+        BEAT_COUNTS_MANIFEST,
+    }
+    assert list(stage.outputs(context)) == [RESULTS_DIR / "data_summary.json"]
+
+
+def test_describe_data_writes_its_result_from_its_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heartbeat import stages as stages_module
+
+    run, payload = object(), {"which": "data_summary"}
+    monkeypatch.setattr(stages_module, "run_describe_data", lambda s: (run, payload))
+    written: list[tuple[str, object, object]] = []
+
+    def spy(name: str, result: object, source: object) -> Path:
+        written.append((name, result, source))
+        return Path(name)
+
+    monkeypatch.setattr(stages_module, "write_result", spy)
+    {s.name: s for s in PIPELINE}["describe-data"].run(rebuild_context())
+    assert written == [("data_summary", payload, run)]
+
+
+def test_export_reads_train_final_and_writes_the_bundle_and_fixtures() -> None:
+    stage = {s.name: s for s in PIPELINE}["export"]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == FOLD_INPUTS | {
+        RESULTS_DIR / "train_final.json"
+    }
+    assert list(stage.outputs(context)) == [
+        RESULTS_DIR / "export.json",
+        MODELS_DIR / "model.onnx",
+        FIXTURES_DIR / "fixtures.json",
     ]
+
+
+def test_export_writes_its_result_from_its_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heartbeat import stages as stages_module
+
+    run, payload = object(), {"which": "export"}
+    monkeypatch.setattr(stages_module, "run_export_all", lambda s: (run, payload))
+    written: list[tuple[str, object, object]] = []
+
+    def spy(name: str, result: object, source: object) -> Path:
+        written.append((name, result, source))
+        return Path(name)
+
+    monkeypatch.setattr(stages_module, "write_result", spy)
+    {s.name: s for s in PIPELINE}["export"].run(rebuild_context())
+    assert written == [("export", payload, run)]
+
+
+# reproduce-test's three cases (Phase 5 design call 8, R28, OPS-02, OPS-03).
+
+
+def _sealed_spy(calls: list[dict[str, object]]) -> object:
+    def spy(*args: object, **kwargs: object) -> dict[str, object]:
+        calls.append({"args": args, **kwargs})
+        return {"id": 2, "type": "reproduction"}
+
+    return spy
+
+
+@pytest.mark.rule("R28")
+def test_without_a_freeze_record_reproduce_test_stops_before_ds2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from heartbeat import stages as stages_module
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(stages_module, "run_sealed", _sealed_spy(calls))
+    message = reproduce_test(
+        rebuild_context().settings,
+        models_dir=tmp_path / "models",
+        log_path=tmp_path / "test_runs.jsonl",
+        reports_dir=tmp_path / "test_runs",
+    )
+    assert message == "no freeze record: stopping before DS2"
+    assert calls == []
+
+
+def test_a_freeze_record_without_a_sealed_run_stops_and_names_evaluate_test(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from heartbeat import stages as stages_module
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(stages_module, "run_sealed", _sealed_spy(calls))
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "freeze.json").write_text("{}\n", encoding="utf-8")
+    with pytest.raises(SealedRunMissingError, match="evaluate-test"):
+        reproduce_test(
+            rebuild_context().settings,
+            models_dir=tmp_path / "models",
+            log_path=tmp_path / "test_runs.jsonl",
+            reports_dir=tmp_path / "test_runs",
+        )
+    assert calls == []
+
+
+def test_with_a_record_and_a_sealed_run_it_reproduces_on_ds2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from heartbeat import stages as stages_module
+    from heartbeat.data.manifests import load_splits
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(stages_module, "run_sealed", _sealed_spy(calls))
+    monkeypatch.setattr(
+        stages_module, "read_log", lambda path: [{"id": 1, "type": "sealed"}]
+    )
+    (tmp_path / "models").mkdir()
+    (tmp_path / "models" / "freeze.json").write_text("{}\n", encoding="utf-8")
+    settings = rebuild_context().settings
+    message = reproduce_test(
+        settings,
+        models_dir=tmp_path / "models",
+        log_path=tmp_path / "test_runs.jsonl",
+        reports_dir=tmp_path / "test_runs",
+    )
+    assert "run 2" in message
+    (call,) = calls
+    assert call["args"] == (
+        load_splits(SPLITS_MANIFEST).ds2,
+        settings.data.raw_dir,
+        tmp_path / "models",
+        tmp_path / "test_runs.jsonl",
+        tmp_path / "test_runs",
+        "reproduction",
+    )
+    assert call["require_remote"] is True
+
+
+# --exact (E4, design call 9): built and tested, never run (about 15 hours).
+
+
+def test_exact_mode_runs_cross_validation_on_cpu_and_changes_fingerprints() -> None:
+    default, exact = rebuild_context(), rebuild_context(exact=True)
+    assert default.settings.train.cv_device == "mps"
+    assert exact.settings.train.cv_device == "cpu"
+    assert exact.settings.data == default.settings.data
+    by_name = {s.name: s for s in PIPELINE}
+    for name in ("cross-validate-cnn", "exhibit"):
+        stage = by_name[name]
+        upstream = dict.fromkeys(stage.upstream, "u")
+        assert fingerprint(stage, default, upstream) != fingerprint(
+            stage, exact, upstream
+        )
+    stage = by_name["train-final"]
+    assert fingerprint(stage, default, {"select": "u"}) == fingerprint(
+        stage, exact, {"select": "u"}
+    )
+
+
+def test_cards_reads_the_results_and_the_log_and_writes_both_cards() -> None:
+    from heartbeat.paths import DATA_CARD, MODEL_CARD, TEST_LOG
+
+    stage = {s.name: s for s in PIPELINE}["cards"]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == {
+        *(
+            RESULTS_DIR / f"{n}.json"
+            for n in (
+                "data_summary",
+                "selection",
+                "cv_cnn",
+                "cv_baseline",
+                "exhibit",
+                "export",
+            )
+        ),
+        TEST_LOG,
+    }
+    assert list(stage.outputs(context)) == [MODEL_CARD, DATA_CARD]
+
+
+def test_planned_stages_follow_with_their_phases() -> None:
+    assert list(PLANNED) == [("build-demo-data", 6)]
 
 
 # rebuild through the CLI
@@ -489,7 +696,7 @@ def test_planned_stages_follow_with_their_phases() -> None:
 
 def _patch_rebuild(counting: Counting, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli, "PIPELINE", counting.stages())
-    monkeypatch.setattr(cli, "rebuild_context", lambda: counting.context())
+    monkeypatch.setattr(cli, "rebuild_context", lambda exact=False: counting.context())
 
 
 def test_rebuild_stops_after_the_last_built_stage_and_names_the_next(
@@ -501,7 +708,7 @@ def test_rebuild_stops_after_the_last_built_stage_and_names_the_next(
     assert main(["rebuild"]) == 0
     out = capsys.readouterr().out
     assert "first: ran" in out
-    assert "next stage export (Phase 5)" in out
+    assert "next stage build-demo-data (Phase 6)" in out
     assert main(["rebuild"]) == 0
     assert "first: skipped (unchanged)" in capsys.readouterr().out
 
@@ -536,8 +743,8 @@ def test_rebuild_from_a_planned_stage_says_it_is_not_built(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _patch_rebuild(counting, monkeypatch)
-    assert main(["rebuild", "--from", "export"]) == 2
-    assert "Phase 5" in capsys.readouterr().err
+    assert main(["rebuild", "--from", "build-demo-data"]) == 2
+    assert "Phase 6" in capsys.readouterr().err
 
 
 def test_rebuild_exits_1_when_a_stage_fails(

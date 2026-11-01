@@ -1766,3 +1766,239 @@ Leaky CNN seeds 1 and 2, macro F1 N, S, V: 0.8375 to 0.8769. Leaky assignment SH
 **Cleanup (Din's go):** deleted the merged local branch `phase-4-cnn` and pruned the deleted remote branches (`origin/phase-4-cnn`, and `origin/phase-3-harness` from the Phase 3 merge). Two stashes remain for Din to drop, since `.claude/hooks/guard.py` blocks `git stash` for Claude: `stash@{0}` (the stopped first rebuild's `results/` files: `cv_baseline.json`, `cv_cnn.json`, `cv_cnn_curves.json`, `selection.json`) and `stash@{1}` (the Task 4 reproduction of `results/cv_baseline.json`). Both hold `results/` files only, already compared and recorded in the Phase 4 entries above.
 
 **Carried into Phase 5:** the two flags from the hand-off entry, report only: the MPS against CPU gap on width 1, fold 0 exceeds the seed spread at 8 of 40 epochs but not at the selected epoch 10, and F stays weak (pooled F1 0.0372, `results/cv_cnn.json`, DS1 out-of-fold, MPS) because fold 0 holds most of DS1's F beats.
+
+## 2026-10-30: Phase 5 settling, 1: the frozen baseline (EVAL-05, MODEL-01 clarification)
+
+**Gap:** EVAL-05 and C1 say the baseline and the CNN are frozen and tested in the same sealed run, but no baseline had been fit on all of DS1. `results/train_final.json` holds the three CNN seeds only, and PLAN.md's Phase 5 build list did not name a baseline, so `evaluate-test` would have had no fixed baseline to checksum.
+
+**Decision (Din):**
+
+1. `train-final` also fits the baseline on every DS1 row: C from `results/cv_baseline.json` (0.001 today), scaler and balanced class weights fitted on those rows, `lbfgs` as in MODEL-01. It is deterministic (no seed), one CPU fit.
+2. Its temperature is the baseline's DS1 out-of-fold temperature from `results/cv_baseline.json` (1.1744 today, "temperature fitted on these predictions"), the same rule the CNN seeds follow (Phase 4 settling 3).
+3. `heartbeat export` writes it as `models/heartbeat-v1/baseline.json`: coefficients, intercepts, scaler, log class weights and temperature. `evaluate-test` scores it with NumPy. A unit test checks the NumPy path against scikit-learn's own decision function on DS1 rows: labels exact, logits within 1e-5.
+
+**Reason:** a frozen model is one whose bytes the freeze record can checksum before DS2 is read. Refitting at test time would leave nothing fixed.
+
+**Rejected:** exporting the baseline to ONNX (needs `skl2onnx`, a new dependency, for a model the demo never runs); refitting the baseline inside `evaluate-test` (not frozen, not checksummable).
+
+**Cost:** the `train-final` stage's code changes, so it reruns (about 15 minutes, measured for the CNN seeds in Phase 4). The clean-clone rebuild reruns every stage anyway.
+
+**Applied:** `docs/PRD.md` MODEL-01; `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.1. Made before any DS2 result and before the Phase 7 gate (rule 6; not part of the pre-registered plan, which already said the baseline is tested in the sealed run).
+
+## 2026-10-30: Phase 5 settling, 2: all three seeds exported; the sealed run scores ONNX only (PARITY-01, C6 clarification)
+
+**Gap:** C6 has the sealed run score all three final CNN models (seed 0 headline, seeds 1 and 2 as a range) and claims inference with the shipped ONNX model reproduces the reported metrics exactly, while PARITY-01 speaks of "the final model". Seeds 1 and 2 existed only as PyTorch checkpoints in the gitignored `runs/`.
+
+**Decision (Din):**
+
+1. `heartbeat export` writes all three seeds as single-file ONNX models. Seed 0 is `models/heartbeat-v1/model.onnx` with its `calibration.json` (what the demo copies in Phase 6). Seeds 1 and 2 sit under `models/heartbeat-v1/seeds/`, each with its own calibration (per-seed temperatures, Phase 4 settling 3). One `scaler.json` serves all three, since every seed's scaler is fitted on the same DS1 rows. The exact file layout is fixed in the Phase 5 task plan.
+2. `evaluate-test` scores only committed files: the three ONNX models through Python ONNX Runtime 1.30.0, and `baseline.json` through NumPy (settling 1).
+3. R26 (PyTorch against Python ONNX Runtime, 1e-5, labels exact) runs for all three seeds. R25's size gate applies per model file.
+
+**Reason:** every sealed number, the seed range included, then comes from a file the freeze record checksums and a clean clone contains; Phase 7's reproduction step can evaluate the committed models without first depending on bit-exact CPU retraining; and the seed range is not mixed with a PyTorch against ONNX difference.
+
+**Size:** about 238 KB per model at width 1 (measured at E2), so about 715 KB committed.
+
+**Rejected:** seed 0 as ONNX with seeds 1 and 2 as checksummed PyTorch checkpoints (two runtimes in one sealed run, and the range is unverifiable from a clone); committing the `.pt` checkpoints (a second format nobody ships).
+
+**Applied:** `docs/PRD.md` PARITY-01; `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.1. Made before any DS2 result and before the Phase 7 gate (rule 6).
+
+## 2026-10-30: Phase 5 settling, 3: `evaluate-test`'s success path is rehearsed on DS1 in tests (EVAL-05, EVAL-06 clarification)
+
+**Gap:** PLAN.md Phase 5 said `evaluate-test` is "tested only for its refusals". Its success path (DS2 prepare in memory, scoring, the paired bootstrap, the EVAL-08 report, the log entry) would then run for the first time in the sealed run, where any crash or malformed entry becomes a permanent logged rerun (A3, EVAL-06).
+
+**Decision (Din):**
+
+1. `evaluate-test` is a thin CLI over one function that takes the record list, the record source, the models folder, the log path and the results folder. The CLI binds exactly one set: the DS2 list from `manifests/splits.toml`, `models/heartbeat-v1/` and `results/test_runs.jsonl`. A test checks that binding.
+2. A real-data test runs that function after the freeze and clean-tree gate, with DS1 records in DS2's place, a planted freeze record in a temporary git repo, and every output under the test's temporary folder. It goes through `prepare_record` in memory, ONNX scoring of the three seeds, the NumPy baseline, the paired bootstrap, the report and the log writer.
+3. The rehearsal asserts structure and invariants only: every EVAL-08 item present, per-class counts summing to the beat count, ordered intervals, skip counts reported, the log entry's schema, and append without rewrite on a second run (R42). Its numbers are in-sample DS1 scores: no test asserts their values and none is quoted anywhere (rule 2).
+4. No `--rehearse` flag on the CLI, so a DS1 headline report cannot be produced by a command and later quoted.
+5. A synthetic unit test covers the report's edge cases (for example a draw with no predicted S).
+
+**Reason:** the sealed path is the same code apart from the records it is given, so its first real use is not its first run. No DS2 signal, label or prediction is read (rule 1).
+
+**Rejected:** refusal tests only (the success path's first run would be the sealed run); a synthetic-only rehearsal (skips `prepare_record` on real recordings and real ONNX scoring, where shape and dtype bugs hide).
+
+**Applied:** `docs/PLAN.md` Phase 5 builds; `docs/TASKS.md` 5.3.
+
+## 2026-10-30: Phase 5 settling, 4: reproduction is exact on this Mac, with no cross-machine number (C6, E4, OPS-03 amendment)
+
+**Gap:** Phase 5's exit asked for a clean-clone `rebuild` that reproduces `results/` "within tolerance", and Phase 4 settling 5 left that tolerance to the start of Phase 5. C6 and the PRD's reproducibility line also claimed retraining reproduces "within tolerance elsewhere".
+
+**Measured (throwaway script in the session scratchpad, deleted after):** a width-1 `HeartbeatCNN` (seeded random weights, no MIT-BIH data) exported with torch 2.14.1, `dynamo=True`, opset 20, single file, twice in one process and once more from a fresh process in another folder: all three files byte-identical (235,390 bytes, SHA256 beginning `b4cbafa3`); the file name is not embedded. With the earlier measurements (MPS same-seed runs bit-identical, Phase 4 settling 5 and Task 9; CPU same-seed bit-identical, R22 and the three `train-final` checksums; baseline and `select` reproduce exactly, Phases 3 and 4), every stage through export is exact on this Mac.
+
+**Decision (Din):**
+
+1. The clean-clone check (task 5.4) is exact, with no numeric tolerance. `results/` files must be equal once a fixed list of volatile keys is removed (run names, commit, run-folder paths, wall times, timestamps); the list is one constant with its own test. Every final checkpoint, every file in `models/heartbeat-v1/` and every parity fixture must match by SHA256. Any difference stops the goal and goes to Din.
+2. The clone is made in the session scratchpad from the local repo, downloads the 132 pinned files fresh, and runs `rebuild` in the background (about 110 minutes, from Phase 4's measured stages plus export).
+3. No cross-machine tolerance: C7 gives one Mac, so any number would be an untested claim. Off this Mac, the claim is that the committed ONNX models reproduce the reported metrics (ONNX Runtime differences near 1e-7 sit inside the 1e-5 parity rule, labels exact). Retraining elsewhere is not claimed to match; the model card says MPS cross-validation on other hardware may differ by about the seed spread (Phase 4 device checks).
+4. E4's default-mode check after the freeze (OPS-03, Phase 7) is exact on this Mac by the same rule. `--exact` stays the all-CPU bit-for-bit mode: built in Phase 5, run only with Din's go.
+
+**Reason:** exact is stricter than any tolerance and matches what was measured; a looser rule would only give a real regression room to hide.
+
+**Rejected:** a numeric tolerance such as fold macro F1 within 0.02 (unneeded on this Mac, untestable elsewhere); keeping C6's "elsewhere" wording (a promise nobody can check).
+
+**Applied:** `docs/PRD.md` OPS-03 and the reproducibility line; `docs/PLAN.md` Phase 5 exit; `docs/TASKS.md` 5.4. C6 is not part of the pre-registered plan (A3, C4, C5, C8); this is a dated amendment made before any DS2 result. AS3 stays as written: it is about MPS against CPU, which the Phase 4 device checks measured.
+
+## 2026-10-30: Phase 5 settling, 5: the cards render every DS1-backed block, the exhibit included (F6 clarification)
+
+**Conflict:** `docs/MODEL_CARD.md` (F6) says DS1 blocks fill in during development, which includes the `exhibit` block, while PLAN.md's Phase 4 exit says exhibit numbers stay out of public text until the case study, and R44 counts the cards as published text. `results/exhibit.json` is already committed in the public repo, so the embargo can only govern which prose quotes the numbers.
+
+**Decision (Din):**
+
+1. Phase 5 renders every DS1-backed block: `dev_selection`, `calibration_fit`, `exhibit` and `model_details` in the model card (the freeze commit and date read "Pending (Phase 7)" until a freeze record exists); `data_counts`, `data_counts_per_record` and `data_demographics` in the data card.
+2. Every `test_*` block stays pending until the sealed run is logged (R50), and `shipped_data` waits for Phase 6.
+3. The data card's DS2 rows come from sources that are not DS2 signals: class counts from the committed expected-count manifest (PhysioNet's published per-record table, already checked by R11), age and sex from the `.hea` headers. A rebuild stage writes them into a committed `results/` file, so the cards render from `results/` only. Rule 1 is unaffected: no DS2 signal is read, and no DS2 label is used beyond published counts.
+4. The embargo is clarified: no hand-written text (README, demo UI, card prose, commit messages, posts) quotes an exhibit number until the case study in Phase 8. The generated card block is exempt, since it is the results file rendered verbatim with its source named.
+
+**Reason:** R50 stays one rule (every block equals what `cards` renders) with no special state; it matches F6's template; and holding back a block whose source is public protects nothing.
+
+**Rejected:** a renderer hold list keeping `exhibit` pending until Phase 8 (a special state in R50 and `verify` to delay a file anyone can read).
+
+**Applied:** `docs/PLAN.md` Phase 4 exit (clarification) and Phase 5 builds; `docs/TASKS.md` 5.5.
+
+## 2026-10-30: Phase 5 settling, 6: one goal run
+
+**Checked:** `.claude/hooks/guard.py` blocks write programs, Edit and writing interpreters on `models/heartbeat-v1/` and `results/`, while `uv run heartbeat export`, `uv run heartbeat rebuild` and `git add` pass, so the goal can write and commit those outputs without prompts. `heartbeat evaluate-test` is on the guard's Din-only list, which fits settling 3 (the rehearsal runs through pytest, never the CLI).
+
+**Decision (Din):** Phase 5 runs as one `/goal` run on branch `phase-5-export` at high effort: the code tasks test first; `rebuild` in the working repo (`train-final` reruns for the baseline; export, the data stage and the cards are new); the `results/`, `models/heartbeat-v1/` and `fixtures/parity/` outputs committed on their own; the clean-clone check from that commit in the session scratchpad, in the background (about 110 minutes), compared by settling 4's rule; docs; then the push command for Din, or a stop-and-ask condition.
+
+**Reason:** Phase 4 ran a 108-minute rebuild inside one goal; the clean-clone check is a read-only comparison that already stops on any mismatch; no step needs Din mid-run (Phase 2 split only because `make-folds` is Din's).
+
+**Rejected:** two goals split before the clean-clone check (a review point that adds a wait and no safety, since nothing in that compute is irreversible or touches DS2).
+
+## 2026-10-30: Phase 5 task plan drafted, for Din's review
+
+**Drafted:** `docs/PLAN.md` section 8, Phase 5: twelve tasks on branch `phase-5-export` (phase bump with constants, paths and the dirty-flag scope; the frozen baseline; header demographics and `describe-data`; export; parity fixtures; the freeze record and gate; the log, scoring, report and DS1 rehearsal; stages, `--exact` and the reproduction check; cards and verify; the real rebuild; the clean-clone check; the hand-off), file map, test-first cases for R25 to R28, R41, R42, R50 and R52, nine stop conditions, review focus. It rests on Phase 5 settling 1 to 6 and twelve design calls listed in the plan.
+
+**Found while planning (code read, nothing run):** every training stage fingerprints `data/`, `signal/`, `models/`, `train/`, `evaluate/`, `runs.py`, `results.py` and `constants.py`, `config.py`, `paths.py`, so settling 1's change to `train/final.py` reruns all training in the real rebuild (about 110 minutes, measured in Phase 4). The plan puts every training-side change and every new constant first and the rest in new folders, so later fixes rerun nothing. The dirty flag skips only `results/`, while `export` writes `models/heartbeat-v1/` and `fixtures/parity/` during the rebuild; design call 2 widens the skip to those two folders. The Task 10 rebuild doubles as a reproduction of the Phase 4 results on new code.
+
+**Approved (Din, 2026-10-30):** the Phase 5 task plan as committed in `4f303e0`, including its twelve design calls, and the `/goal` prompt drafted in the planning session (3,495 characters after Din asked for long jobs to run under `caffeinate -ims`, under the 4,000-character limit, clean under the wording lint; the guard was checked to block `evaluate-test`, `export --freeze` and `rebuild --exact` behind `caffeinate` too). Execution is handed to a fresh Opus 5.5 session at high effort: one goal run on branch `phase-5-export`, ending at the push command for Din or at a stop-and-ask condition.
+
+**Guard (design call 5, Din's go with the plan):** `.claude/hooks/guard.py` now blocks `heartbeat export --freeze` for Claude, beside `evaluate-test`, `make-folds` and `rebuild --exact`, so the freeze record is written only by Din in Phase 7. `.claude/hooks/test_guard.py` gains the blocked command and `uv run heartbeat export` as an allowed one; `uv run pytest .claude/hooks/test_guard.py` 98 passed; ruff check and format clean on `.claude/hooks`.
+
+## 2026-10-30: Phase 5 stopped at stop 2: the clean clone's ONNX files differ (embedded source paths)
+
+**Status:** Tasks 1 to 10 done; Task 11 ran and hit stop 2; Task 12 not started (AGENTS.md Commands and TASKS verification wait for Din's call). Nothing pushed.
+
+**Built (branch `phase-5-export`, one commit per plan step):** `918fd5e` phase bump; `529f539` constants, paths and the dirty-flag scope (design call 2); `036b01f` the frozen baseline (settling 1, TASKS 5.1); `b724927` header demographics and `describe-data` (TASKS 5.5), the last planned training-code change; `e9fb130` ONNX export of three seeds, the bundle and `NOTICE` (R25, R26, R52); `98f5a4a` DS1 parity fixtures (R26, R27); `66d16dd` the freeze record and gate (R41, R47 built); `f0bfc3c` `evaluate-test` with its log, report and the DS1 rehearsal (R42, settling 3); `587356b` parity gated on the fixture beats with a survey of every DS1 beat (deviation 4); `6680fdc` the four stages, `--exact` and the reproduction check (R28); `27fd028` `heartbeat cards` and `heartbeat verify` (R50) with the CI step; `7d97b86` the rebuild's outputs alone; and this commit (this entry and the TASKS statuses).
+
+**Deviations from the plan, and why:**
+
+1. `describe-data` has `prepare` upstream as well as `download`: its DS1 kept-beat counts read the prepared files.
+2. `data/prepare.py` gains `prepare_in_memory` (Task 3, inside the training-code window), so `run_sealed` prepares DS2 records without writing them to `data/prepared/`. A test allows only `sealed/run.py` to import it.
+3. A module the file map did not list, `export/build.py`, runs the export (checkpoints, ONNX, parity, bundle, fixtures). It breaks an import cycle between `bundle.py` and `fixtures.py`.
+4. Parity scope. The dry run on the Phase 4 checkpoints (scratchpad, CPU) showed PyTorch against ONNX Runtime within 1e-5 on the 50 fixture beats for all seeds, but one DS1 beat of seed 2 at 1.53e-5 when every DS1 beat is compared (a logit of about -164.5, relative difference about 9e-8; float32 accumulation order; batch-norm folding and ORT graph optimization ruled out by probes). The plan's R26 row is "parity test on fixtures", so the gate is the fixtures (R26) and labels on every DS1 beat; the all-DS1 largest difference and count over 1e-5 are recorded per seed in `results/export.json`, not gated. Tolerance unchanged. Flagged below.
+5. Training-code touch after Task 3: `train/exhibit.py` gains `card_row(payload)` in `27fd028`, so the card's accuracy row is built in the one module the existing test `test_accuracy_is_computed_only_in_the_exhibit` allows. The test is unchanged. The Task 10 rebuild reran training anyway (Tasks 1 to 3), so this cost nothing extra.
+6. New test helpers the file map did not list: `tests/card_support.py`, `tests/sealed_support.py`, and `annotated_beats_with_traces` in `tests/cnn_support.py` (irregular beat times, so the RR features vary).
+7. `pyproject.toml`: onnxruntime joins mypy's missing-imports overrides (it ships no type hints). No dependency or pin changed.
+8. `--exact` is applied through `rebuild_context(exact)`, which sets the CV device to CPU for every stage that reads it.
+9. `run_sealed` takes keyword arguments beyond design call 7's list (`repo`, `log_root`, `lead`, `subjects`, `data_label`, `require_remote`, `today`, `n_draws`), so the rehearsal points the same function at DS1 records and a temporary repo. `test_cli.py` checks the CLI binds the DS2 list, `MODELS_DIR`, `TEST_LOG` and `TEST_REPORTS_DIR`.
+10. Rendered card tables follow Prettier 3.9.10 with `proseWrap: never` (padded when every line fits in 80 columns, compact otherwise), so `pnpm -C web run format:check` stays green on the cards.
+
+**Task 10, the real rebuild (`uv run heartbeat rebuild` under `caffeinate -ims` at `27fd028`, clean tree, exit 0; stage times from the timestamped log):** download, prepare and check-folds about 1 s together (cache present); cross-validate 5 s; cross-validate-cnn 70 min 26 s (MPS); select under 1 s; exhibit 18 min 55 s (CNN on MPS, baseline CPU); train-final 13 min 46 s (CPU, 282.0, 273.0 and 270.0 s per seed, then the baseline); describe-data under 1 s; export 77 s (CPU); reproduce-test and cards under 1 s. Total 104 min 30 s. `reproduce-test` logged "no freeze record" and the rebuild stopped after `cards` (R28).
+
+**Reproduction of Phase 4 (stop 1 clear):** `cv_baseline`, `cv_cnn_curves`, `selection`, `cv_cnn` and `exhibit` equal `main`'s files apart from `VOLATILE_KEYS`, and so do `train_final`'s CNN entries; the three checkpoint SHA256s are identical (seed 0 `3c1c9b9c...ef342e8`, seed 1 `72279c11...1a3182`, seed 2 `493ece36...96404f`; `results/train_final.json`, runs `20261030T221936Z-27fd028-train-final-s0`, `20261030T222418Z-27fd028-train-final-s1`, `20261030T222852Z-27fd028-train-final-s2`; CPU). Compared with a scratchpad script using `heartbeat.checks.reproduction.strip_volatile`, deleted afterwards. So the Phase 5 changes to the training code left every Phase 4 number unchanged.
+
+**Frozen baseline (`results/train_final.json`, run `20261030T223322Z-27fd028-train-final-baseline`; CPU):** C 0.001 and temperature 1.1744, both from `results/cv_baseline.json` (stop 5 clear), fitted on 50,969 DS1 rows.
+
+**Export (`results/export.json`, run `20261030T223322Z-27fd028-export`; CPU; torch 2.14.1, onnx 1.23.2, onnxscript 0.7.2, onnxruntime 1.30.0; opset 20; 52,036 parameters before batch-norm folding):**
+
+| File | Bytes | SHA256 |
+| --- | --- | --- |
+| `models/heartbeat-v1/model.onnx` (seed 0, shipped) | 235466 | `b0292e6c4763b0bf6e70976aa9ddc754c70dc8c8eabd329576c9fa3ea5025e5f` |
+| `models/heartbeat-v1/seeds/seed-1/model.onnx` | 235466 | `e152852e78b5418184146a40dbf6c43450926dad033fcb0347e5411d6f2a8d24` |
+| `models/heartbeat-v1/seeds/seed-2/model.onnx` | 235466 | `783ca6f59fa225ab06b8594faf491fb8e76df33637265404b6ebe5d8509e1312` |
+| `models/heartbeat-v1/baseline.json` | 1758 | `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3` |
+| `models/heartbeat-v1/scaler.json` | 660 | `88eaaabba777683e606452d2c3afc40c034232f06a29845e89feb220eb1a92d8` |
+| `models/heartbeat-v1/NOTICE` | 673 | `c95b0b52f290d975d59ab4c55bf0663c72bc9655ad1755e86dc6a82372c8bae4` |
+| `fixtures/parity/fixtures.json` (50 DS1 beats, seed 20261031) | 1007961 | `66b6215514f3b0ad9e5d5f0bcaac4a5befc9b397f0d7550130e5bcb2f157c838` |
+
+Each ONNX file is under the 1,000,000-byte gate (stop 4 clear). Parity, PyTorch against Python ONNX Runtime on CPU (`results/export.json`, DS1): fixture beats, largest difference 3.8e-6 (seed 0), 2.9e-6 (seed 1), 4.5e-6 (seed 2), labels exact (R26, stop 3 clear); every DS1 kept beat (50,969), no label changes for any seed, largest difference 7.6e-6, 5.8e-6 and 1.53e-5, with 0, 0 and 1 beat over 1e-5.
+
+**Headers that did not parse (`results/data_summary.json`, record headers only):** record 103 (age) and record 219 (age), both DS2, rendered "unknown" (stop 9: not a stop). Sex parsed for all 43 DS1 and DS2 records.
+
+**Task 11, the clean clone (stop 2):** `git clone --branch phase-5-export` at `7d97b86` into the session scratchpad, `uv sync --frozen`, then `caffeinate -ims uv run heartbeat rebuild` there in the background, exit 0. Stage times: download 43 s (fresh, 132 pinned files); prepare 1 s; cross-validate 4 s; cross-validate-cnn 66 min 51 s (MPS); select under 1 s; exhibit 20 min 18 s; train-final 14 min 16 s (CPU, 295.5, 283.8 and 275.5 s per seed); describe-data and export 79 s; reproduce-test and cards under 1 s. Total 103 min 33 s.
+
+`uv run python -m heartbeat.checks.reproduction --other <clone>` exit 1: "20 files compared, 5 differ":
+
+- equal: every `results/*.json` apart from `export.json` (after `VOLATILE_KEYS`), so the clone's checkpoints carry the same three SHA256s; `fixtures/parity/fixtures.json`; `baseline.json`, `scaler.json`, the three `calibration.json` and `NOTICE`; `docs/DATA_CARD.md`.
+- differ: the three `model.onnx` files (235,466 bytes here, 240,068 in the clone); `results/export.json`, only in those files' sizes and SHA256s (its parity numbers are equal); `docs/MODEL_CARD.md`, only in `model_details`, which prints them.
+
+**Cause (read-only checks in the scratchpad, deleted afterwards):** the torch 2.14.1 dynamo exporter writes each node's stack trace into the ONNX node metadata (`metadata_props`), with absolute paths: `/Users/din/Develop/heartbeat/src/heartbeat/models/cnn.py` and `.venv/.../torch/nn/modules/*.py` here, the scratchpad path in the clone. With node, function and graph `metadata_props` cleared, `onnx.load` of each pair serializes to equal bytes for all three seeds, so the weights and graph are identical and only this metadata differs. The plan's "two exports byte-identical" test passes because both exports run from the same path.
+
+A side finding: the committed ONNX files at `7d97b86` hold Din's home path and the repo layout, and Phase 6 would ship `model.onnx` to the browser. Not pushed.
+
+**Recommended fix (Din's call; not started):** `export_onnx` clears the node, function and graph `metadata_props` before serializing, with a test that an exported file carries no metadata and no absolute path. That change sits in `export/`, which no training stage fingerprints, so `uv run heartbeat rebuild` reruns only export, reproduce-test and cards (about 80 s) and the training results stay as committed. Then commit the new outputs and repeat Task 11 (about 104 minutes). Whether the exporter has its own switch for this was not checked. Not recommended: comparing ONNX files without metadata in the reproduction check, which loosens settling 4's byte rule and keeps the paths in the files.
+
+**Flagged:**
+
+1. Design call 5's gate cannot pass for a later reproduction. The gate needs `git diff --name-only <freeze commit> HEAD` to be exactly `models/heartbeat-v1/freeze.json`. Once the sealed run's log line and report are committed (or any later commit lands), `reproduce-test` with both a record and a sealed entry runs `run_sealed`, whose gate refuses. Built as approved and tested; Din decides before Phase 7 whether the reproduction gate should also allow `results/test_runs.jsonl` and `results/test_runs/`.
+2. The all-DS1 parity survey: one DS1 beat of seed 2 differs by 1.53e-5 (deviation 4). R26 on the fixtures passes for every seed, and no DS1 label changes. If Din reads PARITY-03 as covering every beat, the tolerance or the gate needs Din's call; nothing was changed to get to green.
+3. The training-code touch in `train/exhibit.py` (deviation 5).
+4. Unrelated, not changed: `heartbeat --help` still says "(arrives in Phase N)" beside commands that are built.
+
+**Verified (local, at `7d97b86`):** `scripts/check.sh` exit 0; `uv run pytest` exit 0 (1022 passed, real-data layer, parity and the rehearsal included); `uv run heartbeat verify` exit 0 (6 of 6 checks, about 2 s); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (nothing uncovered; R25 to R28, R41, R42, R50 and R52 have tests); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. These pass with the path-bearing ONNX files; stop 2 is about byte reproduction, which no test covers across checkouts.
+
+DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored. DS2 was touched through its headers and `manifests/mitdb-beat-counts.toml` only (settling 5).
+
+**Not verified:** the clean-clone reproduction (stop 2 above); CI on these commits (nothing pushed; a push waits for Din's call on the fix). **Not accepted:** only Din sets Accepted.
+
+## 2026-10-30: Phase 5 built and verified locally; CI waits for Din's push
+
+**Din's go on stop 2 (2026-10-30, "Yes, fix it"):** strip the exporter's metadata in `export_onnx` and repeat the clean-clone check, as the entry above recommended.
+
+**Built (branch `phase-5-export`):** `918fd5e` to `7d97b86` as listed in the stop-2 entry above; `a913770` that entry; `dfb0300` the fix: `export_onnx` clears `metadata_props` and doc strings on the model, graph, nodes, initializers, value infos and functions, and `check_onnx` refuses a file that keeps any (tests: no metadata and no repo, home or torch path in an export; a file with node metadata refused); `d545ad6` the rebuilt bundle and model card; and this commit (AGENTS.md Commands and Layout, TASKS 5.1 to 5.5, this entry).
+
+**Deviations:** the ten in the stop-2 entry, plus an eleventh: the metadata fix, which the plan did not foresee. It sits in `export/`, outside every training stage's code list, so no training reran.
+
+**Stage times:**
+
+- Task 10 (`uv run heartbeat rebuild` at `27fd028`, every training stage reran): 104 min 30 s, per stage in the stop-2 entry.
+- After the fix (`uv run heartbeat rebuild` at `dfb0300`): export 62 s (CPU), then reproduce-test and cards under 1 s; every training stage and describe-data skipped as unchanged.
+- Clean clone at `d545ad6` (scratchpad, `caffeinate -ims uv run heartbeat rebuild`, exit 0): download 70 s (fresh; one fetch of `123.hea` from the S3 mirror was reset and the downloader took the next source, checksums verified); prepare under 1 s; cross-validate 5 s; cross-validate-cnn 75 min 49 s (MPS); select under 1 s; exhibit 19 min 25 s; train-final 15 min 47 s (CPU, about 5 min per seed, then the baseline); describe-data and export 106 s; reproduce-test and cards under 1 s. Total 114 min 3 s. The first clean clone (stop 2) took 103 min 33 s; the cross-validation difference is MPS wall time, not results.
+
+**Reproduction results:**
+
+1. Phase 4 (Task 10, stop 1 clear): `cv_baseline`, `cv_cnn_curves`, `selection`, `cv_cnn`, `exhibit` and `train_final`'s CNN entries equal `main`'s apart from `VOLATILE_KEYS`; the three checkpoint SHA256s are identical (stop-2 entry).
+2. Clean clone (Task 11, settling 4): at `7d97b86`, 20 files compared, 5 differ (stop 2, the embedded paths); at `d545ad6`, `uv run python -m heartbeat.checks.reproduction --other <clone>` exit 0, "20 files compared, 0 differ". Every `results/*.json` equal apart from `VOLATILE_KEYS`, and the model files, fixtures and both cards byte-identical. The clone was deleted afterwards.
+
+**Model files (`results/export.json`, run `20261031T005238Z-dfb0300-export`; CPU; opset 20; 52,036 parameters before batch-norm folding):**
+
+| File | Bytes | SHA256 |
+| --- | --- | --- |
+| `models/heartbeat-v1/model.onnx` (seed 0, shipped) | 210503 | `6e5237989d00aab52b4106bd11c458a3fa722e0e757161b96a7533535a26eba0` |
+| `models/heartbeat-v1/seeds/seed-1/model.onnx` | 210503 | `d3d02134e7f5a4c408382bddfb0da24c9d33bba0b4f9e73a0bc781ceb06f0e89` |
+| `models/heartbeat-v1/seeds/seed-2/model.onnx` | 210503 | `d03d6fa69d610ce5e9c26838a2758fd1dc8c3838ee635584bea859f63f912e16` |
+| `models/heartbeat-v1/baseline.json` | 1758 | `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3` |
+| `fixtures/parity/fixtures.json` (50 DS1 beats) | 1007961 | `66b6215514f3b0ad9e5d5f0bcaac4a5befc9b397f0d7550130e5bcb2f157c838` |
+
+`scaler.json`, `NOTICE` and the three `calibration.json` are unchanged from the stop-2 entry's table. Parity (`results/export.json`, DS1, CPU) is unchanged by the fix: fixture beats within 1e-5 with exact labels for all seeds; every DS1 kept beat, no label changes, largest difference 7.6e-6, 5.8e-6 and 1.53e-5 (one beat over 1e-5, seed 2).
+
+**Headers that did not parse (`results/data_summary.json`):** record 103 (age) and record 219 (age), both DS2, rendered "unknown".
+
+**Flagged:**
+
+1. The freeze gate and a later reproduction (stop-2 entry, flag 1): Din decides before Phase 7.
+2. The all-DS1 parity survey, one seed-2 beat at 1.53e-5 (stop-2 entry, flag 2).
+3. The training-code touch in `train/exhibit.py` (stop-2 entry, deviation 5).
+4. Commit `7d97b86` still holds the path-bearing ONNX files (Din's home path and the repo layout) in its blobs, so pushing the branch as it stands publishes them in the history, and a squash merge leaves them visible on the pull request's commits. Rewriting the unpushed branch (folding `7d97b86`'s model files into `d545ad6`) would remove them; that is Din's call and was not done.
+5. Unrelated, not changed: `heartbeat --help` says "(arrives in Phase N)" beside built commands.
+
+**Verified (local, at `d545ad6` plus these doc edits; rerun on the clean tree after this commit):** `scripts/check.sh` exit 0 (909 passed, 115 real-data deselected); `CI=1 uv run pytest` exit 0 (1024 passed, real-data layer, parity and the rehearsal included); `uv run heartbeat verify` exit 0 (6 of 6); `uv run python -m heartbeat.checks.rule_coverage` exit 0 (R25 to R28, R41, R42, R50 and R52 covered); `uv run python -m heartbeat.checks.repo_config` exit 0; `uv run python -m heartbeat.checks.wording` exit 0. DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or scored; DS2 was touched through its headers and `manifests/mitdb-beat-counts.toml` only.
+
+**Not verified:** CI on these commits (waits for Din's push). **Not accepted:** only Din sets Accepted.
+
+## 2026-11-01: CI failed on one exact float comparison in the fixture-steps test; the RR float steps now compare at 1e-12 (rule 3, Din's go)
+
+**What happened:** Din pushed `phase-5-export` (CI run 41343213226 on `51b21d0`, pull request 6). The `web` job passed. The `python` job failed with 1 failed, 1023 passed: `tests/data/test_parity_real.py::test_each_stored_step_matches_the_pipeline_on_the_cache` required the recomputed `rr_inputs` to equal the stored fixture exactly, and one value (the log of an RR ratio, index 4) came out `-0.43593707468212917` on Linux x86 against `-0.4359370746821292` stored on Din's Mac (macOS arm64), a difference of about 5.6e-17 (one rounding step of `np.log`). `heartbeat verify` did not run, since pytest failed first. R26 (Python ONNX Runtime on the committed models against the fixture logits, 1e-5) and R27 passed on Linux.
+
+**Decided (Din, 2026-11-01):** `rr_inputs` and `rr_scaled` compare with `np.testing.assert_allclose(rtol=0, atol=1e-12)`, the tolerance the same test already used for the adjusted logits and probabilities. Why: exact equality cannot hold across platforms once a log is involved, and the test was stricter than PARITY-03 (1e-5 on features). 1e-12 still catches any real pipeline difference. Every other step (beat samples, classes, int16 windows, z-scored windows, RR samples and seconds, labels) stays exact; all of them matched exactly on Linux. No fixture, model or `results/` file changes; the 1e-5 parity tolerance is untouched. The test was written in Phase 5 (`98f5a4a`) and never accepted.
+
+**Verified (local, this commit):** `scripts/check.sh` exit 0; `CI=1 uv run pytest` exit 0 (1024 passed, the changed test included); `uv run heartbeat verify` exit 0 (6 of 6). **Not verified:** CI on this commit (waits for Din's push).
+
+## 2026-11-01: Phase 5 verified in CI
+
+**What:** after Din pushed `bb73cd2` (the cross-platform test fix, entry above), CI went green on pull request 6: run 41344129399 (push) and run 41344131957 (pull request), both at `bb73cd2`, `python` and `web` jobs passed, each in about 2 minutes 20 seconds. The `python` job runs ruff, mypy, the MIT-BIH download, `uv run pytest` (real-data layer, parity and the DS1 rehearsal included) and `uv run heartbeat verify`, which ran in CI for the first time on this branch. Checked with `gh run list --branch phase-5-export` and `gh run view` on both runs. The earlier failure (runs 41343213226 and 41343307016 at `51b21d0`) is logged in the entry above.
+
+**Status:** TASKS 5.1 to 5.5 are verified locally and in CI. **Not accepted:** only Din sets Accepted, at the merge of pull request 6.

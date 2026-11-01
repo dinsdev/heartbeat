@@ -33,8 +33,15 @@ PROVENANCE_PACKAGES = ("numpy", "scipy", "scikit-learn", "wfdb")
 
 _PACKAGE_LOGGER = "heartbeat"
 
-# Git pathspecs for the dirty flag and diff hash: everything but `results/`.
-_TRACKED_INPUTS = (":(top)", ":(top,exclude)results/")
+# Git pathspecs for the dirty flag and diff hash: everything but the folders
+# `rebuild` writes, `results/`, `models/heartbeat-v1/` and `fixtures/parity/`
+# (Phase 5 task plan, design call 2). Each carries its own provenance.
+_TRACKED_INPUTS = (
+    ":(top)",
+    ":(top,exclude)results/",
+    ":(top,exclude)models/heartbeat-v1/",
+    ":(top,exclude)fixtures/parity/",
+)
 
 
 def canonical_json(payload: Any) -> str:
@@ -87,10 +94,11 @@ def provenance(repo: Path, now: datetime) -> dict[str, Any]:
     """What a run's numbers depend on besides its config.
 
     The tree is dirty when `git status` shows any change, untracked files
-    included (ignored files are not), outside the top-level `results/`.
-    `rebuild` writes each stage's results file before the next stage starts,
-    so counting `results/` would mark every later stage of a clean-tree
-    rebuild dirty; those files carry their own run and provenance.
+    included (ignored files are not), outside the top-level `results/`,
+    `models/heartbeat-v1/` and `fixtures/parity/`. `rebuild` writes each
+    stage's outputs before the next stage starts, so counting them would mark
+    every later stage of a clean-tree rebuild dirty; those files carry their
+    own run and provenance (`results/export.json` for the export).
     """
     status = _git(repo, "status", "--porcelain", "--", *_TRACKED_INPUTS)
     diff = _git(repo, "diff", "HEAD", "--", *_TRACKED_INPUTS)

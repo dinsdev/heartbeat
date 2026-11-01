@@ -5,6 +5,10 @@ epoch count chosen on the folds, with the class weights and RR scaler fitted
 on all of those rows. C6, C7: frozen models train on CPU in deterministic
 mode, whatever the CV device is. Each seed's checkpoint stays in its run
 folder with its SHA256 (design call 4); Phase 5's export reads it from there.
+
+Phase 5 settling 1 (MODEL-01): the baseline is refit the same way, on every
+DS1 row at the C chosen on the folds, with its DS1 out-of-fold temperature.
+It is one deterministic CPU fit with no seed.
 """
 
 import hashlib
@@ -12,7 +16,7 @@ import logging
 import tempfile
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +25,14 @@ import torch
 from numpy.typing import NDArray
 
 from heartbeat.config import Settings
-from heartbeat.constants import SCORED_CLASSES, SHIPPED_SEED, TORCH_THREADS
+from heartbeat.constants import (
+    BASELINE_MAX_ITER,
+    SCORED_CLASSES,
+    SHIPPED_SEED,
+    TORCH_THREADS,
+)
 from heartbeat.data.loader import BeatTable
+from heartbeat.models.baseline import BASELINE, FittedBaseline, coefficients
 from heartbeat.models.inputs import apply_rr_scaler, fit_rr_scaler, rr_model_inputs
 from heartbeat.paths import REPO_ROOT, RUNS_DIR
 from heartbeat.runs import create_run
@@ -158,10 +168,98 @@ def train_final(
     )
 
 
+@dataclass(frozen=True)
+class FinalBaseline:
+    """The frozen baseline and what `baseline.json` needs (settling 1).
+
+    Attributes:
+        run: Its run folder's name.
+        c: The C chosen on the folds (`results/cv_baseline.json`).
+        temperature: Its DS1 out-of-fold temperature from the same file.
+        coefficients: `(4, 6)`, rows in `SCORED_CLASSES` order.
+        intercepts: `(4,)`, in `SCORED_CLASSES` order.
+        scaler_mean: RR scaler mean, `(6,)`, fitted on all DS1 rows.
+        scaler_std: RR scaler standard deviation, `(6,)`.
+        class_weights: Balanced weights over all DS1 rows.
+        n_rows: DS1 rows it was fitted on.
+        fitted: The scikit-learn fit, for checks; never serialized.
+    """
+
+    run: str
+    c: float
+    temperature: float
+    coefficients: NDArray[np.float64]
+    intercepts: NDArray[np.float64]
+    scaler_mean: NDArray[np.float64]
+    scaler_std: NDArray[np.float64]
+    class_weights: dict[str, float]
+    n_rows: int
+    fitted: FittedBaseline = field(repr=False, compare=False)
+
+
+def train_final_baseline(
+    settings: Settings,
+    beats: BeatTable,
+    c: float,
+    temperature: float,
+    root: Path = RUNS_DIR,
+    repo: Path = REPO_ROOT,
+) -> FinalBaseline:
+    """Fit the baseline on every DS1 row into a new run `train-final-baseline`.
+
+    Raises:
+        ConvergenceWarning: If lbfgs does not converge (stop condition 5).
+    """
+    y = beats.beat_class
+    class_weight = balanced_class_weights(y)
+    rr = rr_model_inputs(beats.rr_s)
+    scaler = fit_rr_scaler(rr)
+    rows = np.arange(y.size, dtype=np.int64)
+    x = BASELINE.inputs(beats, rows, apply_rr_scaler(scaler, rr))
+    extra = {
+        "model": BASELINE.name,
+        "model_config": dict(BASELINE.config),
+        "C": c,
+        "temperature": temperature,
+    }
+    with create_run(
+        "train-final-baseline", settings, extra, root=root, repo=repo
+    ) as run:
+        log.info("final baseline: C %g on %d DS1 rows", c, y.size)
+        fitted = BASELINE.fit(x, y, class_weight, {"C": c})
+        coef, intercept = coefficients(fitted)
+        run.write_arrays(
+            "baseline",
+            coef=coef,
+            intercept=intercept,
+            scaler_mean=scaler.mean,
+            scaler_std=scaler.std,
+            class_weights=np.array([class_weight[k] for k in SCORED_CLASSES]),
+            classes=np.array(SCORED_CLASSES),
+            c=np.array(c),
+        )
+    return FinalBaseline(
+        run=run.name,
+        c=c,
+        temperature=temperature,
+        coefficients=coef,
+        intercepts=intercept,
+        scaler_mean=scaler.mean,
+        scaler_std=scaler.std,
+        class_weights=class_weight,
+        n_rows=int(y.size),
+        fitted=fitted,
+    )
+
+
 def final_payload(
-    models: Sequence[FinalModel], width: float, epochs: int, repo: Path = REPO_ROOT
+    models: Sequence[FinalModel],
+    width: float,
+    epochs: int,
+    baseline: FinalBaseline,
+    repo: Path = REPO_ROOT,
 ) -> dict[str, Any]:
-    """The `results/train_final.json` payload (design call 4)."""
+    """The `results/train_final.json` payload (design call 4, settling 1)."""
 
     def path_text(path: Path) -> str:
         try:
@@ -196,4 +294,24 @@ def final_payload(
             }
             for m in models
         ],
+        "baseline": {
+            "label": (
+                "baseline on every DS1 row at the chosen C, CPU; temperature from "
+                "its DS1 out-of-fold predictions (Phase 5 settling 1)"
+            ),
+            "run": baseline.run,
+            "C": baseline.c,
+            "temperature": baseline.temperature,
+            "classes": list(SCORED_CLASSES),
+            "coefficients": baseline.coefficients.tolist(),
+            "intercepts": baseline.intercepts.tolist(),
+            "scaler": {
+                "mean": baseline.scaler_mean.tolist(),
+                "std": baseline.scaler_std.tolist(),
+            },
+            "class_weights": dict(baseline.class_weights),
+            "n_rows": baseline.n_rows,
+            "solver": "lbfgs",
+            "max_iter": BASELINE_MAX_ITER,
+        },
     }

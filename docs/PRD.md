@@ -183,7 +183,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 
 ### 8.3 Models (MODEL)
 
-- **MODEL-01 (P0, C2).** Baseline: multinomial logistic regression (scikit-learn, `lbfgs`) on the six RR features only, with log ratio features and a scaler fitted inside each training fold, `class_weight="balanced"`, and C chosen from seven log-spaced values (0.0001 to 100) by pooled out-of-fold macro F1 over N, S and V (clarified 2026-10-29, before any result; grid widened 2026-10-30, Phase 4 settling 1).
+- **MODEL-01 (P0, C2).** Baseline: multinomial logistic regression (scikit-learn, `lbfgs`) on the six RR features only, with log ratio features and a scaler fitted inside each training fold, `class_weight="balanced"`, and C chosen from seven log-spaced values (0.0001 to 100) by pooled out-of-fold macro F1 over N, S and V (clarified 2026-10-29, before any result; grid widened 2026-10-30, Phase 4 settling 1). The frozen baseline is refit on every DS1 row at the chosen C, with its scaler and class weights fitted on those rows and its temperature from its DS1 out-of-fold predictions, and ships as `models/heartbeat-v1/baseline.json` (Phase 5 settling 1, 2026-10-30).
 - **MODEL-02 (P0, C3).** CNN: the 256-sample window through four blocks of Conv1d (kernel 7), batch norm, ReLU and max-pool by 2 (channels 16, 32, 64, 64 at width 1), global average pooling, concatenated with the same six standardized RR features, a 64-unit layer with dropout 0.3, four outputs.
 - **MODEL-03 (P0, C3).** CNN training: cross-entropy with the same balanced class weights as the baseline; fixed augmentation (time shift up to 5 samples each way by re-cutting the window from the trace, then the z-score, then Gaussian noise with standard deviation 0.05 in z-units; Phase 4 settling 4, 2026-10-30); AdamW at a constant 1e-3, weight decay 1e-4, batch 256.
 - **MODEL-04 (P0, C3, C6).** CNN tuning: width 0.5, 1 or 2, plus epoch count, on the C1 folds with seeds 0, 1 and 2; selection on the seed mean of pooled out-of-fold macro F1 over N, S and V, which also scores the averaged validation curves for the epoch count (clarified 2026-10-29, before any result). The epoch cap is 40 and width and epoch are picked by one joint argmax (Phase 4 settling 2, 2026-10-30). The baseline and CNN get the same folds, metric and reporting.
@@ -199,7 +199,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 
 ### 8.5 Export and parity (PARITY)
 
-- **PARITY-01 (P0, E2, E3).** The final model exports to a single-file ONNX model (opset 20, batch norm folded), with the scaler and calibration as JSON and a freeze record, committed under `models/heartbeat-v1/`.
+- **PARITY-01 (P0, E2, E3).** The final model exports to a single-file ONNX model (opset 20, batch norm folded), with the scaler and calibration as JSON and a freeze record, committed under `models/heartbeat-v1/`. All three final seeds are exported and committed: seed 0 is the shipped `model.onnx`, seeds 1 and 2 sit beside it with their own calibration, and the sealed run scores only these committed ONNX files and `baseline.json` (Phase 5 settling 2, 2026-10-30).
 - **PARITY-02 (P0, E5).** Export writes shared fixtures of about 50 real DS1 beats (never DS2) to `fixtures/parity/`.
 - **PARITY-03 (P0, E5).** The parity chain must pass at a tolerance of 1e-5 on outputs and features with exact labels: PyTorch against Python ONNX Runtime; Python ONNX Runtime against ONNX Runtime Web in a real browser; TypeScript preprocessing (window, z-score, RR features, scaler, calibration) against Python step by step.
 - **PARITY-04 (P0, E1).** Python and the browser use the same ONNX Runtime version (1.30.0 at the time of writing).
@@ -240,7 +240,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 
 - **OPS-01 (P0, E4).** `uv run heartbeat rebuild` runs every stage (download, prepare, check-folds, cross-validate, select, exhibit, train-final, export, reproduce-test after the freeze only, build-demo-data), skipping stages whose input fingerprint is unchanged; `--from <stage>` forces a rerun.
 - **OPS-02 (P0, E4).** Before a freeze record exists, `rebuild` stops after export and builds DS1-only demo data.
-- **OPS-03 (P0, E4).** After the sealed run, `rebuild` retrains and checks against the freeze record (default mode: metrics within tolerance; `--exact`: model checksum bit for bit), evaluates DS2 with the committed frozen model, and requires results equal to the logged ones. This is logged as a reproduction, a separate entry type. Mismatches fail loudly.
+- **OPS-03 (P0, E4).** After the sealed run, `rebuild` retrains and checks against the freeze record (default mode: results exact on this Mac apart from a fixed list of volatile keys, checkpoints and exported files equal by SHA256; `--exact`: everything on CPU, model checksum bit for bit; Phase 5 settling 4, 2026-10-30), evaluates DS2 with the committed frozen model, and requires results equal to the logged ones. This is logged as a reproduction, a separate entry type. Mismatches fail loudly.
 - **OPS-04 (P0, E4).** `heartbeat verify` checks manifests and checksums, frozen-model parity on the fixtures, and consistency of result files with the test log, in minutes, without training.
 - **OPS-05 (P0, E6).** One GitHub Actions workflow runs on every push and pull request: ruff, mypy, Python unit and real-data tests, a smoke training run, the Python parity half, ESLint, Prettier, svelte-check, Vitest, the web build with size gates, Playwright in Chromium and WebKit, and the wording lint.
 - **OPS-06 (P0, E6).** Deploys run from GitHub Actions with wrangler: production on `main` after checks pass, Worker Previews on pull requests, served on `workers.dev` only. Deploys never train; demo data is built from the committed frozen model.
@@ -290,7 +290,7 @@ Reported timings use Playwright with 4x CPU slowdown, and fast 4G for the phone 
 
 **Platform.** Current Chromium and WebKit browsers on desktop and phone, tested in CI. Requires WebAssembly and Web Workers for live labels; without them the labeled fallback runs. Firefox is not in the automated matrix (E5); see Q5.
 
-**Reproducibility (C6, C7, E4).** Bit-for-bit retraining on the same machine and setup with `--exact`; within tolerance elsewhere. Inference with the shipped ONNX model reproduces the reported metrics exactly.
+**Reproducibility (C6, C7, E4).** Retraining reproduces exactly on this Mac in both modes (default mode: MPS cross-validation and exhibit, CPU final models; `--exact`: all CPU). No numeric claim is made for retraining on other hardware, where MPS cross-validation may differ by about the seed spread (Phase 4 device checks). Inference with the committed ONNX models reproduces the reported metrics on any machine (Phase 5 settling 4, 2026-10-30).
 
 **Cost.** Zero recurring cost: Cloudflare Workers free plan with static assets; GitHub Actions on a public repo; training on Din's Mac.
 

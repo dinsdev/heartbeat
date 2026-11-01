@@ -44,6 +44,9 @@ jobs:
       # Runs the wording lint, the rule-coverage check, the R45 and R46 checks,
       # and the real-data tests.
       - run: uv run pytest
+      # OPS-04: manifests, cache, folds, model files, NOTICE, fixture parity,
+      # card blocks and the sealed-run log, without training.
+      - run: uv run heartbeat verify
 
   web:
     runs-on: ubuntu-24.04

@@ -43,9 +43,10 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-# The Phase 2 to 4 subcommands are built and have their own tests here and in
-# test_folds.py and test_stages.py; the rest stay stubs until their phase.
-BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 4}
+# The Phase 2 to 5 subcommands are built and have their own tests here and in
+# test_folds.py, test_stages.py, test_cards.py and test_verify.py; the rest stay
+# stubs until their phase.
+BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 5}
 
 
 @pytest.mark.parametrize(
@@ -346,3 +347,138 @@ def test_select_exits_1_at_the_epoch_edge(
     monkeypatch.setattr(cli, "run_select_all", edge)
     assert main(["select"]) == 1
     assert "selected epoch 38" in capsys.readouterr().err
+
+
+# evaluate-test (Phase 5 settling 3): one binding of run_sealed, never run here.
+
+
+def test_evaluate_test_binds_ds2_the_models_and_the_log(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from heartbeat.config import load_settings
+    from heartbeat.data.manifests import load_splits, load_subjects
+    from heartbeat.paths import (
+        DEFAULT_CONFIG,
+        MODELS_DIR,
+        REPO_ROOT,
+        SPLITS_MANIFEST,
+        SUBJECTS_MANIFEST,
+        TEST_LOG,
+        TEST_REPORTS_DIR,
+    )
+    from heartbeat.sealed.run import SEALED_DATA_LABEL
+
+    calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def spy(*args: object, **kwargs: object) -> dict[str, object]:
+        calls.append((args, kwargs))
+        return {"id": 1, "type": "sealed", "report": "results/test_runs/1-sealed.json"}
+
+    monkeypatch.setattr(cli, "run_sealed", spy)
+    assert main(["evaluate-test"]) == 0
+    ((args, kwargs),) = calls
+    splits = load_splits(SPLITS_MANIFEST)
+    assert args == (
+        splits.ds2,
+        load_settings(DEFAULT_CONFIG).data.raw_dir,
+        MODELS_DIR,
+        TEST_LOG,
+        TEST_REPORTS_DIR,
+        "sealed",
+    )
+    assert len(splits.ds2) == 21
+    assert kwargs["repo"] == REPO_ROOT
+    assert kwargs["log_root"] == REPO_ROOT
+    assert kwargs["lead"] == splits.lead
+    assert kwargs["subjects"] == load_subjects(SUBJECTS_MANIFEST)
+    assert kwargs["require_remote"] is True
+    assert kwargs["data_label"] == SEALED_DATA_LABEL
+    assert "DS2 test" in str(kwargs["data_label"])
+    assert "logged run 1" in capsys.readouterr().out
+
+
+def test_evaluate_test_exits_1_when_the_gate_refuses(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from heartbeat.export.freeze import FreezeError
+
+    def refuse(*args: object, **kwargs: object) -> None:
+        raise FreezeError("no freeze record")
+
+    monkeypatch.setattr(cli, "run_sealed", refuse)
+    assert main(["evaluate-test"]) == 1
+    assert "no freeze record" in capsys.readouterr().err
+
+
+# export (E3) and export --freeze (design call 5; Din's, never run here).
+
+
+def test_export_writes_a_run_folder_and_no_results(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    calls: list[object] = []
+
+    class Run:
+        path = tmp_path / "runs" / "export"
+
+    def spy(settings: object) -> tuple[object, dict[str, object]]:
+        calls.append(settings)
+        return Run(), {}
+
+    monkeypatch.setattr(cli, "run_export_all", spy)
+    assert main(["export"]) == 0
+    assert len(calls) == 1
+    assert "run folder" in capsys.readouterr().out
+
+
+def test_export_freeze_writes_the_record_for_the_repo_and_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    from heartbeat.paths import MODELS_DIR, REPO_ROOT
+
+    calls: list[tuple[object, ...]] = []
+
+    def spy(*args: object) -> Path:
+        calls.append(args)
+        return MODELS_DIR / "freeze.json"
+
+    monkeypatch.setattr(cli, "write_freeze", spy)
+    monkeypatch.setattr(cli, "RESULTS_DIR", tmp_path)
+    assert main(["export", "--freeze"]) == 1
+    assert "export.json" in capsys.readouterr().err
+    (tmp_path / "export.json").write_text('{"files": []}', encoding="utf-8")
+    assert main(["export", "--freeze"]) == 0
+    ((repo, models, record, _today),) = calls
+    assert (repo, models, record) == (REPO_ROOT, MODELS_DIR, {"files": []})
+    assert "commit it and push" in capsys.readouterr().out
+
+
+def test_verify_prints_each_check_and_exits_1_on_a_problem(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    results = [("first (R1)", []), ("second (R2)", ["something is off"])]
+    monkeypatch.setattr(cli, "verify", lambda paths: results)
+    monkeypatch.setattr(cli, "CHECKS", results)
+    assert main(["verify"]) == 1
+    out = capsys.readouterr().out
+    assert "ok: first (R1)" in out
+    assert "FAILED: second (R2)" in out
+    assert "  something is off" in out
+    assert "1 of 2 checks passed" in out
+    monkeypatch.setattr(cli, "verify", lambda paths: [("first (R1)", [])])
+    monkeypatch.setattr(cli, "CHECKS", [("first (R1)", [])])
+    assert main(["verify"]) == 0
+
+
+def test_cards_reports_the_changed_blocks(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        cli, "write_cards", lambda: {"MODEL_CARD.md": ["exhibit"], "DATA_CARD.md": []}
+    )
+    assert main(["cards"]) == 0
+    out = capsys.readouterr().out
+    assert "MODEL_CARD.md: exhibit" in out
+    assert "DATA_CARD.md: unchanged" in out

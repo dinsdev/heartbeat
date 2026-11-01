@@ -2,14 +2,18 @@
 
 import argparse
 import hashlib
+import json
 import logging
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 
 from sklearn.exceptions import ConvergenceWarning
 
+from heartbeat.cards.render import CardError
 from heartbeat.config import CV_DEVICES, Settings, load_settings
 from heartbeat.constants import CNN_WIDTHS, FLOOR_HIT_LIMIT, MAX_EPOCHS, N_FOLDS
 from heartbeat.data import download as download_module
@@ -25,34 +29,50 @@ from heartbeat.data.loader import BeatTable, load_ds1, load_ds1_traces
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
 from heartbeat.evaluate.calibration import TemperatureAtBoundError
+from heartbeat.export.freeze import FreezeError, write_freeze
+from heartbeat.export.onnx import ExportError
 from heartbeat.paths import (
     CHECKSUM_MANIFEST,
+    DATA_CARD,
     DEFAULT_CONFIG,
+    FIXTURES_DIR,
     FOLDS_JSON,
     FOLDS_PIN,
+    MODEL_CARD,
+    MODELS_DIR,
     PACKAGE_DIR,
+    REPO_ROOT,
+    RESULTS_DIR,
     RUNS_DIR,
     SPLITS_MANIFEST,
     STAGES_DIR,
     SUBJECTS_MANIFEST,
+    TEST_LOG,
+    TEST_REPORTS_DIR,
     UV_LOCK,
 )
+from heartbeat.sealed.log import LogError
+from heartbeat.sealed.run import SEALED_DATA_LABEL, run_sealed
 from heartbeat.stages import (
+    EXPORT_RESULT,
     PIPELINE,
     PLANNED,
     Context,
     StageFailedError,
     UnknownStageError,
     run_exhibit_all,
+    run_export_all,
     run_final_all,
     run_pipeline,
     run_select_all,
+    write_cards,
 )
 from heartbeat.train.cnn_cv import MissingRunError, run_cnn_cv
 from heartbeat.train.cv import run_baseline
 from heartbeat.train.loop import NonFiniteLossError
 from heartbeat.train.select import EpochEdgeError, UndefinedScoreError
 from heartbeat.train.torch_setup import DeviceUnavailableError
+from heartbeat.verify import CHECKS, VerifyPaths, verify
 
 # Phase 2 settling 5: the manifests whose hashes the fold file records.
 FOLD_MANIFESTS = (SPLITS_MANIFEST, SUBJECTS_MANIFEST)
@@ -303,10 +323,114 @@ def _train_final(args: argparse.Namespace) -> int:
     return 0
 
 
-def rebuild_context() -> Context:
-    """Return the context `rebuild` runs in."""
+def _evaluate_test(args: argparse.Namespace) -> int:
+    # Settling 3: the one binding of run_sealed. Only Din runs this (guard).
+    settings = load_settings(DEFAULT_CONFIG)
+    splits = load_splits(SPLITS_MANIFEST)
+    try:
+        entry = run_sealed(
+            splits.ds2,
+            settings.data.raw_dir,
+            MODELS_DIR,
+            TEST_LOG,
+            TEST_REPORTS_DIR,
+            "sealed",
+            repo=REPO_ROOT,
+            log_root=REPO_ROOT,
+            lead=splits.lead,
+            subjects=load_subjects(SUBJECTS_MANIFEST),
+            data_label=SEALED_DATA_LABEL,
+            require_remote=True,
+        )
+    except (FreezeError, LogError) as error:
+        print(f"heartbeat evaluate-test: {error}", file=sys.stderr)
+        return 1
+    print(
+        f"heartbeat evaluate-test: logged run {entry['id']} ({entry['type']}) "
+        f"in {TEST_LOG}; report {entry['report']}"
+    )
+    return 0
+
+
+def _export(args: argparse.Namespace) -> int:
+    if args.freeze:
+        # Phase 5 design call 5: Din's, before the sealed run (the guard
+        # keeps it from Claude).
+        try:
+            export_record = json.loads(
+                (RESULTS_DIR / f"{EXPORT_RESULT}.json").read_text(encoding="utf-8")
+            )
+            path = write_freeze(
+                REPO_ROOT, MODELS_DIR, export_record, datetime.now(UTC).date()
+            )
+        except (FreezeError, FileNotFoundError) as error:
+            print(f"heartbeat export --freeze: {error}", file=sys.stderr)
+            return 1
+        print(f"heartbeat export --freeze: wrote {path}; commit it and push")
+        return 0
+    # Writes models/heartbeat-v1/, fixtures/parity/ and a run folder;
+    # results/export.json is written by the rebuild stage (rule 5).
+    try:
+        run, _ = run_export_all(load_settings(DEFAULT_CONFIG))
+    except (ExportError, *_CNN_STOPS) as error:
+        print(f"heartbeat export: {error}", file=sys.stderr)
+        return 1
+    print(f"heartbeat export: wrote {MODELS_DIR} and {FIXTURES_DIR}")
+    print(f"run folder {run.path}")
+    return 0
+
+
+def _cards(args: argparse.Namespace) -> int:
+    # F6: writes the generated blocks of both cards from committed files.
+    try:
+        changed = write_cards()
+    except (CardError, FileNotFoundError, KeyError) as error:
+        print(f"heartbeat cards: {error}", file=sys.stderr)
+        return 1
+    for name, blocks in changed.items():
+        print(f"heartbeat cards: {name}: {', '.join(blocks) or 'unchanged'}")
+    return 0
+
+
+def verify_paths() -> VerifyPaths:
+    """The paths `heartbeat verify` checks."""
+    return VerifyPaths(
+        repo=REPO_ROOT,
+        results_dir=RESULTS_DIR,
+        models_dir=MODELS_DIR,
+        fixtures_dir=FIXTURES_DIR,
+        model_card=MODEL_CARD,
+        data_card=DATA_CARD,
+        log_path=TEST_LOG,
+        raw_dir=load_settings(DEFAULT_CONFIG).data.raw_dir,
+    )
+
+
+def _verify(args: argparse.Namespace) -> int:
+    # OPS-04: minutes, no training.
+    failed = 0
+    for name, problems in verify(verify_paths()):
+        print(f"{'ok' if not problems else 'FAILED'}: {name}")
+        for problem in problems:
+            print(f"  {problem}")
+        failed += bool(problems)
+    print(f"heartbeat verify: {len(CHECKS) - failed} of {len(CHECKS)} checks passed")
+    return 1 if failed else 0
+
+
+def rebuild_context(exact: bool = False) -> Context:
+    """Return the context `rebuild` runs in.
+
+    Args:
+        exact: E4's `--exact` mode (Phase 5 design call 9): cross-validation
+            and the exhibit run on CPU too, so their fingerprints differ from
+            the default mode's and every stage reruns. About 15 hours; Din's.
+    """
+    settings = load_settings(DEFAULT_CONFIG)
+    if exact:
+        settings = replace(settings, train=replace(settings.train, cv_device="cpu"))
     return Context(
-        settings=load_settings(DEFAULT_CONFIG),
+        settings=settings,
         package_dir=PACKAGE_DIR,
         state_dir=STAGES_DIR,
         uv_lock=UV_LOCK,
@@ -323,14 +447,11 @@ def _rebuild(args: argparse.Namespace) -> int:
         )
         return 2
     if args.exact:
-        # E4: --exact (every training run on CPU, checked bit for bit) is built
-        # with the reproduction checks in Phase 5.
-        print(
-            "heartbeat rebuild: --exact is not built yet (Phase 5); "
-            "running the default mode"
-        )
+        print("heartbeat rebuild: --exact, every training run on CPU")
     try:
-        results = run_pipeline(PIPELINE, rebuild_context(), from_stage=args.from_stage)
+        results = run_pipeline(
+            PIPELINE, rebuild_context(exact=args.exact), from_stage=args.from_stage
+        )
     except UnknownStageError as error:
         print(f"heartbeat rebuild: {error}", file=sys.stderr)
         return 2
@@ -360,6 +481,10 @@ HANDLERS: Mapping[str, Callable[[argparse.Namespace], int]] = MappingProxyType(
         "select": _select,
         "exhibit": _exhibit,
         "train-final": _train_final,
+        "export": _export,
+        "evaluate-test": _evaluate_test,
+        "verify": _verify,
+        "cards": _cards,
     }
 )
 
@@ -407,6 +532,12 @@ def build_parser() -> argparse.ArgumentParser:
                 "--device",
                 choices=CV_DEVICES,
                 help="CNN device (default: [train] cv_device)",
+            )
+        if name == "export":
+            sub.add_argument(
+                "--freeze",
+                action="store_true",
+                help="write the freeze record (Din, Phase 7)",
             )
         if name == "rebuild":
             sub.add_argument(

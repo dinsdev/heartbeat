@@ -181,3 +181,35 @@ def test_a_torch_run_records_torch_device_threads_and_the_flag(repo: Path) -> No
         )
     for key, value in info.items():
         assert provenance[key] == value
+
+
+@pytest.mark.parametrize(
+    "written", ["models/heartbeat-v1/model.onnx", "fixtures/parity/fixtures.json"]
+)
+def test_export_outputs_written_in_a_rebuild_leave_the_tree_clean(
+    repo: Path, written: str
+) -> None:
+    # Phase 5 design call 2: export writes these during a clean-tree rebuild.
+    with _run(repo, "clean") as clean:
+        pass
+    path = repo / written
+    path.parent.mkdir(parents=True)
+    path.write_text("new\n", encoding="utf-8")
+    with _run(repo, "after") as after:
+        pass
+    assert after.provenance["dirty"] is False
+    assert after.provenance["diff_sha256"] == clean.provenance["diff_sha256"]
+
+
+@pytest.mark.parametrize(
+    "written",
+    ["models/other/model.onnx", "fixtures/other.json", "docs/models/heartbeat-v1/x"],
+)
+def test_a_change_beside_the_export_outputs_still_dirties_the_tree(
+    repo: Path, written: str
+) -> None:
+    path = repo / written
+    path.parent.mkdir(parents=True)
+    path.write_text("new\n", encoding="utf-8")
+    with _run(repo, "after") as after:
+        assert after.provenance["dirty"] is True

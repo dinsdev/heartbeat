@@ -1,0 +1,902 @@
+{
+  "classes": [
+    "N",
+    "S",
+    "V",
+    "F",
+    "Q"
+  ],
+  "commit": "27fd028dda5134615260ab93a641d4ea81130d50",
+  "demographics": {
+    "DS1": {
+      "age_max": 89,
+      "age_median": 66.0,
+      "age_min": 23,
+      "age_unknown": 0,
+      "men": 13,
+      "patients": 22,
+      "sex_unknown": 0,
+      "women": 9
+    },
+    "DS2": {
+      "age_max": 89,
+      "age_median": 69.0,
+      "age_min": 24,
+      "age_unknown": 2,
+      "men": 10,
+      "patients": 21,
+      "sex_unknown": 0,
+      "women": 11
+    }
+  },
+  "dirty": false,
+  "label": "annotated beats: PhysioNet's published per-record table (manifests/mitdb-beat-counts.toml); kept beats: DS1 prepared files, first and last beat of each record dropped; age and sex: record headers",
+  "n_kept_ds1": 50977,
+  "records": [
+    {
+      "age": 75,
+      "annotated": {
+        "F": 0,
+        "N": 1860,
+        "Q": 2,
+        "S": 3,
+        "V": 0
+      },
+      "kept": {
+        "F": 0,
+        "N": 1858,
+        "Q": 2,
+        "S": 3,
+        "V": 0
+      },
+      "record": "101",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s101"
+    },
+    {
+      "age": 24,
+      "annotated": {
+        "F": 0,
+        "N": 1507,
+        "Q": 0,
+        "S": 0,
+        "V": 520
+      },
+      "kept": {
+        "F": 0,
+        "N": 1505,
+        "Q": 0,
+        "S": 0,
+        "V": 520
+      },
+      "record": "106",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s106"
+    },
+    {
+      "age": 87,
+      "annotated": {
+        "F": 2,
+        "N": 1740,
+        "Q": 0,
+        "S": 4,
+        "V": 17
+      },
+      "kept": {
+        "F": 2,
+        "N": 1738,
+        "Q": 0,
+        "S": 4,
+        "V": 17
+      },
+      "record": "108",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s108"
+    },
+    {
+      "age": 64,
+      "annotated": {
+        "F": 2,
+        "N": 2492,
+        "Q": 0,
+        "S": 0,
+        "V": 38
+      },
+      "kept": {
+        "F": 2,
+        "N": 2490,
+        "Q": 0,
+        "S": 0,
+        "V": 38
+      },
+      "record": "109",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s109"
+    },
+    {
+      "age": 54,
+      "annotated": {
+        "F": 0,
+        "N": 2537,
+        "Q": 0,
+        "S": 2,
+        "V": 0
+      },
+      "kept": {
+        "F": 0,
+        "N": 2535,
+        "Q": 0,
+        "S": 2,
+        "V": 0
+      },
+      "record": "112",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s112"
+    },
+    {
+      "age": 72,
+      "annotated": {
+        "F": 4,
+        "N": 1820,
+        "Q": 0,
+        "S": 12,
+        "V": 43
+      },
+      "kept": {
+        "F": 4,
+        "N": 1818,
+        "Q": 0,
+        "S": 12,
+        "V": 43
+      },
+      "record": "114",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s114"
+    },
+    {
+      "age": 39,
+      "annotated": {
+        "F": 0,
+        "N": 1953,
+        "Q": 0,
+        "S": 0,
+        "V": 0
+      },
+      "kept": {
+        "F": 0,
+        "N": 1951,
+        "Q": 0,
+        "S": 0,
+        "V": 0
+      },
+      "record": "115",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s115"
+    },
+    {
+      "age": 68,
+      "annotated": {
+        "F": 0,
+        "N": 2302,
+        "Q": 0,
+        "S": 1,
+        "V": 109
+      },
+      "kept": {
+        "F": 0,
+        "N": 2300,
+        "Q": 0,
+        "S": 1,
+        "V": 109
+      },
+      "record": "116",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s116"
+    },
+    {
+      "age": 69,
+      "annotated": {
+        "F": 0,
+        "N": 2166,
+        "Q": 0,
+        "S": 96,
+        "V": 16
+      },
+      "kept": {
+        "F": 0,
+        "N": 2164,
+        "Q": 0,
+        "S": 96,
+        "V": 16
+      },
+      "record": "118",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s118"
+    },
+    {
+      "age": 51,
+      "annotated": {
+        "F": 0,
+        "N": 1543,
+        "Q": 0,
+        "S": 0,
+        "V": 444
+      },
+      "kept": {
+        "F": 0,
+        "N": 1541,
+        "Q": 0,
+        "S": 0,
+        "V": 444
+      },
+      "record": "119",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s119"
+    },
+    {
+      "age": 51,
+      "annotated": {
+        "F": 0,
+        "N": 2476,
+        "Q": 0,
+        "S": 0,
+        "V": 0
+      },
+      "kept": {
+        "F": 0,
+        "N": 2474,
+        "Q": 0,
+        "S": 0,
+        "V": 0
+      },
+      "record": "122",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s122"
+    },
+    {
+      "age": 77,
+      "annotated": {
+        "F": 5,
+        "N": 1536,
+        "Q": 0,
+        "S": 31,
+        "V": 47
+      },
+      "kept": {
+        "F": 5,
+        "N": 1534,
+        "Q": 0,
+        "S": 31,
+        "V": 47
+      },
+      "record": "124",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s124"
+    },
+    {
+      "age": 68,
+      "annotated": {
+        "F": 2,
+        "N": 1635,
+        "Q": 0,
+        "S": 128,
+        "V": 198
+      },
+      "kept": {
+        "F": 2,
+        "N": 1633,
+        "Q": 0,
+        "S": 128,
+        "V": 198
+      },
+      "record": "201",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s201"
+    },
+    {
+      "age": 43,
+      "annotated": {
+        "F": 1,
+        "N": 2529,
+        "Q": 4,
+        "S": 2,
+        "V": 444
+      },
+      "kept": {
+        "F": 1,
+        "N": 2527,
+        "Q": 4,
+        "S": 2,
+        "V": 444
+      },
+      "record": "203",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s203"
+    },
+    {
+      "age": 59,
+      "annotated": {
+        "F": 11,
+        "N": 2571,
+        "Q": 0,
+        "S": 3,
+        "V": 71
+      },
+      "kept": {
+        "F": 11,
+        "N": 2569,
+        "Q": 0,
+        "S": 3,
+        "V": 71
+      },
+      "record": "205",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s205"
+    },
+    {
+      "age": 89,
+      "annotated": {
+        "F": 0,
+        "N": 1543,
+        "Q": 0,
+        "S": 107,
+        "V": 210
+      },
+      "kept": {
+        "F": 0,
+        "N": 1542,
+        "Q": 0,
+        "S": 106,
+        "V": 210
+      },
+      "record": "207",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s207"
+    },
+    {
+      "age": 23,
+      "annotated": {
+        "F": 373,
+        "N": 1586,
+        "Q": 2,
+        "S": 2,
+        "V": 992
+      },
+      "kept": {
+        "F": 372,
+        "N": 1585,
+        "Q": 2,
+        "S": 2,
+        "V": 992
+      },
+      "record": "208",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s208"
+    },
+    {
+      "age": 62,
+      "annotated": {
+        "F": 0,
+        "N": 2621,
+        "Q": 0,
+        "S": 383,
+        "V": 1
+      },
+      "kept": {
+        "F": 0,
+        "N": 2619,
+        "Q": 0,
+        "S": 383,
+        "V": 1
+      },
+      "record": "209",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s209"
+    },
+    {
+      "age": 81,
+      "annotated": {
+        "F": 1,
+        "N": 3195,
+        "Q": 0,
+        "S": 3,
+        "V": 164
+      },
+      "kept": {
+        "F": 1,
+        "N": 3193,
+        "Q": 0,
+        "S": 3,
+        "V": 164
+      },
+      "record": "215",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s215"
+    },
+    {
+      "age": 87,
+      "annotated": {
+        "F": 0,
+        "N": 1954,
+        "Q": 0,
+        "S": 94,
+        "V": 0
+      },
+      "kept": {
+        "F": 0,
+        "N": 1952,
+        "Q": 0,
+        "S": 94,
+        "V": 0
+      },
+      "record": "220",
+      "set": "DS1",
+      "sex": "F",
+      "subject": "s220"
+    },
+    {
+      "age": 73,
+      "annotated": {
+        "F": 14,
+        "N": 2045,
+        "Q": 0,
+        "S": 73,
+        "V": 473
+      },
+      "kept": {
+        "F": 14,
+        "N": 2043,
+        "Q": 0,
+        "S": 73,
+        "V": 473
+      },
+      "record": "223",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s223"
+    },
+    {
+      "age": 32,
+      "annotated": {
+        "F": 0,
+        "N": 2255,
+        "Q": 0,
+        "S": 0,
+        "V": 1
+      },
+      "kept": {
+        "F": 0,
+        "N": 2253,
+        "Q": 0,
+        "S": 0,
+        "V": 1
+      },
+      "record": "230",
+      "set": "DS1",
+      "sex": "M",
+      "subject": "s230"
+    },
+    {
+      "age": 69,
+      "annotated": {
+        "F": 0,
+        "N": 2239,
+        "Q": 0,
+        "S": 33,
+        "V": 1
+      },
+      "kept": null,
+      "record": "100",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s100"
+    },
+    {
+      "age": null,
+      "annotated": {
+        "F": 0,
+        "N": 2082,
+        "Q": 0,
+        "S": 2,
+        "V": 0
+      },
+      "kept": null,
+      "record": "103",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s103"
+    },
+    {
+      "age": 73,
+      "annotated": {
+        "F": 0,
+        "N": 2526,
+        "Q": 5,
+        "S": 0,
+        "V": 41
+      },
+      "kept": null,
+      "record": "105",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s105"
+    },
+    {
+      "age": 47,
+      "annotated": {
+        "F": 0,
+        "N": 2123,
+        "Q": 0,
+        "S": 0,
+        "V": 1
+      },
+      "kept": null,
+      "record": "111",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s111"
+    },
+    {
+      "age": 24,
+      "annotated": {
+        "F": 0,
+        "N": 1789,
+        "Q": 0,
+        "S": 6,
+        "V": 0
+      },
+      "kept": null,
+      "record": "113",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s113"
+    },
+    {
+      "age": 69,
+      "annotated": {
+        "F": 0,
+        "N": 1534,
+        "Q": 0,
+        "S": 1,
+        "V": 0
+      },
+      "kept": null,
+      "record": "117",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s117"
+    },
+    {
+      "age": 83,
+      "annotated": {
+        "F": 0,
+        "N": 1861,
+        "Q": 0,
+        "S": 1,
+        "V": 1
+      },
+      "kept": null,
+      "record": "121",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s121"
+    },
+    {
+      "age": 63,
+      "annotated": {
+        "F": 0,
+        "N": 1515,
+        "Q": 0,
+        "S": 0,
+        "V": 3
+      },
+      "kept": null,
+      "record": "123",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s123"
+    },
+    {
+      "age": 64,
+      "annotated": {
+        "F": 2,
+        "N": 1743,
+        "Q": 0,
+        "S": 30,
+        "V": 826
+      },
+      "kept": null,
+      "record": "200",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s200"
+    },
+    {
+      "age": 89,
+      "annotated": {
+        "F": 10,
+        "N": 2423,
+        "Q": 0,
+        "S": 22,
+        "V": 195
+      },
+      "kept": null,
+      "record": "210",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s210"
+    },
+    {
+      "age": 32,
+      "annotated": {
+        "F": 0,
+        "N": 2748,
+        "Q": 0,
+        "S": 0,
+        "V": 0
+      },
+      "kept": null,
+      "record": "212",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s212"
+    },
+    {
+      "age": 61,
+      "annotated": {
+        "F": 362,
+        "N": 2641,
+        "Q": 0,
+        "S": 28,
+        "V": 220
+      },
+      "kept": null,
+      "record": "213",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s213"
+    },
+    {
+      "age": 53,
+      "annotated": {
+        "F": 1,
+        "N": 2003,
+        "Q": 2,
+        "S": 0,
+        "V": 256
+      },
+      "kept": null,
+      "record": "214",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s214"
+    },
+    {
+      "age": null,
+      "annotated": {
+        "F": 1,
+        "N": 2082,
+        "Q": 0,
+        "S": 7,
+        "V": 64
+      },
+      "kept": null,
+      "record": "219",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s219"
+    },
+    {
+      "age": 83,
+      "annotated": {
+        "F": 0,
+        "N": 2031,
+        "Q": 0,
+        "S": 0,
+        "V": 396
+      },
+      "kept": null,
+      "record": "221",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s221"
+    },
+    {
+      "age": 84,
+      "annotated": {
+        "F": 0,
+        "N": 2274,
+        "Q": 0,
+        "S": 209,
+        "V": 0
+      },
+      "kept": null,
+      "record": "222",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s222"
+    },
+    {
+      "age": 80,
+      "annotated": {
+        "F": 0,
+        "N": 1688,
+        "Q": 0,
+        "S": 3,
+        "V": 362
+      },
+      "kept": null,
+      "record": "228",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s228"
+    },
+    {
+      "age": 72,
+      "annotated": {
+        "F": 0,
+        "N": 1568,
+        "Q": 0,
+        "S": 1,
+        "V": 2
+      },
+      "kept": null,
+      "record": "231",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s231"
+    },
+    {
+      "age": 76,
+      "annotated": {
+        "F": 0,
+        "N": 398,
+        "Q": 0,
+        "S": 1382,
+        "V": 0
+      },
+      "kept": null,
+      "record": "232",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s232"
+    },
+    {
+      "age": 57,
+      "annotated": {
+        "F": 11,
+        "N": 2230,
+        "Q": 0,
+        "S": 7,
+        "V": 831
+      },
+      "kept": null,
+      "record": "233",
+      "set": "DS2",
+      "sex": "M",
+      "subject": "s233"
+    },
+    {
+      "age": 56,
+      "annotated": {
+        "F": 0,
+        "N": 2700,
+        "Q": 0,
+        "S": 50,
+        "V": 3
+      },
+      "kept": null,
+      "record": "234",
+      "set": "DS2",
+      "sex": "F",
+      "subject": "s234"
+    }
+  ],
+  "run": "20261030T223322Z-27fd028-describe-data",
+  "sets": {
+    "DS1": {
+      "annotated": {
+        "F": 415,
+        "N": 45866,
+        "Q": 8,
+        "S": 944,
+        "V": 3788
+      },
+      "kept": {
+        "F": 414,
+        "N": 45824,
+        "Q": 8,
+        "S": 943,
+        "V": 3788
+      },
+      "patients": 22,
+      "records": [
+        "101",
+        "106",
+        "108",
+        "109",
+        "112",
+        "114",
+        "115",
+        "116",
+        "118",
+        "119",
+        "122",
+        "124",
+        "201",
+        "203",
+        "205",
+        "207",
+        "208",
+        "209",
+        "215",
+        "220",
+        "223",
+        "230"
+      ]
+    },
+    "DS2": {
+      "annotated": {
+        "F": 387,
+        "N": 42198,
+        "Q": 7,
+        "S": 1782,
+        "V": 3202
+      },
+      "kept": null,
+      "patients": 21,
+      "records": [
+        "100",
+        "103",
+        "105",
+        "111",
+        "113",
+        "117",
+        "121",
+        "123",
+        "200",
+        "210",
+        "212",
+        "213",
+        "214",
+        "219",
+        "221",
+        "222",
+        "228",
+        "231",
+        "232",
+        "233",
+        "234"
+      ]
+    }
+  },
+  "unparsed": [
+    {
+      "field": "age",
+      "record": "103"
+    },
+    {
+      "field": "age",
+      "record": "219"
+    }
+  ]
+}

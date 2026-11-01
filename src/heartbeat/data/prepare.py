@@ -2,7 +2,9 @@
 
 `prepare_record` is pure, so `evaluate-test` can later run it on DS2 in memory.
 `prepare_ds1` writes DS1 only (Phase 2 settling 4) and refuses any other record
-before reading a file.
+before reading a file. `prepare_in_memory` reads one record and prepares it
+without writing anything; only the sealed run calls it (a test checks the
+importers), so no DS2-derived file ever exists on disk.
 """
 
 import json
@@ -33,6 +35,7 @@ __all__ = [
     "PreparedRecord",
     "load_prepared",
     "prepare_ds1",
+    "prepare_in_memory",
     "prepare_record",
     "save_prepared",
 ]
@@ -105,6 +108,17 @@ def prepare_record(raw: RawRecord, subject_id: str) -> PreparedRecord:
         kept=kept,
         rr_s=rr_s,
     )
+
+
+def prepare_in_memory(
+    raw_dir: Path, record_id: str, lead: str, subject_id: str
+) -> PreparedRecord:
+    """Read one record and run `prepare_record` on it, writing nothing.
+
+    Rule 1: only `heartbeat.sealed.run` imports this (Phase 2 settling 4,
+    Phase 5 settling 3); the caller decides which records it is given.
+    """
+    return prepare_record(read_record(raw_dir, record_id, lead), subject_id)
 
 
 def floor_hits(record: PreparedRecord) -> FloorHits:

@@ -337,3 +337,21 @@ def run_exhibit(
         }
         umbrella.write_json("metrics", payload)
     return umbrella, payload
+
+
+def card_row(payload: Mapping[str, Any]) -> tuple[str, list[Mapping[str, Any]], str]:
+    """The exhibit's own row for the model card's exhibit block (F6, EXHIBIT-03).
+
+    Design call 10 keeps accuracy in this module alone, so the card renderer
+    takes it from here: the row's name, one interval per payload row in order,
+    and the sentence that labels it.
+
+    Returns:
+        The name, the intervals, and the label as a sentence.
+    """
+    label = str(payload["accuracy_label"])
+    return (
+        "Accuracy",
+        [row["accuracy"] for row in payload["rows"]],
+        f"{label[0].upper()}{label[1:]}.",
+    )

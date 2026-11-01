@@ -45,7 +45,15 @@ Source of truth: `manifests/splits.toml`, with the record-to-person map in `mani
 
 <!-- card:begin data_counts -->
 
-_Pending: rendered from the counts `prepare` writes (Phase 2)._
+Source: `results/data_summary.json` (annotated beats from PhysioNet's published per-record table, DS1 and DS2; kept beats from the DS1 prepared files).
+
+Kept beats leave out the first and last beat of each record. DS2's own beats are not loaded before the sealed run, so its row is the published table.
+
+| Set | Beats     | N     | S    | V    | F   | Q   | Total |
+| --- | --------- | ----- | ---- | ---- | --- | --- | ----- |
+| DS1 | annotated | 45866 | 944  | 3788 | 415 | 8   | 51021 |
+| DS1 | kept      | 45824 | 943  | 3788 | 414 | 8   | 50977 |
+| DS2 | annotated | 42198 | 1782 | 3202 | 387 | 7   | 47576 |
 
 <!-- card:end data_counts -->
 
@@ -53,7 +61,53 @@ _Pending: rendered from the counts `prepare` writes (Phase 2)._
 
 <!-- card:begin data_counts_per_record -->
 
-_Pending: rendered from the counts `prepare` writes (Phase 2)._
+Source: `results/data_summary.json` (annotated beats from PhysioNet's published per-record table, DS1 and DS2; kept beats from the DS1 prepared files).
+
+| Record | Set | N    | S    | V   | F   | Q   | Kept       |
+| ------ | --- | ---- | ---- | --- | --- | --- | ---------- |
+| 101    | DS1 | 1860 | 3    | 0   | 0   | 2   | 1863       |
+| 106    | DS1 | 1507 | 0    | 520 | 0   | 0   | 2025       |
+| 108    | DS1 | 1740 | 4    | 17  | 2   | 0   | 1761       |
+| 109    | DS1 | 2492 | 0    | 38  | 2   | 0   | 2530       |
+| 112    | DS1 | 2537 | 2    | 0   | 0   | 0   | 2537       |
+| 114    | DS1 | 1820 | 12   | 43  | 4   | 0   | 1877       |
+| 115    | DS1 | 1953 | 0    | 0   | 0   | 0   | 1951       |
+| 116    | DS1 | 2302 | 1    | 109 | 0   | 0   | 2410       |
+| 118    | DS1 | 2166 | 96   | 16  | 0   | 0   | 2276       |
+| 119    | DS1 | 1543 | 0    | 444 | 0   | 0   | 1985       |
+| 122    | DS1 | 2476 | 0    | 0   | 0   | 0   | 2474       |
+| 124    | DS1 | 1536 | 31   | 47  | 5   | 0   | 1617       |
+| 201    | DS1 | 1635 | 128  | 198 | 2   | 0   | 1961       |
+| 203    | DS1 | 2529 | 2    | 444 | 1   | 4   | 2978       |
+| 205    | DS1 | 2571 | 3    | 71  | 11  | 0   | 2654       |
+| 207    | DS1 | 1543 | 107  | 210 | 0   | 0   | 1858       |
+| 208    | DS1 | 1586 | 2    | 992 | 373 | 2   | 2953       |
+| 209    | DS1 | 2621 | 383  | 1   | 0   | 0   | 3003       |
+| 215    | DS1 | 3195 | 3    | 164 | 1   | 0   | 3361       |
+| 220    | DS1 | 1954 | 94   | 0   | 0   | 0   | 2046       |
+| 223    | DS1 | 2045 | 73   | 473 | 14  | 0   | 2603       |
+| 230    | DS1 | 2255 | 0    | 1   | 0   | 0   | 2254       |
+| 100    | DS2 | 2239 | 33   | 1   | 0   | 0   | not loaded |
+| 103    | DS2 | 2082 | 2    | 0   | 0   | 0   | not loaded |
+| 105    | DS2 | 2526 | 0    | 41  | 0   | 5   | not loaded |
+| 111    | DS2 | 2123 | 0    | 1   | 0   | 0   | not loaded |
+| 113    | DS2 | 1789 | 6    | 0   | 0   | 0   | not loaded |
+| 117    | DS2 | 1534 | 1    | 0   | 0   | 0   | not loaded |
+| 121    | DS2 | 1861 | 1    | 1   | 0   | 0   | not loaded |
+| 123    | DS2 | 1515 | 0    | 3   | 0   | 0   | not loaded |
+| 200    | DS2 | 1743 | 30   | 826 | 2   | 0   | not loaded |
+| 210    | DS2 | 2423 | 22   | 195 | 10  | 0   | not loaded |
+| 212    | DS2 | 2748 | 0    | 0   | 0   | 0   | not loaded |
+| 213    | DS2 | 2641 | 28   | 220 | 362 | 0   | not loaded |
+| 214    | DS2 | 2003 | 0    | 256 | 1   | 2   | not loaded |
+| 219    | DS2 | 2082 | 7    | 64  | 1   | 0   | not loaded |
+| 221    | DS2 | 2031 | 0    | 396 | 0   | 0   | not loaded |
+| 222    | DS2 | 2274 | 209  | 0   | 0   | 0   | not loaded |
+| 228    | DS2 | 1688 | 3    | 362 | 0   | 0   | not loaded |
+| 231    | DS2 | 1568 | 1    | 2   | 0   | 0   | not loaded |
+| 232    | DS2 | 398  | 1382 | 0   | 0   | 0   | not loaded |
+| 233    | DS2 | 2230 | 7    | 831 | 11  | 0   | not loaded |
+| 234    | DS2 | 2700 | 50   | 3   | 0   | 0   | not loaded |
 
 <!-- card:end data_counts_per_record -->
 
@@ -61,7 +115,14 @@ _Pending: rendered from the counts `prepare` writes (Phase 2)._
 
 <!-- card:begin data_demographics -->
 
-_Pending: rendered from the record headers by `prepare` (Phase 2)._
+Source: `results/data_summary.json` (the record headers, DS1 and DS2).
+
+| Set | Patients | Men | Women | Sex unknown | Age range | Median age | Age unknown |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| DS1 | 22 | 13 | 9 | 0 | 23 to 89 | 66 | 0 |
+| DS2 | 21 | 10 | 11 | 0 | 24 to 89 | 69 | 2 |
+
+Header values that do not parse, counted as unknown: record 103 (age), record 219 (age).
 
 <!-- card:end data_demographics -->
 
