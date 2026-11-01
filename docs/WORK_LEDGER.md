@@ -2078,8 +2078,8 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 
 **Why:** BRAND.md and settlings 2 to 7 already pin most of the look, so variants would differ only in details, and this demo's look lives in the canvas, the data and the motion, which static mockups skip.
 
-## 2026-11-01: Phase 6 task plan approved; goal prompts drafted
+## 2026-11-01: Phase 6 task plan and goal prompts approved
 
 **Approved (Din, 2026-11-01):** the Phase 6 task plan as committed in `50d2426` (PLAN.md section 8), including its 22 design calls.
 
-**Drafted for Din's review:** two `/goal` prompts from the planning session, Goal A (engine and design probe, 3,749 characters) and Goal B (interface, accessibility and deploy, 3,905 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort on branch `phase-6-demo`; Goal A ends at Din's sign-off of the probe, Goal B starts only after that sign-off is in this ledger.
+**Approved (Din, 2026-11-01):** two `/goal` prompts from the planning session, Goal A (engine and design probe, 3,749 characters) and Goal B (interface, accessibility and deploy, 3,905 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort on branch `phase-6-demo`; Goal A ends at Din's sign-off of the probe, Goal B starts only after that sign-off is in this ledger.
