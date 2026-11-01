@@ -5,8 +5,9 @@ brand files: U+2014 and U+2013 anywhere; in Markdown prose, a hyphen or double
 hyphen with a space on each side, and dash entities; dash entities anywhere in
 HTML and Svelte files.
 
-Tier 2, published text (`PUBLISHED_PATHS`): D7's avoid list, Din's buzzword list,
-and "accurate" in a heading.
+Tier 2, published text (`PUBLISHED_PATHS` and the demo's own text, see
+`is_published`): D7's avoid list, Din's buzzword list, and "accurate" in a
+heading.
 
 Run as `python -m heartbeat.checks.wording [--root DIR] [paths...]`.
 """
@@ -21,9 +22,16 @@ from pathlib import Path
 
 from heartbeat.paths import REPO_ROOT
 
-# D7 and F6: the published text that exists today. The built demo text and the
-# case study draft join when they exist.
+# D7 and F6: the published text that exists today. The case study draft joins
+# when it exists; the demo's text is matched by `is_published`.
 PUBLISHED_PATHS = ("README.md", "docs/MODEL_CARD.md", "docs/DATA_CARD.md")
+
+# PUB-05 (Phase 6): the demo's own text, in its source and in the build. Tests
+# and bundled JavaScript are left out: bundles mix in library text such as
+# Svelte's `seamless` attribute name, and keep the dash tier.
+DEMO_SOURCE = re.compile(r"^web/(?:index\.html|src/.+\.(?:svelte|ts))$")
+DEMO_BUILD = re.compile(r"^web/dist/.+\.(?:html|txt)$")
+NOT_PUBLISHED = re.compile(r"\.(?:test|spec)\.ts$")
 
 LOCKFILE_NAMES = frozenset({"uv.lock", "pnpm-lock.yaml"})
 VENDORED_PREFIX = ("web", "vendor", "brand")
@@ -151,6 +159,16 @@ def check_dashes(path: Path, text: str) -> list[Finding]:
     return sorted(findings, key=lambda f: f.line)
 
 
+def is_published(path: Path) -> bool:
+    """Return whether the published tier applies to a repo-relative path."""
+    name = path.as_posix()
+    if name in PUBLISHED_PATHS:
+        return True
+    if NOT_PUBLISHED.search(name):
+        return False
+    return bool(DEMO_SOURCE.match(name) or DEMO_BUILD.match(name))
+
+
 def check_published(path: Path, text: str) -> list[Finding]:
     """Return the published tier's findings, or none if the path is not published.
 
@@ -158,7 +176,7 @@ def check_published(path: Path, text: str) -> list[Finding]:
         path: The file's path relative to the repo root.
         text: The file's contents.
     """
-    if path.as_posix() not in PUBLISHED_PATHS:
+    if not is_published(path):
         return []
     findings: list[Finding] = []
     lines = text.splitlines()

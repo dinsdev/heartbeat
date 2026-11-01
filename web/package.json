@@ -7,7 +7,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/size-gates.js",
     "check": "svelte-check --fail-on-warnings",
     "lint": "eslint .",
     "format:check": "prettier --check . ../*.md ../docs/*.md",

@@ -10,10 +10,14 @@ export default defineConfig({
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    // Phase 6 design call 18: the two phone profiles.
+    { name: "pixel-7", use: { ...devices["Pixel 7"] } },
+    { name: "iphone-15", use: { ...devices["iPhone 15"] } },
   ],
   // The tests run against the built page, as it ships.
   webServer: {
-    command: `pnpm exec vite build && pnpm exec vite preview --port ${PORT} --strictPort`,
+    // With the size gates, as `pnpm run build`; the demo data must be built.
+    command: `pnpm run build && pnpm exec vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
   },
