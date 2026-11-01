@@ -1996,3 +1996,9 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Decided (Din, 2026-11-01):** `rr_inputs` and `rr_scaled` compare with `np.testing.assert_allclose(rtol=0, atol=1e-12)`, the tolerance the same test already used for the adjusted logits and probabilities. Why: exact equality cannot hold across platforms once a log is involved, and the test was stricter than PARITY-03 (1e-5 on features). 1e-12 still catches any real pipeline difference. Every other step (beat samples, classes, int16 windows, z-scored windows, RR samples and seconds, labels) stays exact; all of them matched exactly on Linux. No fixture, model or `results/` file changes; the 1e-5 parity tolerance is untouched. The test was written in Phase 5 (`98f5a4a`) and never accepted.
 
 **Verified (local, this commit):** `scripts/check.sh` exit 0; `CI=1 uv run pytest` exit 0 (1024 passed, the changed test included); `uv run heartbeat verify` exit 0 (6 of 6). **Not verified:** CI on this commit (waits for Din's push).
+
+## 2026-11-01: Phase 5 verified in CI
+
+**What:** after Din pushed `bb73cd2` (the cross-platform test fix, entry above), CI went green on pull request 6: run 41344129399 (push) and run 41344131957 (pull request), both at `bb73cd2`, `python` and `web` jobs passed, each in about 2 minutes 20 seconds. The `python` job runs ruff, mypy, the MIT-BIH download, `uv run pytest` (real-data layer, parity and the DS1 rehearsal included) and `uv run heartbeat verify`, which ran in CI for the first time on this branch. Checked with `gh run list --branch phase-5-export` and `gh run view` on both runs. The earlier failure (runs 41343213226 and 41343307016 at `51b21d0`) is logged in the entry above.
+
+**Status:** TASKS 5.1 to 5.5 are verified locally and in CI. **Not accepted:** only Din sets Accepted, at the merge of pull request 6.
