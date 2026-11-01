@@ -2002,3 +2002,13 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **What:** after Din pushed `bb73cd2` (the cross-platform test fix, entry above), CI went green on pull request 6: run 41344129399 (push) and run 41344131957 (pull request), both at `bb73cd2`, `python` and `web` jobs passed, each in about 2 minutes 20 seconds. The `python` job runs ruff, mypy, the MIT-BIH download, `uv run pytest` (real-data layer, parity and the DS1 rehearsal included) and `uv run heartbeat verify`, which ran in CI for the first time on this branch. Checked with `gh run list --branch phase-5-export` and `gh run view` on both runs. The earlier failure (runs 41343213226 and 41343307016 at `51b21d0`) is logged in the entry above.
 
 **Status:** TASKS 5.1 to 5.5 are verified locally and in CI. **Not accepted:** only Din sets Accepted, at the merge of pull request 6.
+
+## 2026-11-01: Phase 5 accepted
+
+**Decision (Din):** TASKS 5.1 to 5.5 are Accepted. Din opened and merged PR dinsdev/heartbeat#6 (merge commit `bea15c1` on `main`, 20:07:05Z) and deleted the remote branch.
+
+**State at acceptance:** the Phase 5 exit is met (PLAN.md section 8): R25 to R28, R41, R42, R50 and R52 pass locally and in CI; the frozen bundle, fixtures and cards come from `uv run heartbeat rebuild`, and a clean clone reproduces them exactly. CI runs on the pull request, all green: 41344129399 (push) and 41344131957 (pull request) at `bb73cd2`; 41344682206 (push) and 41344687464 (pull request) at `799fb72`. Superseded: 41343213226 (push) and 41343307016 (pull request) at `51b21d0`, which failed on the exact float comparison fixed in `bb73cd2` (entry above). On `main` after the merge, `uv run heartbeat check-folds` exits 0 and `uv run heartbeat verify` passes 6 of 6. CI run 41345175472 on `main` after the merge (20:07:08Z to 20:09:53Z), both jobs success.
+
+**Cleanup:** the merged local branch `phase-5-export` deleted with `git branch -d` and the remote branch pruned with `git fetch --prune`. No stashes remain.
+
+**Carried into Phase 6 and 7, report only:** the freeze gate allows only `freeze.json` to differ from the freeze commit, so a reproduction after the sealed log is committed will refuse (Din decides before Phase 7); one seed-2 DS1 beat at 1.53e-5 in the all-DS1 parity survey (`results/export.json`, DS1, CPU; not gated, no label change); commit `7d97b86` keeps the path-bearing ONNX files in the published history; `heartbeat --help` still says "arrives in Phase N" beside built commands.
