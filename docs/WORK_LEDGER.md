@@ -2043,3 +2043,9 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Why:** about nine in ten beats are N, so a neutral N lets irregular beats stand out with no extra marks. BRAND.md makes teal the one brand color for interaction, and brand amber is 2.0 on light paper, so light-mode S needs a darker amber. Brick and amber are close for red-green colorblind viewers; the letter on every beat (D6) carries the class, color only reinforces it.
 
 **Verified:** WCAG contrast ratios above computed with the relative-luminance formula in a throwaway scratchpad script (deleted after), against the BRAND.md background colors.
+
+## 2026-11-01: Phase 6 settling 4, full page layout: instrument first
+
+**Decided (Din):** the full page opens with a slim header (the dins lockup linking to dins.dev, the title "Heartbeat", one lead sentence), then the demo panel straight away (trace, controls, the D7 short line, the parity counter, the legend), then the beat table, then an about section (how it works, how record 200 was chosen, the one-beat label lag, the fuller D7 note, the attribution) and a footer. On phones it is one column in that order, controls under the canvas (D6).
+
+**Why:** the page autoplays (D6), so the trace should be above the fold on a phone as well as a desktop. Not chosen: an editorial intro above the demo (pushes the trace below the fold on phones) and a full-viewport tool with a drawer (hides the table and about text behind a click and adds dialog accessibility work).
