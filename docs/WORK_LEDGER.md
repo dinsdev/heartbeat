@@ -2065,3 +2065,9 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Why:** the shipped seed-0 model was trained on all of DS1, so every label in the Phase 6 demo is in-sample and looks better than it deserves, and Worker Previews on `workers.dev` are public. Shipping all 22 records follows D4's no-cherry-picking rule and keeps edge cases such as records with no irregular beats in the picker. Not chosen: three hand-picked records (cherry-picking) or no note (a shared preview link would mislead).
 
 **Verified:** S and V counts from `manifests/mitdb-beat-counts.toml` (PhysioNet's whole-record table; S is A, a, J, S and V is V, E), DS1 records only. The agent rechecks the default against the prepared beats, since the first and last beats are dropped (B3).
+
+## 2026-11-01: Phase 6 settling 7, drag to scrub with momentum
+
+**Decided (Din):** on the full page, visitors can drag the trace itself to scrub, on top of the native range input. The paper tracks the pointer or finger 1:1; on release it coasts with the release velocity and friction, and rubber-bands at the start and end of the recording; any new touch or click stops it at once. Playback pauses during a drag and resumes on release if it was playing. `touch-action: pan-y` on the canvas keeps vertical page scrolling on phones. The range input stays the keyboard and assistive path (WCAG 2.5.7, a single-pointer alternative to dragging). Under reduced motion there is no coasting or rubber-banding: a drag moves the page by whole 10-second pages. The physics live in the plain TypeScript trace module (D2) and are unit-tested. The embed has no scrubbing (settling 5).
+
+**Why:** the trace is paper (settling 2), and paper you can handle directly, with interruptible motion, is the apple-design principle that fits this demo. Not chosen: drag without momentum (loses the fling) and the slider only (feels like a video).
