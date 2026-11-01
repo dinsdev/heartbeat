@@ -1,0 +1,18 @@
+/* The brand's variable fonts, vendored from dins.dev (design call 14). Mono
+   text uses the token's fallback stack: JetBrains Mono is not in brand/fonts. */
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("../../vendor/brand/Fraunces-VF.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("../../vendor/brand/InstrumentSans-VF.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}

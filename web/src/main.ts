@@ -1,3 +1,7 @@
+import "../vendor/brand/tokens.css";
+import "./styles/fonts.css";
+import "./styles/heartbeat-tokens.css";
+
 import { mount } from "svelte";
 
 import App from "./App.svelte";

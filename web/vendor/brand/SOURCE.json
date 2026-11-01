@@ -1,0 +1,35 @@
+{
+  "commit": "d75677fc1b840afedf9cb8598b1a76c07d35f044",
+  "files": [
+    {
+      "path": "brand/tokens/tokens.css",
+      "sha256": "ed1948689a67a800d67329bcab8a1d0703dbce05de59fd70051bf9dd99d31423"
+    },
+    {
+      "path": "brand/fonts/Fraunces-VF.ttf",
+      "sha256": "177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb"
+    },
+    {
+      "path": "brand/fonts/InstrumentSans-VF.ttf",
+      "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1"
+    },
+    {
+      "path": "brand/fonts/OFL.txt",
+      "sha256": "bdf4c22802eaf804f998195871c6b8938aac2ac14b2d78a8bd66a6f1eced833b"
+    },
+    {
+      "path": "brand/fonts/OFL-InstrumentSans.txt",
+      "sha256": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966"
+    },
+    {
+      "path": "brand/logo/lockup-light.svg",
+      "sha256": "2cce44181f36b219ab9c67597420c0c54059d39c54f73104f7d4c4eaabe932b7"
+    },
+    {
+      "path": "brand/logo/lockup-dark.svg",
+      "sha256": "3456be89cca6d0ad01978b028a465ef7317a08b914e5464d36cf597551e78f35"
+    }
+  ],
+  "label": "Copied from the dins.dev repo, never edited here; change them there and copy again (D2, OPS-10)",
+  "repository": "dins.dev"
+}
