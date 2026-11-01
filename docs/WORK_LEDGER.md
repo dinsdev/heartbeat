@@ -2049,3 +2049,11 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Decided (Din):** the full page opens with a slim header (the dins lockup linking to dins.dev, the title "Heartbeat", one lead sentence), then the demo panel straight away (trace, controls, the D7 short line, the parity counter, the legend), then the beat table, then an about section (how it works, how record 200 was chosen, the one-beat label lag, the fuller D7 note, the attribution) and a footer. On phones it is one column in that order, controls under the canvas (D6).
 
 **Why:** the page autoplays (D6), so the trace should be above the fold on a phone as well as a desktop. Not chosen: an editorial intro above the demo (pushes the trace below the fold on phones) and a full-viewport tool with a drawer (hides the table and about text behind a click and adds dialog accessibility work).
+
+## 2026-11-01: Phase 6 settling 5, embed mode is site-sized with a compact control set
+
+**Decided (Din):** the `?embed=page` iframe fills whatever box the site gives it, laid out with container queries. G4 asks the site for a 16:10 box from 640 px wide and a taller box (about 4:5) below that. The embed carries a compact set: the trace, play and pause, speed, "Next irregular beat", "Next disagreement", the parity counter and model-loading note, a one-line legend, the D7 short line, and an "Open the full demo" link. The patient picker, scrub slider, beat table and about text live on the full page only. No resize protocol between the site and the iframe.
+
+**Why:** the site's `ProjectWindow` is a fixed 16:10 box (dins.dev M1 plan), about 214 px tall at a 343 px phone content width, too short for the full control set. Not chosen: auto-height by `postMessage` (more G4 work, a second message type to secure, layout shift on the case study) and a strict 16:10 box everywhere (too thin on phones).
+
+**Follow-on for G4:** the handoff note includes the two aspect ratios and the 640 px switch.
