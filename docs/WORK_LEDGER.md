@@ -2057,3 +2057,11 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Why:** the site's `ProjectWindow` is a fixed 16:10 box (dins.dev M1 plan), about 214 px tall at a 343 px phone content width, too short for the full control set. Not chosen: auto-height by `postMessage` (more G4 work, a second message type to secure, layout shift on the case study) and a strict 16:10 box everywhere (too thin on phones).
 
 **Follow-on for G4:** the handoff note includes the two aspect ratios and the 640 px switch.
+
+## 2026-11-01: Phase 6 settling 6, the DS1 demo data and the training-patient note
+
+**Decided (Din):** while the demo runs on DS1 (DEMO-17, C1), `build-demo-data` ships all 22 DS1 records. The default record is 223, chosen by D4's rule applied to DS1 expert labels: most S plus V beats among records with at least 25 of each (223: S 73, V 473; 201 and 207 also qualify). `build-demo-data` writes a flag to `manifest.json` saying the data is DS1, and the flag drives a visible note in both the full page and the embed: "Development build: these are training patients the model has already seen, so its labels here look better than they would on new patients." The note goes away by itself when DS2 data replaces DS1 data after the sealed run (Phase 7). The traces (about 29 MB, a guess from D4's 1.3 MB per record) are built in CI and stay gitignored under `web/public/data/`.
+
+**Why:** the shipped seed-0 model was trained on all of DS1, so every label in the Phase 6 demo is in-sample and looks better than it deserves, and Worker Previews on `workers.dev` are public. Shipping all 22 records follows D4's no-cherry-picking rule and keeps edge cases such as records with no irregular beats in the picker. Not chosen: three hand-picked records (cherry-picking) or no note (a shared preview link would mislead).
+
+**Verified:** S and V counts from `manifests/mitdb-beat-counts.toml` (PhysioNet's whole-record table; S is A, a, J, S and V is V, E), DS1 records only. The agent rechecks the default against the prepared beats, since the first and last beats are dropped (B3).
