@@ -2142,3 +2142,13 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Not verified:** CI (waits for Din's push); the timings of D5 (Goal B, task B6); any screen reader or keyboard pass (Goal B and Phase 8). Local Node is 24.21.0 while `.node-version` pins 24.22.0; CI uses the pin.
 
 **Waiting on Din:** the push of `phase-6-demo` so CI runs the engine (CI's python job will be red on the same coverage test until Goal B), and the sign-off of the probe (look, copy, the 375 px scale call in the design read). Goal B starts only after that sign-off is in this ledger.
+
+## 2026-11-01: Din signs off the Phase 6 design probe; Goal B may start
+
+**Decided:** Din signed off the probe (Task A8) in chat on 2026-11-01: the look, the copy and the 375 px scale call in the design read. So the locked 10 mm/mV scale holds at every width (settling 2 and design call 5 unchanged, no phone-only gain). The sign-off did not address deviation 1 (CI's web job builds its own demo data); it stays as built until Din says otherwise.
+
+**Pushed:** Din pushed `phase-6-demo` at `a5c0de7`; CI run 41357721418 started on it. Its result is not recorded here yet. The python job is expected red on the coverage test alone until Goal B covers R35, R36, R37, R38 and R40.
+
+**Pull request:** none yet. The phase opens one pull request when Goal B is done (section 1: phases merge to `main` after CI passes and Din agrees); merging now would put the red coverage test on `main`.
+
+**Accepted:** the probe's design direction only. TASKS 6.1 to 6.3 and 6.5 stay In progress; their rows are accepted when the phase is.
