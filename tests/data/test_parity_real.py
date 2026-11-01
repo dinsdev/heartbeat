@@ -88,9 +88,14 @@ def test_each_stored_step_matches_the_pipeline_on_the_cache(
         row = int(np.sum(rec.kept[:index]))
         assert beat["rr_s"] == rec.rr_s[row].tolist()
         assert beat["rr_s"] == rr_features(context)[position - 1].tolist()
+        # The log ratios can round one step apart across platforms (macOS arm64
+        # wrote the fixtures, CI runs Linux x86), so float steps after a log
+        # compare at 1e-12 like the logits below.
         inputs = rr_model_inputs(rec.rr_s[[row]])
-        assert beat["rr_inputs"] == inputs[0].tolist()
-        assert beat["rr_scaled"] == apply_rr_scaler(scaler, inputs)[0].tolist()
+        np.testing.assert_allclose(beat["rr_inputs"], inputs[0], rtol=0, atol=1e-12)
+        np.testing.assert_allclose(
+            beat["rr_scaled"], apply_rr_scaler(scaler, inputs)[0], rtol=0, atol=1e-12
+        )
         for seed, calibration in calibrations.items():
             out = beat["seeds"][seed]
             logits = np.array([out["logits"]])
