@@ -2071,3 +2071,9 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Decided (Din):** on the full page, visitors can drag the trace itself to scrub, on top of the native range input. The paper tracks the pointer or finger 1:1; on release it coasts with the release velocity and friction, and rubber-bands at the start and end of the recording; any new touch or click stops it at once. Playback pauses during a drag and resumes on release if it was playing. `touch-action: pan-y` on the canvas keeps vertical page scrolling on phones. The range input stays the keyboard and assistive path (WCAG 2.5.7, a single-pointer alternative to dragging). Under reduced motion there is no coasting or rubber-banding: a drag moves the page by whole 10-second pages. The physics live in the plain TypeScript trace module (D2) and are unit-tested. The embed has no scrubbing (settling 5).
 
 **Why:** the trace is paper (settling 2), and paper you can handle directly, with interruptible motion, is the apple-design principle that fits this demo. Not chosen: drag without momentum (loses the fling) and the slider only (feels like a video).
+
+## 2026-11-01: Phase 6 settling 8, the design probe is one direction in the real app
+
+**Decided (Din):** Goal A ends with one considered design direction built in the real Svelte shell on the real engine (record 223, live labels), not static mockups or competing variants. Din gets a short design read (type, spacing, beat marker style, motion choices and the reasons), screenshots at 375, 768 and 1280 px wide in light and dark, the embed at 16:10 and 4:5, and a local URL to try. Goal B starts after Din signs it off.
+
+**Why:** BRAND.md and settlings 2 to 7 already pin most of the look, so variants would differ only in details, and this demo's look lives in the canvas, the data and the motion, which static mockups skip.
