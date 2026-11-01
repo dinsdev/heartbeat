@@ -2012,3 +2012,12 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Cleanup:** the merged local branch `phase-5-export` deleted with `git branch -d` and the remote branch pruned with `git fetch --prune`. No stashes remain.
 
 **Carried into Phase 6 and 7, report only:** the freeze gate allows only `freeze.json` to differ from the freeze commit, so a reproduction after the sealed log is committed will refuse (Din decides before Phase 7); one seed-2 DS1 beat at 1.53e-5 in the all-DS1 parity survey (`results/export.json`, DS1, CPU; not gated, no label change); commit `7d97b86` keeps the path-bearing ONNX files in the published history; `heartbeat --help` still says "arrives in Phase N" beside built commands.
+
+## 2026-11-01: Phase 6 settling 1, the phase runs as two goals
+
+**Decided (Din):** Phase 6 runs as two `/goal` agent runs with a design sign-off between them.
+
+- **Goal A:** the data and inference engine (`build-demo-data` on DS1, the Worker with ONNX Runtime Web, TypeScript preprocessing, browser parity, the fallback, size gates) plus a design probe: the real page shell rendered at phone and desktop widths, light and dark, with screenshots for Din's review.
+- **Goal B, after Din signs off the probe:** the full interface, the accessibility suite, headers and CSP, the deploy workflow and the G4 handoff note.
+
+**Why:** a `/goal` run continues until its end condition holds, so a mid-run design review is cleaner as a goal boundary. The engine and the look are independent, so Goal A builds both and Din sees the look before the interface is built and tested, when a redirect is cheap.
