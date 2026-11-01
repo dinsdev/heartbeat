@@ -123,7 +123,10 @@ export class Scroller {
         x0: position - bound,
         v0: velocity,
       };
-    } else if (Math.abs(velocity) * this.#options.pxPerSecond > REST_SPEED_PX_S) {
+    } else if (
+      Math.abs(velocity) * this.#options.pxPerSecond >
+      REST_SPEED_PX_S
+    ) {
       this.#motion = { kind: "coast", t0: t, p0: position, v0: velocity };
     } else {
       this.#motion = { kind: "rest" };
@@ -142,7 +145,8 @@ export class Scroller {
   #dragPosition(motion: Extract<Motion, { kind: "drag" }>): number {
     // Dragging right brings earlier paper into view.
     const raw =
-      motion.grabPosition - (motion.x - motion.grabX) / this.#options.pxPerSecond;
+      motion.grabPosition -
+      (motion.x - motion.grabX) / this.#options.pxPerSecond;
     const bound = this.#boundBeyond(raw);
     return bound === undefined ? raw : bound + rubberBand(raw - bound);
   }
@@ -166,7 +170,8 @@ export class Scroller {
     const width = this.#options.pxPerSecond * SPAN_S;
     const threshold = Math.min(48, width / 4);
     if (Math.abs(dx) < threshold) return;
-    const pages = -Math.sign(dx) * Math.max(1, Math.round(Math.abs(dx) / width));
+    const pages =
+      -Math.sign(dx) * Math.max(1, Math.round(Math.abs(dx) / width));
     this.#position = stepPage(
       this.#position,
       pages,

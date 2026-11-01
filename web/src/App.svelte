@@ -28,6 +28,7 @@
   let manifest = $state<Manifest>();
   let loaded = $state<{
     entry: RecordEntry;
+    startS: number;
     trace: Int16Array;
     beats: RecordBeats;
     session: LabelingSession;
@@ -38,6 +39,9 @@
   let labelsVersion = $state(0);
   let labelsShown = $state(0);
   let error = $state("");
+  // One Worker for the page; each record gets its own labeling session.
+  let labeler: Labeler | undefined;
+  let choosing = 0;
 
   const labelSource = $derived(
     modelState === "fallback" ? "python" : labelsShown > 0 ? "browser" : "none",
@@ -56,29 +60,57 @@
     return shown;
   }
 
+  /** Fetch a record and start labeling it; the newest choice wins. */
+  async function load(data: Manifest, entry: RecordEntry, startS: number) {
+    const ticket = ++choosing;
+    const [trace, beats] = await Promise.all([
+      fetchTrace(entry.trace),
+      fetchBeats(entry.beats),
+    ]);
+    if (ticket !== choosing) return;
+    const fs = data.fs_hz;
+    const viewFrom = startS * fs;
+    const update = () => {
+      if (loaded?.session !== session) return;
+      counts = session.store.counts();
+      labelsShown = countShown(
+        session,
+        beats,
+        viewFrom,
+        viewFrom + VISIBLE_S * fs,
+      );
+      labelsVersion++;
+      if (session.store.fallback) modelState = "fallback";
+    };
+    const session = new LabelingSession(beats, labeler ?? NO_MODEL, update);
+    labeler?.sendRecord(beats.record, trace, beats.samples);
+    // DEMO-06: the trace and expert marks play before the model is ready.
+    loaded = { entry, startS, trace, beats, session };
+    counts = session.store.counts();
+    labelsShown = 0;
+    traceState = "ready";
+    if (!labeler || modelState === "fallback") session.fail();
+    else if (modelState === "ready")
+      session.fill(viewFrom + VISIBLE_S * fs, fs);
+  }
+
+  function select(record: string) {
+    const data = manifest!;
+    const entry = data.records.find((r) => r.record === record)!;
+    // Other records start at the beginning; the default keeps D4's start.
+    const startS = record === data.default.record ? data.default.start_s : 0;
+    load(data, entry, startS).catch(failed);
+  }
+
+  function failed(reason: unknown) {
+    traceState = "error";
+    error = reason instanceof Error ? reason.message : String(reason);
+  }
+
   onMount(() => {
-    let labeler: Labeler | undefined;
     void (async () => {
       const data = await fetchManifest();
       manifest = data;
-      const entry = data.records.find((r) => r.record === data.default.record)!;
-      const [trace, beats] = await Promise.all([
-        fetchTrace(entry.trace),
-        fetchBeats(entry.beats),
-      ]);
-      const fs = data.fs_hz;
-      const viewFrom = data.default.start_s * fs;
-      const update = () => {
-        counts = session.store.counts();
-        labelsShown = countShown(
-          session,
-          beats,
-          viewFrom,
-          viewFrom + VISIBLE_S * fs,
-        );
-        labelsVersion++;
-        if (session.store.fallback) modelState = "fallback";
-      };
       if (canRunModel()) {
         try {
           labeler = new Labeler({
@@ -90,27 +122,23 @@
           labeler = undefined;
         }
       }
-      const session = new LabelingSession(beats, labeler ?? NO_MODEL, update);
-      // DEMO-06: the trace and expert marks play before the model is ready.
-      loaded = { entry, trace, beats, session };
-      traceState = "ready";
-      if (!labeler) {
-        session.fail();
-        return;
-      }
-      labeler.sendRecord(beats.record, trace, beats.samples);
+      const entry = data.records.find((r) => r.record === data.default.record)!;
+      await load(data, entry, data.default.start_s);
+      if (!labeler) return;
       try {
         await labeler.ready;
       } catch {
-        session.fail();
+        modelState = "fallback";
+        loaded?.session.fail();
         return;
       }
       modelState = "ready";
-      session.fill(viewFrom + VISIBLE_S * fs, fs);
-    })().catch((reason: unknown) => {
-      traceState = "error";
-      error = reason instanceof Error ? reason.message : String(reason);
-    });
+      const current = loaded!;
+      current.session.fill(
+        (current.startS + VISIBLE_S) * data.fs_hz,
+        data.fs_hz,
+      );
+    })().catch(failed);
     return () => labeler?.terminate();
   });
 </script>
@@ -135,17 +163,21 @@
         help.
       </p>
     {:else if manifest && loaded}
-      <DemoPanel
-        {embed}
-        {manifest}
-        entry={loaded.entry}
-        trace={loaded.trace}
-        beats={loaded.beats}
-        session={loaded.session}
-        {modelState}
-        {counts}
-        {labelsVersion}
-      />
+      {#key loaded.session}
+        <DemoPanel
+          {embed}
+          {manifest}
+          entry={loaded.entry}
+          startS={loaded.startS}
+          trace={loaded.trace}
+          beats={loaded.beats}
+          session={loaded.session}
+          {modelState}
+          {counts}
+          {labelsVersion}
+          onselect={select}
+        />
+      {/key}
     {:else}
       <div class="placeholder" aria-hidden="true"></div>
       <p class="message t-small" role="status">Loading the recording</p>

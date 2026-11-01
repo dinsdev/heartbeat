@@ -2,7 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import { decodeBeats } from "../data/beats";
 import { LabelStore } from "../parity";
-import { jumpTarget, JUMP_LEAD_S, nextDisagreement, nextIrregular } from "./jumps";
+import {
+  jumpTarget,
+  JUMP_LEAD_S,
+  nextDisagreement,
+  nextIrregular,
+  searchFrom,
+} from "./jumps";
 
 const FS = 360;
 // Annotated beats every second; the first and last are not kept.
@@ -94,5 +100,29 @@ describe("where a jump puts the beat", () => {
   test("reduced motion: the page that holds the beat", () => {
     expect(jumpTarget(603.5 * FS, FS, true, 10, 1805)).toBe(610);
     expect(jumpTarget(610 * FS, FS, true, 10, 1805)).toBe(610);
+  });
+});
+
+describe("where the search for the next beat starts", () => {
+  test("scrolling: from the beat a jump would have left a few seconds back", () => {
+    expect(searchFrom(600, 600, FS, false)).toBe((600 - JUMP_LEAD_S) * FS);
+  });
+
+  test("under reduced motion: after the page in view", () => {
+    expect(searchFrom(610, 610, FS, true)).toBe(610 * FS);
+  });
+
+  test("right after the last jump's beat while it is still in view", () => {
+    // Pressed again at once: the search goes past the beat just shown, even
+    // where float rounding or the end of the recording moved the playhead.
+    expect(searchFrom(603, 603, FS, false, 600 * FS)).toBe(600 * FS);
+    expect(searchFrom(1805, 1805, FS, false, 1804 * FS)).toBe(1804 * FS);
+    // Under reduced motion the beat can sit anywhere on its page.
+    expect(searchFrom(610, 610, FS, true, 601 * FS)).toBe(601 * FS);
+  });
+
+  test("a last jump out of view no longer counts", () => {
+    expect(searchFrom(900, 900, FS, false, 600 * FS)).toBe(897 * FS);
+    expect(searchFrom(900, 900, FS, true, 600 * FS)).toBe(900 * FS);
   });
 });

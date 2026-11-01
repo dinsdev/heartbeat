@@ -10,7 +10,11 @@ function clamp(seconds: number, min: number, duration: number): number {
 }
 
 /** The right edge of the page holding the playhead. */
-export function pageEnd(position: number, min: number, duration: number): number {
+export function pageEnd(
+  position: number,
+  min: number,
+  duration: number,
+): number {
   return clamp(Math.ceil(position / PAGE_S) * PAGE_S, min, duration);
 }
 

@@ -67,7 +67,9 @@ export class PlaybackClock {
 
   setSpeed(speed: number): void {
     if (!(SPEEDS as readonly number[]).includes(speed)) {
-      throw new Error(`no ${speed}x speed; the speeds are ${SPEEDS.join(", ")}`);
+      throw new Error(
+        `no ${speed}x speed; the speeds are ${SPEEDS.join(", ")}`,
+      );
     }
     // Bank the time played so far at the old speed (this stops at the end).
     this.#position = this.position();

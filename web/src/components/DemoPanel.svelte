@@ -3,11 +3,25 @@
 
   import type { RecordBeats } from "../lib/data/beats";
   import type { Manifest, RecordEntry } from "../lib/data/manifest";
-  import { clockTime, count } from "../lib/format";
+  import { clockTenths, clockTime, count } from "../lib/format";
   import type { LabelingSession } from "../lib/labeling";
   import type { ParityCounts } from "../lib/parity";
   import { PlaybackClock, SPEEDS } from "../lib/playback/clock";
+  import {
+    jumpTarget,
+    nextDisagreement,
+    nextIrregular,
+    searchFrom,
+  } from "../lib/playback/jumps";
+  import { pageEnd } from "../lib/playback/pages";
+  import {
+    beatRows,
+    recordOption,
+    statusLine,
+    traceSummary,
+  } from "../lib/summary";
   import { SPAN_S } from "../lib/trace/geometry";
+  import BeatTable from "./BeatTable.svelte";
   import Legend from "./Legend.svelte";
   import Trace from "./Trace.svelte";
 
@@ -15,24 +29,29 @@
     embed: boolean;
     manifest: Manifest;
     entry: RecordEntry;
+    /** Where the first view starts, in seconds. */
+    startS: number;
     trace: Int16Array;
     beats: RecordBeats;
     session: LabelingSession;
     modelState: "loading" | "ready" | "fallback";
     counts: ParityCounts;
     labelsVersion: number;
+    onselect: (record: string) => void;
   }
 
   let {
     embed,
     manifest,
     entry,
+    startS,
     trace,
     beats,
     session,
     modelState,
     counts,
     labelsVersion,
+    onselect,
   }: Props = $props();
 
   const FALLBACK_NOTE =
@@ -41,14 +60,18 @@
     "Research demo, not medical advice. Recordings come from a public research database.";
   const TRAINING_NOTE =
     "Development build: these are training patients the model has already seen, so its labels here look better than they would on new patients.";
+  const NO_IRREGULAR = "No irregular beats in this recording";
+  const NO_DISAGREEMENT =
+    "No disagreements in this recording: the model agrees with the experts on every scored beat";
 
   // A panel lives for one record: its rate, start and length are read once.
-  const { fs, start, duration } = untrack(() => ({
+  const { fs, start, duration, record } = untrack(() => ({
     fs: manifest.fs_hz,
-    start: manifest.default.start_s,
+    start: startS,
     duration: trace.length / manifest.fs_hz,
+    record: entry.record,
   }));
-  // The first view is the default 10-second span; the playhead is its right edge.
+  // The first view is a 10-second span; the playhead is its right edge.
   const clock = new PlaybackClock(
     () => performance.now(),
     start + SPAN_S,
@@ -62,7 +85,15 @@
   );
   let shownSecond = $state(Math.floor(clock.position()));
   let redraw = $state(0);
+  // What the words describe: the span at the last 10-second mark, pause or seek.
+  let described = $state(spanEnding(clock.position()));
+  let summary = $state("");
+  let traceLabel = $state("");
+  let jumpNote = $state("");
+  let sliding = $state(false);
   let lastFill = -Infinity;
+  let lastWindow = -1;
+  let lastJump: number | undefined;
 
   const mismatches = $derived(counts.compared - counts.matched);
   const fullHref = $derived.by(() => {
@@ -70,14 +101,59 @@
     url.searchParams.delete("embed");
     return url.href;
   });
-  const traceLabel = $derived(
-    `ECG trace of record ${entry.record}, ${clockTime(shownSecond - SPAN_S)} to ${clockTime(shownSecond)}, with a label on each beat`,
+  const rows = $derived.by(() => {
+    void labelsVersion;
+    return beatRows(beats, session.store, fs, described.from, described.to);
+  });
+  const spanText = $derived(
+    `${clockTime(described.from / fs)} to ${clockTime(described.to / fs)}`,
   );
+  const timeText = $derived(
+    `${clockTime(shownSecond)} of ${clockTime(duration)}`,
+  );
+
+  function viewEndOf(position: number): number {
+    return reducedMotion ? pageEnd(position, clock.min, duration) : position;
+  }
+
+  function spanEnding(position: number) {
+    const to = Math.round(viewEndOf(position) * fs);
+    return { from: to - SPAN_S * fs, to };
+  }
+
+  /** The table and the polite status line (DEMO-12). */
+  function summarize(position: number) {
+    described = spanEnding(position);
+    summary = statusLine(beats, session.store, described.from, described.to);
+  }
+
+  /** D6: the canvas label, on pause and seek only. */
+  function labelTrace(position: number) {
+    const { from, to } = spanEnding(position);
+    traceLabel = traceSummary(record, beats, session.store, fs, from, to);
+  }
+
+  function describeAll() {
+    const position = clock.position();
+    summarize(position);
+    labelTrace(position);
+    lastWindow = Math.floor(viewEndOf(position) / SPAN_S);
+  }
 
   function onframe(position: number, viewEnd: number) {
     const second = Math.floor(position);
     if (second !== shownSecond) shownSecond = second;
-    if (playing !== clock.playing) playing = clock.playing;
+    if (playing !== clock.playing) {
+      playing = clock.playing;
+      // The recording ran out: that is a pause too.
+      if (!playing && position >= duration) describeAll();
+    }
+    // D6: a summary every 10 seconds of playback.
+    const window = Math.floor(viewEnd / SPAN_S);
+    if (clock.playing && window !== lastWindow) {
+      lastWindow = window;
+      summarize(position);
+    }
     // DEMO-03: keep the visible span and the next 10 seconds labeled.
     if (Math.abs(viewEnd - lastFill) >= 0.5) {
       lastFill = viewEnd;
@@ -85,30 +161,85 @@
     }
   }
 
+  function toggle() {
+    if (clock.playing) {
+      clock.pause();
+      describeAll();
+    } else clock.play();
+    playing = clock.playing;
+    redraw++;
+  }
+
   function changeSpeed() {
     clock.setSpeed(Number(speed));
     redraw++;
   }
 
-  function toggle() {
-    if (clock.playing) clock.pause();
-    else clock.play();
-    playing = clock.playing;
+  function seekTo(seconds: number) {
+    clock.seek(seconds);
+    shownSecond = Math.floor(clock.position());
+    lastJump = undefined;
+    describeAll();
     redraw++;
+  }
+
+  function onslide(event: Event) {
+    seekTo(Number((event.currentTarget as HTMLInputElement).value));
+  }
+
+  function jump(kind: "irregular" | "disagreement") {
+    const position = clock.position();
+    const after = searchFrom(
+      position,
+      viewEndOf(position),
+      fs,
+      reducedMotion,
+      lastJump,
+    );
+    const row =
+      kind === "irregular"
+        ? nextIrregular(beats, after)
+        : nextDisagreement(beats, session.store, after);
+    if (row === undefined) {
+      jumpNote = kind === "irregular" ? NO_IRREGULAR : NO_DISAGREEMENT;
+      return;
+    }
+    const sample = beats.keptSamples[row]!;
+    const expert = beats.classes[beats.keptIndex[row]!]!;
+    const model = session.store.get(row)?.label ?? beats.pythonLabels[row]!;
+    seekTo(jumpTarget(sample, fs, reducedMotion, clock.min, duration));
+    lastJump = sample;
+    const at = `Beat at ${clockTenths(sample / fs)}`;
+    jumpNote =
+      kind === "irregular"
+        ? `${at}: experts ${expert}`
+        : `${at}: model ${model}, experts ${expert}`;
+  }
+
+  function pick(event: Event) {
+    onselect((event.currentTarget as HTMLSelectElement).value);
   }
 
   $effect(() => {
     // New labels or a model change: draw again even while paused.
     void labelsVersion;
     void modelState;
-    lastFill = -Infinity;
-    redraw++;
+    untrack(() => {
+      lastFill = -Infinity;
+      redraw++;
+      // While paused the words follow the labels as they arrive.
+      if (!clock.playing) describeAll();
+    });
   });
 
   onMount(() => {
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
-    const onMotion = () => (reducedMotion = motion.matches);
+    const onMotion = () => {
+      reducedMotion = motion.matches;
+      describeAll();
+    };
     motion.addEventListener("change", onMotion);
+    describeAll();
     // D6: the full page autoplays, silent, with a visible pause; never under
     // reduced motion.
     if (!motion.matches) {
@@ -139,6 +270,7 @@
       {reducedMotion}
       label={traceLabel}
       {onframe}
+      onseek={describeAll}
     />
   </div>
 
@@ -147,21 +279,62 @@
       <span class="icon" class:pause={playing} aria-hidden="true"></span>
       {playing ? "Pause" : "Play"}
     </button>
-    <label class="speed t-small">
-      Speed
+    <label class="field t-small">
+      <span class="field-name">Speed</span>
       <select bind:value={speed} onchange={changeSpeed}>
         {#each SPEEDS as option (option)}
           <option value={String(option)}>{option}x</option>
         {/each}
       </select>
     </label>
-    <p class="where t-data">
-      <span>Record {entry.record}</span>
-      <span class="time" data-testid="playhead" data-seconds={shownSecond}
-        >{clockTime(shownSecond)} of {clockTime(clock.duration)}</span
-      >
-    </p>
-    <p class="status t-small" role="status">
+    <button class="quiet" type="button" onclick={() => jump("irregular")}
+      >Next irregular beat</button
+    >
+    <button class="quiet" type="button" onclick={() => jump("disagreement")}
+      >Next disagreement</button
+    >
+    {#if embed}
+      <p class="t-data record">Record {record} {@render playhead()}</p>
+    {/if}
+  </div>
+
+  {#snippet playhead()}
+    <span class="time t-data" data-testid="playhead" data-seconds={shownSecond}
+      >{timeText}</span
+    >
+  {/snippet}
+
+  {#if embed}
+    <!-- Settling 5's compact set: record and time ride in the bar. -->
+  {:else}
+    <div class="where">
+      <label class="field t-small">
+        Recording
+        <select value={record} onchange={pick}>
+          {#each manifest.records as option (option.record)}
+            <option value={option.record}>{recordOption(option)}</option>
+          {/each}
+        </select>
+      </label>
+      {@render playhead()}
+      <input
+        class="scrub"
+        type="range"
+        aria-label="Position"
+        aria-valuetext={timeText}
+        min={SPAN_S}
+        max={Math.floor(duration)}
+        step="5"
+        value={sliding ? undefined : shownSecond}
+        oninput={onslide}
+        onpointerdown={() => (sliding = true)}
+        onchange={() => (sliding = false)}
+      />
+    </div>
+  {/if}
+
+  <div class="words t-small">
+    <p class="counter">
       {#if modelState === "fallback"}
         {FALLBACK_NOTE}
       {:else if modelState === "loading"}
@@ -174,6 +347,11 @@
           >{/if}
       {/if}
     </p>
+    {#if !embed}
+      <!-- DEMO-12; the embed's compact set leaves it out (settling 5). -->
+      <p class="summary" role="status" data-testid="summary">{summary}</p>
+    {/if}
+    <p class="jump" role="status" data-testid="jump-note">{jumpNote}</p>
   </div>
 
   <Legend compact={embed} />
@@ -189,6 +367,10 @@
       </p>
     {/if}
   </div>
+
+  {#if !embed}
+    <BeatTable {rows} span={spanText} />
+  {/if}
 </section>
 
 <style>
@@ -197,35 +379,50 @@
     gap: var(--space-4);
   }
 
-  .bar {
+  .bar,
+  .where {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-3) var(--space-5);
+    gap: var(--space-3) var(--space-4);
   }
 
-  .play {
+  button {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
     min-height: 40px;
-    padding: 0 var(--space-5) 0 var(--space-4);
-    border: 0;
     border-radius: var(--radius-pill);
-    background: var(--color-accent);
-    color: var(--color-paper);
     font: 600 var(--text-small) / 1 var(--font-text);
     cursor: pointer;
     /* apple-design: the press responds at once. */
     transition: transform 100ms ease-out;
   }
 
+  button:active {
+    transform: scale(0.97);
+  }
+
+  .play {
+    padding: 0 var(--space-5) 0 var(--space-4);
+    border: 0;
+    background: var(--color-accent);
+    color: var(--color-paper);
+  }
+
   .play:hover {
     filter: brightness(1.08);
   }
 
-  .play:active {
-    transform: scale(0.97);
+  .quiet {
+    padding: 0 var(--space-4);
+    border: 1px solid var(--color-hairline);
+    background: transparent;
+    color: var(--color-ink);
+  }
+
+  .quiet:hover {
+    border-color: var(--color-muted);
   }
 
   .icon {
@@ -243,15 +440,16 @@
     border-inline: 3px solid currentColor;
   }
 
-  .speed {
+  .field {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
     color: var(--color-muted);
   }
 
-  .speed select {
+  select {
     min-height: 32px;
+    max-width: 100%;
     padding: 0 var(--space-2);
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-md);
@@ -260,21 +458,44 @@
     font: inherit;
   }
 
-  .where {
-    display: flex;
-    gap: var(--space-4);
+  .record {
+    display: inline-flex;
+    gap: var(--space-3);
     margin: 0;
     color: var(--color-muted);
   }
 
   .time {
     color: var(--color-ink);
+    white-space: nowrap;
   }
 
-  .status {
+  .scrub {
+    flex: 1 1 16rem;
+    min-width: 0;
+    min-height: 24px;
+    margin: 0;
+    accent-color: var(--color-accent);
+  }
+
+  .words {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .words p {
     margin: 0;
     color: var(--color-ink);
-    margin-inline-start: auto;
+  }
+
+  /* Empty live regions stay in the page (so they announce) but take no room. */
+  .words p:not(:empty) ~ p:not(:empty) {
+    margin-top: var(--space-1);
+  }
+
+  .summary,
+  .jump {
+    color: var(--color-muted);
   }
 
   .mismatch {
@@ -300,7 +521,7 @@
   /* Settling 5: the embed fills the site's box, laid out by container queries. */
   .embed {
     height: 100%;
-    grid-template-rows: minmax(0, 1fr) auto auto auto;
+    grid-template-rows: minmax(0, 1fr) auto auto auto auto auto;
     gap: var(--space-3);
   }
 
@@ -314,34 +535,56 @@
 
   /* A narrow embed (about 4:5 on phones): smaller text, more paper. */
   @container demo (max-width: 480px) {
-    .status {
-      margin-inline-start: 0;
-      flex-basis: 100%;
-    }
-
     .embed {
       gap: var(--space-2);
     }
 
-    .embed .bar {
-      gap: var(--space-2) var(--space-4);
+    .embed .bar,
+    .embed .where {
+      gap: var(--space-2) var(--space-3);
+    }
+
+    .embed button {
+      min-height: 32px;
+      font-size: var(--text-label);
+    }
+
+    /* The select keeps its label for assistive tech; the word gives way to paper. */
+    .embed .field-name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .embed select {
+      min-height: 32px;
+    }
+
+    .embed .record {
+      gap: var(--space-2);
+      font-size: var(--text-label);
+    }
+
+    .embed .record .time {
+      font-size: inherit;
     }
 
     .embed .play {
-      min-height: 36px;
+      padding: 0 var(--space-4) 0 var(--space-3);
+    }
+
+    .embed .quiet {
+      padding: 0 var(--space-3);
     }
 
     .embed .notes,
+    .embed .words,
     .embed :global(.legend) {
       font-size: var(--text-label);
       line-height: 1.4;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .status {
-      margin-inline-start: 0;
-      flex-basis: 100%;
     }
   }
 </style>

@@ -6,11 +6,15 @@ import { expect, test, type Page } from "@playwright/test";
 // follows, and reduced motion moves by whole pages.
 
 async function seconds(page: Page): Promise<number> {
-  return Number(await page.getByTestId("playhead").getAttribute("data-seconds"));
+  return Number(
+    await page.getByTestId("playhead").getAttribute("data-seconds"),
+  );
 }
 
 async function dragTrace(page: Page, dx: number) {
-  const box = (await page.getByRole("img", { name: /ECG trace/ }).boundingBox())!;
+  const box = (await page
+    .getByRole("img", { name: /ECG trace/ })
+    .boundingBox())!;
   const y = box.y + box.height / 2;
   const x = box.x + box.width / 2 - dx / 2;
   await page.mouse.move(x, y);

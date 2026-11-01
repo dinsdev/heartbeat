@@ -28,6 +28,8 @@
     label: string;
     /** Every frame: the playhead and the view's right edge, in seconds. */
     onframe: (positionS: number, viewEndS: number) => void;
+    /** A drag came to rest: the playhead moved by hand. */
+    onseek?: () => void;
   }
 
   let {
@@ -42,6 +44,7 @@
     reducedMotion = false,
     label,
     onframe,
+    onseek,
   }: Props = $props();
 
   let wrapper: HTMLDivElement;
@@ -73,6 +76,7 @@
       resume = false;
       clock.play();
     }
+    onseek?.();
   }
 
   function onpointerdown(event: PointerEvent) {

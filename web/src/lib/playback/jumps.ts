@@ -1,5 +1,6 @@
 import type { RecordBeats } from "../data/beats";
 import type { LabelStore } from "../parity";
+import { SPAN_S } from "../trace/geometry";
 import { pageEnd } from "./pages";
 
 // DEMO-10: "Next irregular beat" goes to beats the experts call S, V or F.
@@ -70,4 +71,28 @@ export function jumpTarget(
   const seconds = sample / fs;
   if (reducedMotion) return pageEnd(seconds, min, duration);
   return Math.min(Math.max(seconds + JUMP_LEAD_S, min), duration);
+}
+
+/**
+ * The sample after which "Next irregular beat" and "Next disagreement" look.
+ * While the beat the last jump went to is still in view, just past it, so a
+ * second press always moves on. Otherwise from where a jump would have left
+ * a beat (a few seconds left of the playhead), or, under reduced motion, after
+ * the page in view.
+ */
+export function searchFrom(
+  positionS: number,
+  viewEndS: number,
+  fs: number,
+  reducedMotion: boolean,
+  lastJumpSample?: number,
+): number {
+  if (
+    lastJumpSample !== undefined &&
+    lastJumpSample >= (viewEndS - SPAN_S) * fs &&
+    lastJumpSample <= viewEndS * fs
+  ) {
+    return lastJumpSample;
+  }
+  return Math.round((reducedMotion ? viewEndS : positionS - JUMP_LEAD_S) * fs);
 }
