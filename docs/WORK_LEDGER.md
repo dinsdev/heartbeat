@@ -2359,3 +2359,15 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Rejected:** running the reproduction from a temporary git worktree at the freeze commit (survives later code changes, but needs its own environment and writes the log back across checkouts, for a case that arises only if Phase 9 happens).
 
 **Applied:** Phase 7 task plan (PLAN.md section 8, to come). All of it is code that lands before the freeze. Made before any DS2 result and before the Phase 7 gate; not part of the pre-registered plan (A3, C4, C5, C8).
+
+## 2026-11-02: Phase 7 settling 2, every line of code before the freeze; two goals around Din's steps
+
+**Decided (Din):** Phase 7 runs as Goal A, then Din's steps, then Goal B.
+
+- **Goal A (agent, branch `phase-7-freeze`, before the freeze):** the `current-phase = 7` bump; settling 1's fixes; the DS2 path of `build-demo-data` (DS2 prepared in memory as the sealed run does, never written to `data/prepared/`), rehearsed with DS1 records in DS2's place as in Phase 5 settling 3; R43's rule tested on synthetic counts; web tests that read the default record from the manifest instead of assuming 223, and DEMO-09's line that the patient was chosen before testing, shown when the split is DS2; the 7.1 gate checklist with the R49 audit as a ledger entry; Din's runbook with the exact freeze and sealed-run commands in order. It ends with the push command for Din.
+- **Din:** pushes, opens and merges the pull request once CI is green, then follows the runbook on `main`: the freeze record, its push, `evaluate-test`, the log push.
+- **Goal B (agent, fresh session, after the log is pushed):** runs commands and writes docs only: the ledger entry with every headline number from the sealed report, DS2 demo data and R43 on the built manifest, Playwright on DS2, the logged reproduction, TASKS and PLAN updates, then the push command for a preview pull request.
+
+**Why:** `check_gate` refuses any code change between the freeze commit and the sealed run, and CI's `build-demo-data` step fails once a sealed run is logged unless the DS2 path exists. Writing the code before the freeze also means none of it is written after seeing a test number. A goal run continues until its end condition, so Din's steps sit at a goal boundary, as in Phase 6.
+
+**Not chosen:** the post-seal work done in a supervised session instead of Goal B; DS2 demo code written after the sealed run (CI on `main` red from the log push until it lands, and code written after seeing results).
