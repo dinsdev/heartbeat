@@ -2371,3 +2371,15 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Why:** `check_gate` refuses any code change between the freeze commit and the sealed run, and CI's `build-demo-data` step fails once a sealed run is logged unless the DS2 path exists. Writing the code before the freeze also means none of it is written after seeing a test number. A goal run continues until its end condition, so Din's steps sit at a goal boundary, as in Phase 6.
 
 **Not chosen:** the post-seal work done in a supervised session instead of Goal B; DS2 demo code written after the sealed run (CI on `main` red from the log push until it lands, and code written after seeing results).
+
+## 2026-11-02: Phase 7 settling 3, what Claude may run on DS2 after the sealed run (rigor rule 1 amendment)
+
+**Gap:** rigor rule 1 in `AGENTS.md` says only `evaluate-test` evaluates on DS2 and only Din starts it. Goal B (settling 2) needs `build-demo-data` on DS2 (seed-0 predictions for the demo, DEMO-07) and `rebuild`, whose `reproduce-test` stage evaluates DS2 again (OPS-03). Both use only the frozen files and fit nothing.
+
+**Decision (Din):** once the sealed entry is logged and pushed, Claude may run `heartbeat build-demo-data` and `heartbeat rebuild` (its reproduction stage) on DS2, and debug demo and web code on DS2 data. Nothing may ever train, tune, select or calibrate on DS2. A change to any frozen path (settling 1) or a suspected bug in the scoring code is a stop for Din, and a rerun follows A3: fix, rerun, both runs logged.
+
+**Reason:** after the sealed run the model is frozen and the numbers are logged, so these commands cannot feed a test number back into a model choice; CI's web job builds DS2 demo data on every push after the log anyway. `evaluate-test` and the freeze record stay Din's.
+
+**Not chosen:** Claude runs only `build-demo-data` and Din runs the reproduction; rule 1 unchanged, with Din running both.
+
+**Applied:** `AGENTS.md` rigor rule 1. Before the Phase 7 gate and before any DS2 result.
