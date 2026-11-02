@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { caseStudy } from "./host";
+import { caseStudy, unhost } from "./host";
+
+test.afterEach(({ page }) => unhost(page));
 
 // R37 end to end (the rule's own test is the unit test in
 // src/lib/theme/messages.test.ts): the case study on https://dins.dev posts

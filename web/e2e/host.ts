@@ -41,6 +41,15 @@ export async function hostAt(
   return page.frameLocator("#demo");
 }
 
+/**
+ * Drops the proxy route when a test ends. Without it, a request still in
+ * flight (the 14 MB runtime, say) fails the test after its checks passed
+ * (`route.fetch: Test ended`). Call it from `test.afterEach`.
+ */
+export async function unhost(page: Page) {
+  await page.context().unrouteAll({ behavior: "ignoreErrors" });
+}
+
 /** The case study on dins.dev with the embed in view, playing. */
 export async function caseStudy(
   page: Page,

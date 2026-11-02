@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test } from "@playwright/test";
 
-import { hostAt } from "./host";
+import { hostAt, unhost } from "./host";
+
+test.afterEach(({ page }) => unhost(page));
 
 // R40, design call 16: the built `dist/_headers` that Cloudflare applies to
 // every response. The webServer builds `dist/` before these run.

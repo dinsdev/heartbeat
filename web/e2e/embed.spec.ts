@@ -1,6 +1,8 @@
 import { expect, test, type Request } from "@playwright/test";
 
-import { hostAt } from "./host";
+import { hostAt, unhost } from "./host";
+
+test.afterEach(({ page }) => unhost(page));
 
 // Settling 5, design call 12: `?embed=page` is the case study's iframe. It
 // shows the compact control set, fetches nothing heavy (the runtime, the
