@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // OPS-06, Phase 6 design call 19: an assets-only Worker (no `main`) that
+  // serves the built demo. `dist/_headers` sets the CSP and caching (R40).
+  // `.github/workflows/deploy.yml` runs wrangler; `repo_config` checks this
+  // file's keys.
+  "name": "heartbeat",
+  // The newest date the pinned workerd (1.20261012.1) supports.
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "directory": "./dist",
+  },
+  // Production is not served on workers.dev (Phase 8 adds heartbeat.dins.dev).
+  // Version preview URLs stay on for pull requests, set here rather than left
+  // to follow `workers_dev`.
+  "workers_dev": false,
+  "preview_urls": true,
+}

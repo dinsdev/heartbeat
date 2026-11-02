@@ -91,3 +91,14 @@ jobs:
       - run: uv run python -m heartbeat.checks.wording web/dist/index.html web/dist/data/*.txt web/dist/assets/*.js
       - run: pnpm -C web exec playwright install --with-deps chromium webkit
       - run: pnpm -C web run e2e
+
+  # OPS-06, Phase 6 design call 19: once both jobs pass on a pull request from
+  # this repo, upload a preview version. A fork's pull request has no secrets
+  # and is never deployed.
+  preview:
+    needs: [python, web]
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/deploy.yml
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
