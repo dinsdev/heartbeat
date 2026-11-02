@@ -2233,3 +2233,24 @@ Limits, all three material:
 **CI on the Goal B push (run 41511303371, `a76d881`):** `python` green; `web` red on one test of 201, `[webkit] e2e/longtasks.spec.ts` R38, worst frame gap 83 ms against the 50 ms limit (the long-task list itself was empty). Every parity check in the run passed (survey: 50,977 DS1 beats, 0 label mismatches, largest difference 1.004e-6). Passes on this Mac. The preview job needs `web`, so no preview runs until this is fixed; the limit stays at 50 ms (rule 3).
 
 **Waiting on Din:** the go to investigate R38, then the pull request.
+
+## 2026-11-02: R38 in WebKit CI, first look (not fixed)
+
+**Evidence from run 41511303371:** the runner (`ubuntu-24.04`, public repo, so 4 vCPU) ran Playwright with 2 workers. The dot reporter put the webkit R38 failure (worst gap 83 ms) inside the stretch where the webkit survey was running in the other worker (`e2e/survey.spec.ts`, about 45 s of WASM inference on the runner). R38 passed in the other three projects in the same run. No numbers for the passing projects: the test attached its measurements but CI uploads no artifacts.
+
+**Local runs (this Mac, 10 cores, Playwright's macOS WebKit; scratchpad JSON reports, deleted):**
+
+| Run | WebKit worst gap | Median |
+| --- | --- | --- |
+| R38 alone | 15 ms | 8 ms |
+| R38 beside the survey, 2 workers (the survey took 6 s) | 13 ms | 8 ms |
+| R38 beside six survey repeats, 2 workers, 8 `yes` CPU hogs | 9 to 10 ms (6 repeats) | 8 ms |
+| All four projects, after the logging change below | 10 to 12.2 ms | 4.5 to 8 ms |
+
+Not reproduced. macOS ranks the browser above the hogs, and the macOS WebKit build is not the Linux one CI runs, so these runs neither confirm nor rule out contention.
+
+**Hypotheses, both open:** (1) host contention: the survey's inference in the other worker starves the R38 page on 4 vCPU, so the timer probe sees a gap that is not the app's main thread; (2) the app's per-frame work is heavier on Linux WebKit at Desktop Safari's 1280 by 720 viewport (iPhone 15, also WebKit, passed). Telling them apart needs Linux numbers.
+
+**Change:** `e2e/longtasks.spec.ts` now prints one line per project (worst and median gap, gap count, long tasks over 50 ms, the five longest gaps with when each ended), like the survey and R29 do. Assertions and the 50 ms limit unchanged (rule 3). Verified: `pnpm -C web exec playwright test e2e/longtasks.spec.ts`, 4 passed.
+
+**Next:** Din pushes; the CI log then gives the numbers for all four projects. If the webkit failure repeats while the survey overlaps, the fix candidate is running R38 apart from the other tests, which changes how a gate runs and is Din's call. If the gaps are high in webkit regardless, the fix is in the app.

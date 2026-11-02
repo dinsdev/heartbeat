@@ -13,6 +13,7 @@ const PLAY_MS = 30_000;
 interface Probe {
   __longTasks: number[];
   __gaps: number[];
+  __gapEnds: number[];
   __probe: boolean;
 }
 
@@ -26,6 +27,7 @@ test.describe("R38: long tasks during playback", () => {
       const w = window as unknown as Probe;
       w.__longTasks = [];
       w.__gaps = [];
+      w.__gapEnds = [];
       w.__probe = false;
       if (PerformanceObserver.supportedEntryTypes.includes("longtask")) {
         new PerformanceObserver((list) => {
@@ -37,7 +39,10 @@ test.describe("R38: long tasks during playback", () => {
       let last = 0;
       const tick = () => {
         const now = performance.now();
-        if (w.__probe && last) w.__gaps.push(now - last);
+        if (w.__probe && last) {
+          w.__gaps.push(now - last);
+          w.__gapEnds.push(now);
+        }
         last = now;
         setTimeout(tick, 0);
       };
@@ -59,11 +64,22 @@ test.describe("R38: long tasks during playback", () => {
       const w = window as unknown as Probe;
       w.__probe = false;
       const gaps = w.__gaps.slice().sort((a, b) => a - b);
+      // The five longest gaps and when each ended, in seconds into the probe,
+      // so a log shows whether a failure is one spike or a pattern.
+      const start = (w.__gapEnds[0] ?? 0) - (w.__gaps[0] ?? 0);
+      const worst = w.__gaps
+        .map((gap, i) => ({
+          ms: Math.round(gap),
+          atS: Math.round(((w.__gapEnds[i] ?? 0) - start) / 100) / 10,
+        }))
+        .sort((a, b) => b.ms - a.ms)
+        .slice(0, 5);
       return {
         longTasks: w.__longTasks,
         gapCount: gaps.length,
         worstGap: gaps[gaps.length - 1] ?? 0,
         medianGap: gaps[Math.floor(gaps.length / 2)] ?? 0,
+        worst,
       };
     });
     const after = Number(await playhead.getAttribute("data-seconds"));
@@ -75,6 +91,12 @@ test.describe("R38: long tasks during playback", () => {
       ),
       contentType: "application/json",
     });
+    console.log(
+      `R38 ${testInfo.project.name}: worst gap ${result.worstGap.toFixed(1)} ms, ` +
+        `median ${result.medianGap.toFixed(1)} ms, ${result.gapCount} gaps, ` +
+        `long tasks over ${LIMIT_MS} ms ${result.longTasks.filter((d) => d > LIMIT_MS).length}; ` +
+        `longest ${result.worst.map((g) => `${g.ms} ms at ${g.atS} s`).join(", ")}`,
+    );
     // Playback really ran at 4x: about 120 seconds of recording in 30.
     expect(after - before).toBeGreaterThan(100);
     expect(result.gapCount).toBeGreaterThan(1000);
