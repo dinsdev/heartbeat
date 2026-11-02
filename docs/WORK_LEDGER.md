@@ -2451,3 +2451,7 @@ Nothing else lands on `main` between steps 2 and 5. Goal B starts from step 5's 
 ## 2026-11-02: Phase 7 task plan drafted, for Din's review
 
 Written from settlings 1 to 8 into PLAN.md section 8 ("Phase 7: Freeze and the sealed run (task plan, 2026-11-02)"), with nine design calls, Goal A tasks A1 to A8, Din's runbook step, Goal B tasks B1 to B4, six stop conditions and five review-focus items. TASKS 7.1 to 7.5 reworded and 7.6 and 7.7 added. Two `/goal` prompts drafted in the planning session, for Din's review. Nothing built; no DS2 file read.
+
+## 2026-11-02: Phase 7 task plan and goal prompts approved
+
+**Approved (Din, 2026-11-02):** the Phase 7 task plan as committed in `2c4dde5` (PLAN.md section 8), with its nine design calls, and two `/goal` prompts from the planning session: Goal A (everything before the freeze, 3,988 characters) and Goal B (after the sealed log is pushed, 3,902 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort. Goal A runs on `phase-7-freeze` and ends at a pull request; Goal B starts only once a sealed entry is on `origin/main`, on a new branch `phase-7-sealed`.
