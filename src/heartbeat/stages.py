@@ -2,8 +2,9 @@
 
 A stage reruns when its fingerprint changes: its settings, its upstream
 fingerprints, the code under the package folders it declares, its input files,
-or `uv.lock`. It also reruns when an output is missing, when `--from` names it
-or an earlier stage, or always if it is marked `always_run`. State lives in
+or `uv.lock`, and any facts the stage adds (reproduce-test adds the log's last
+sealed entry). It also reruns when an output is missing, when `--from` names
+it or an earlier stage, or always if it is marked `always_run`. State lives in
 `data/stages/<name>.json` and is written only after the stage succeeds.
 """
 
@@ -41,6 +42,7 @@ from heartbeat.demo.manifest import MANIFEST_NAME
 from heartbeat.export.build import export_models
 from heartbeat.export.bundle import FREEZE_NAME
 from heartbeat.export.fixtures import FIXTURES_NAME
+from heartbeat.export.freeze import FROZEN_INPUTS
 from heartbeat.paths import (
     BEAT_COUNTS_MANIFEST,
     CHECKSUM_MANIFEST,
@@ -59,7 +61,7 @@ from heartbeat.paths import (
     TEST_REPORTS_DIR,
 )
 from heartbeat.results import write_result
-from heartbeat.runs import RunFolder, create_run
+from heartbeat.runs import RunFolder, canonical_json, create_run
 from heartbeat.sealed.log import read_log
 from heartbeat.sealed.run import SEALED_DATA_LABEL, run_sealed
 from heartbeat.train.cnn_cv import (
@@ -120,6 +122,8 @@ class Stage:
         run: Does the work; raises on failure.
         outputs: Files it writes; a missing one reruns the stage.
         always_run: Run every time (checks such as check-folds).
+        facts: Values that are not whole files, hashed into the fingerprint
+            when given (part of a file, such as one log entry).
     """
 
     name: str
@@ -130,6 +134,7 @@ class Stage:
     run: Callable[[Context], None]
     outputs: Callable[[Context], Sequence[Path]]
     always_run: bool = False
+    facts: Callable[[Context], Mapping[str, str]] | None = None
 
 
 @dataclass(frozen=True)
@@ -197,6 +202,9 @@ def fingerprint(
         },
         "uv_lock": _sha256_file(context.uv_lock),
     }
+    # Only when given, so stages without facts keep their fingerprints.
+    if stage.facts is not None:
+        payload["facts"] = dict(stage.facts(context))
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -690,6 +698,26 @@ def reproduce_test(
     return f"reproduction logged as run {entry['id']}"
 
 
+def _reproduce_inputs(context: Context) -> tuple[Path, ...]:
+    """The freeze record and the frozen inputs (Phase 7 design call 2)."""
+    return (
+        SPLITS_MANIFEST,
+        SUBJECTS_MANIFEST,
+        MODELS_DIR / FREEZE_NAME,
+        *(REPO_ROOT / name for name in FROZEN_INPUTS),
+    )
+
+
+def _last_sealed_entry(context: Context) -> dict[str, str]:
+    """The log's last sealed entry, not the whole log.
+
+    The reproduction's own entry must not change the fingerprint (Phase 7
+    settling 1.3).
+    """
+    sealed = [entry for entry in read_log(TEST_LOG) if entry["type"] == "sealed"]
+    return {"last_sealed_entry": canonical_json(sealed[-1]) if sealed else "none"}
+
+
 def _run_reproduce_test(context: Context) -> None:
     reproduce_test(
         context.settings,
@@ -938,11 +966,13 @@ PIPELINE: tuple[Stage, ...] = (
         settings_keys=("data.raw_dir",),
         upstream=("export",),
         code=(*_TRAINING_CODE, "export", "sealed"),
-        inputs=lambda context: (SPLITS_MANIFEST, SUBJECTS_MANIFEST),
+        inputs=_reproduce_inputs,
         run=_run_reproduce_test,
         outputs=lambda context: (),
-        # Decided by the freeze record and the log each time, not a fingerprint.
-        always_run=True,
+        # Phase 7 settling 1.3: once per freeze record, last sealed entry and
+        # frozen inputs; the state folder is gitignored, so a clean clone
+        # reproduces once on its own.
+        facts=_last_sealed_entry,
     ),
     Stage(
         name="cards",

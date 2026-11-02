@@ -286,15 +286,13 @@ def test_pipeline_has_the_built_stages_in_order() -> None:
     assert by_name["describe-data"].upstream == ("download", "prepare")
     assert by_name["export"].upstream == ("train-final",)
     assert by_name["reproduce-test"].upstream == ("export",)
-    # reproduce-test decides from the freeze record and the log every time.
-    assert by_name["reproduce-test"].always_run
+    # Phase 7 settling 1.3: one reproduction per frozen state, by fingerprint.
+    assert not by_name["reproduce-test"].always_run
     assert by_name["cards"].upstream == ("describe-data", "select", "exhibit", "export")
     assert by_name["cards"].always_run
     assert by_name["build-demo-data"].upstream == ("prepare", "export")
     assert not any(
-        s.always_run
-        for s in PIPELINE
-        if s.name not in ("check-folds", "reproduce-test", "cards")
+        s.always_run for s in PIPELINE if s.name not in ("check-folds", "cards")
     )
     assert by_name["cross-validate-cnn"].settings_keys == (
         "data.prepared_dir",
@@ -656,6 +654,138 @@ def test_with_a_record_and_a_sealed_run_it_reproduces_on_ds2(
         "reproduction",
     )
     assert call["require_remote"] is True
+
+
+# One reproduction per frozen state (Phase 7 settling 1.3, design call 2).
+
+
+class FrozenState:
+    """A freeze record, a log and the frozen inputs under `tmp_path`."""
+
+    def __init__(self, root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from heartbeat import stages as stages_module
+
+        self.root = root
+        self.models = root / "models" / "heartbeat-v1"
+        self.models.mkdir(parents=True)
+        self.log = root / "results" / "test_runs.jsonl"
+        for name in ("config/default.toml", "manifests/folds.sha256", "uv.lock"):
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(f"{name}\n", encoding="utf-8")
+        monkeypatch.setattr(stages_module, "MODELS_DIR", self.models)
+        monkeypatch.setattr(stages_module, "TEST_LOG", self.log)
+        monkeypatch.setattr(stages_module, "REPO_ROOT", root)
+        self.context = replace(
+            rebuild_context(), state_dir=root / "stages", uv_lock=root / "uv.lock"
+        )
+        self.stage = {s.name: s for s in PIPELINE}["reproduce-test"]
+
+    def freeze(self, commit: str = "a" * 40) -> None:
+        record = {"commit": commit, "date": "2027-01-15"}
+        (self.models / "freeze.json").write_text(json.dumps(record), "utf-8")
+
+    def log_entry(self, entry_type: str) -> None:
+        from datetime import date
+
+        from heartbeat.sealed.log import append_entry
+
+        append_entry(
+            self.log,
+            self.root / "results" / "test_runs",
+            entry_type,
+            {"entry_type": entry_type},
+            commit="c" * 40,
+            freeze_sha256="f" * 64,
+            today=date(2027, 1, 16),
+            repo=self.root,
+        )
+
+    def fingerprint(self) -> str:
+        return fingerprint(self.stage, self.context, {"export": "e" * 64})
+
+
+@pytest.fixture
+def frozen(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FrozenState:
+    return FrozenState(tmp_path, monkeypatch)
+
+
+def test_reproduce_test_fingerprint_follows_the_freeze_record(
+    frozen: FrozenState,
+) -> None:
+    none = frozen.fingerprint()
+    frozen.freeze()
+    first = frozen.fingerprint()
+    frozen.freeze(commit="b" * 40)
+    assert len({none, first, frozen.fingerprint()}) == 3
+
+
+def test_reproduce_test_fingerprint_follows_the_last_sealed_entry_only(
+    frozen: FrozenState,
+) -> None:
+    frozen.freeze()
+    before = frozen.fingerprint()
+    frozen.log_entry("sealed")
+    sealed = frozen.fingerprint()
+    assert sealed != before
+    frozen.log_entry("reproduction")
+    assert frozen.fingerprint() == sealed
+    frozen.log_entry("sealed")
+    assert frozen.fingerprint() != sealed
+
+
+@pytest.mark.parametrize(
+    "name", ["config/default.toml", "manifests/folds.sha256", "uv.lock"]
+)
+def test_reproduce_test_fingerprint_follows_each_frozen_input(
+    frozen: FrozenState, name: str
+) -> None:
+    frozen.freeze()
+    frozen.log_entry("sealed")
+    before = frozen.fingerprint()
+    (frozen.root / name).write_text("changed\n", encoding="utf-8")
+    assert frozen.fingerprint() != before
+
+
+def test_a_second_rebuild_after_a_reproduction_skips_it(frozen: FrozenState) -> None:
+    runs: list[str] = []
+
+    def reproduce(context: Context) -> None:
+        runs.append("reproduce-test")
+        frozen.log_entry("reproduction")
+
+    stage = replace(frozen.stage, upstream=(), run=reproduce)
+    frozen.freeze()
+    frozen.log_entry("sealed")
+    first = run_pipeline([stage], frozen.context)
+    second = run_pipeline([stage], frozen.context)
+    assert [r.ran for r in (*first, *second)] == [True, False]
+    assert runs == ["reproduce-test"]
+    frozen.log_entry("sealed")
+    assert run_pipeline([stage], frozen.context)[0].ran
+    assert runs == ["reproduce-test", "reproduce-test"]
+
+
+def test_other_stages_fingerprints_ignore_the_log(frozen: FrozenState) -> None:
+    """Only reproduce-test reads the last sealed entry.
+
+    So the training stages keep their fingerprints and nothing retrains when a
+    run is logged.
+    """
+    stages = {s.name: s for s in PIPELINE if s.name != "build-demo-data"}
+    upstream = dict.fromkeys(stages, "u" * 64)
+
+    def prints() -> dict[str, str]:
+        return {
+            name: fingerprint(stage, frozen.context, upstream)
+            for name, stage in stages.items()
+            if name not in ("reproduce-test", "cards")
+        }
+
+    before = prints()
+    frozen.freeze()
+    frozen.log_entry("sealed")
+    assert prints() == before
 
 
 # --exact (E4, design call 9): built and tested, never run (about 15 hours).
