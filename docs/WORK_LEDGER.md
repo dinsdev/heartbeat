@@ -2218,3 +2218,18 @@ Limits, all three material:
 **Not verified:** anything on Cloudflare (preview URL, edge compression of `.wasm` and `.i16`, whether previews survive with `workers_dev` off); CI on Goal B; a screen reader pass and real phones (the manual checklist in the hand-off). DS1 only throughout: no DS2 signal, label or prediction was read, plotted or shipped. No dependency apart from wrangler, no pin change or download, no edit to `manifests/`, `config/folds.json`, `.claude/`, `models/heartbeat-v1/` or `~/Develop/dins.dev`; no push, deploy or secret.
 
 **Waiting on Din:** the first `wrangler deploy`, the API token, the two GitHub secrets, the push and the pull request. Accepted: nothing new; only Din sets it.
+
+## 2026-11-02: Din's Cloudflare setup for Worker Previews; CI red on R38 in WebKit
+
+**Done (Din, from this Mac, outputs pasted into the session):**
+
+- `pnpm -C web exec wrangler login` (OAuth, wrangler 4.151.1).
+- `pnpm -C web run build && pnpm -C web exec wrangler deploy`: size gates passed, 63 files read from `web/dist` (DS1 demo data only), "Uploaded heartbeat", "No targets deployed", version `303c7149-5b9c-4847-b6b0-c2dc5fc1f750`. So the Worker exists with no `workers.dev` URL and no route, as `workers_dev: false` intends. Wrangler also printed "No updated asset files to upload", which suggests a `heartbeat` Worker with this build was already on the account; Din to confirm in the dashboard that it has no route or `workers.dev` URL.
+- An account-owned API token with one policy: Workers, Specified Workers `heartbeat`, Individual Workers Editor; no zone permissions. The dashboard's starting draft also held all-zones Workers Routes Write and account-wide Workers Scripts Write, KV Write and Account Settings Read (plus 7 more); Din removed both before creating it. Cloudflare's Workers authorization docs (read 2026-11-02) give Editor on the Worker as the minimum for `wrangler versions upload`, and per-Worker scope needs the Worker to exist first, hence the deploy before the token.
+- `gh secret set -f .env --repo dinsdev/heartbeat`: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` set as Actions secrets. The local `.env` is gitignored (`.gitignore` line 34, checked with `git check-ignore`; Claude did not read it). Recommended to Din: delete it now that GitHub holds the values.
+
+**Unknown until the first preview job:** whether wrangler needs any account-level permission beyond Editor on the Worker (for example to print the preview URL). If the job fails on authorization, add only the permission it names.
+
+**CI on the Goal B push (run 41511303371, `a76d881`):** `python` green; `web` red on one test of 201, `[webkit] e2e/longtasks.spec.ts` R38, worst frame gap 83 ms against the 50 ms limit (the long-task list itself was empty). Every parity check in the run passed (survey: 50,977 DS1 beats, 0 label mismatches, largest difference 1.004e-6). Passes on this Mac. The preview job needs `web`, so no preview runs until this is fixed; the limit stays at 50 ms (rule 3).
+
+**Waiting on Din:** the go to investigate R38, then the pull request.
