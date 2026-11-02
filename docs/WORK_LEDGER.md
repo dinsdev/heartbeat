@@ -2447,3 +2447,7 @@ Nothing else lands on `main` between steps 2 and 5. Goal B starts from step 5's 
 **Reason:** the rule protects what matters, that no test number informs a change, without turning a crash nobody saw a number from into a "rerun" in the case study. Deciding it now means nobody improvises it after a failure.
 
 **Not chosen:** every start that passes the gate counts as a run, crash or not.
+
+## 2026-11-02: Phase 7 task plan drafted, for Din's review
+
+Written from settlings 1 to 8 into PLAN.md section 8 ("Phase 7: Freeze and the sealed run (task plan, 2026-11-02)"), with nine design calls, Goal A tasks A1 to A8, Din's runbook step, Goal B tasks B1 to B4, six stop conditions and five review-focus items. TASKS 7.1 to 7.5 reworded and 7.6 and 7.7 added. Two `/goal` prompts drafted in the planning session, for Din's review. Nothing built; no DS2 file read.

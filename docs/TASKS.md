@@ -163,11 +163,13 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 7.1 | Gate checklist (PLAN.md section 3, Phase 7) | Planned |
-| 7.2 | Freeze record committed and pushed (Din's go) | Planned |
-| 7.3 | `evaluate-test` once; log pushed; ledger entry with every headline number | Planned |
-| 7.4 | DS2 demo data from the frozen model; reproduction check | Planned |
-| 7.5 | G1 case study outline | Planned |
+| 7.1 | Gate checklist (PLAN.md section 3, Phase 7) with the R49 audit (Goal A) | Planned |
+| 7.2 | Freeze record committed and pushed (Din, from the runbook) | Planned |
+| 7.3 | `evaluate-test` once (Din); log, report and cards pushed; ledger entry with every headline number (Goal B) | Planned |
+| 7.4 | DS2 demo data from the frozen model, checked exactly against the sealed report (code in Goal A, built in Goal B); reproduction logged (Goal B) | Planned |
+| 7.5 | G1 case study outline, before the freeze (Goal A, settling 5) | Planned |
+| 7.6 | Settling 1 fixes: freeze line in the test blocks, frozen-paths reproduction gate, one reproduction per state (Goal A) | Planned |
+| 7.7 | Din's runbook for the freeze and the sealed run, with settling 8's failure cases (Goal A) | Planned |
 
 ### Phase 8: Content and launch
 
