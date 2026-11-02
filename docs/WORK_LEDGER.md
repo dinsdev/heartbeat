@@ -2298,3 +2298,16 @@ Read: on the runner every project sits near the 50 ms limit (29 to 54 ms here; w
 | iphone-15 | 54.0 ms | 18.0 ms | 8.0 ms |
 
 Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac's range. Desktop WebKit on Linux stays the outlier: worst 39 ms (at 0 s, the probe's first tick), then 25 to 27 ms through the run, and about 24% fewer gaps than on this Mac (2,862 against 3,750). It passes with 11 ms of margin. Flagged, not acted on: if it creeps toward 50 ms, the next look is the app's frame work at Desktop Safari's 1280 by 720 viewport on Linux WebKit.
+
+## 2026-11-02: First Worker Preview on pull request 7; the workers.dev subdomain is not `din`
+
+**The preview job (run 41525310325, PR dinsdev/heartbeat#7 at `8f8e27f`):** passed in 1 min 2 s with the token scoped to Editor on `heartbeat` only, so no further permission was needed. Wrangler uploaded 23 of 60 asset files (37 already on Cloudflare) and printed version `0914590f-a96b-4d86-b20d-9a1c1c91eaec`, `https://0914590f-heartbeat.dineshddawo.workers.dev` and the alias `https://pr-7-heartbeat.dineshddawo.workers.dev`.
+
+**Checked on the alias with curl (2026-11-02):**
+
+- `/`: 200, the full CSP from `_headers`, `nosniff`, `strict-origin-when-cross-origin`, `x-robots-tag: noindex`, no `X-Frame-Options`, `public, max-age=0, must-revalidate`.
+- `/assets/ort-wasm-simd-threaded-DcHrbrbl.wasm`: `content-encoding: br`, 3,274,094 bytes on the wire (14,239,897 raw), immutable caching. The PRD's "about 2.4 MB with Brotli" was an estimate; the edge sends 3.27 MB. Not changed in the PRD (a requirement text; Din's call).
+- `/data/101.5803e294.trace.i16`: no compression, 1,300,000 bytes, immutable caching, as D4 accepted. No `content-type` header is sent for `.i16`; the page reads it with `arrayBuffer()`, so nothing depends on it.
+- `/data/manifest.json`: `br`, `max-age=0, must-revalidate`.
+
+**Finding:** the account's workers.dev subdomain is `dineshddawo`, not `din`. Design call 16 (PLAN section 8), `web/public/_headers`, `web/e2e/headers.spec.ts`, `deploy.yml`'s comment, this ledger's Goal B entry and `docs/G4_HANDOFF.md` all assume `*.din.workers.dev`. So `frame-ancestors` does not cover this account's previews, and it does allow whoever holds the `din` subdomain to frame the demo. Low harm today (the demo has no sign-in and no actions, and production is not deployed until Phase 8), but the policy and the hand-off to dins.dev carry a wrong value. Not changed yet: the expected CSP is in a test (rule 3) and the value is in an approved design call.
