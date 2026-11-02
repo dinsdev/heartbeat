@@ -197,6 +197,12 @@ def test_accurate_in_a_heading_fails(text: str) -> None:
     assert "accurate-heading" in rules(check_published(Path("README.md"), text))
 
 
+def test_the_case_study_outline_is_published_text() -> None:
+    # Phase 7 settling 5: the G1 outline is linted like the case study.
+    assert "docs/CASE_STUDY_OUTLINE.md" in PUBLISHED_PATHS
+    assert (REPO_ROOT / "docs" / "CASE_STUDY_OUTLINE.md").is_file()
+
+
 @pytest.mark.parametrize("path", PUBLISHED_PATHS)
 def test_every_published_path_is_checked(path: str) -> None:
     assert check_published(Path(path), "We diagnose nothing.\n") != []

@@ -22,9 +22,14 @@ from pathlib import Path
 
 from heartbeat.paths import REPO_ROOT
 
-# D7 and F6: the published text that exists today. The case study draft joins
-# when it exists; the demo's text is matched by `is_published`.
-PUBLISHED_PATHS = ("README.md", "docs/MODEL_CARD.md", "docs/DATA_CARD.md")
+# D7 and F6: the published text that exists today, with the G1 case study
+# outline (Phase 7 settling 5); the demo's text is matched by `is_published`.
+PUBLISHED_PATHS = (
+    "README.md",
+    "docs/MODEL_CARD.md",
+    "docs/DATA_CARD.md",
+    "docs/CASE_STUDY_OUTLINE.md",
+)
 
 # PUB-05 (Phase 6): the demo's own text, in its source and in the build. Tests
 # and bundled JavaScript are left out: bundles mix in library text such as
