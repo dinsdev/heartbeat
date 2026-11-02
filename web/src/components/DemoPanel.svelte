@@ -13,7 +13,7 @@
     nextIrregular,
     searchFrom,
   } from "../lib/playback/jumps";
-  import { pageEnd } from "../lib/playback/pages";
+  import { pageEnd, stepPage } from "../lib/playback/pages";
   import {
     beatRows,
     recordOption,
@@ -84,6 +84,9 @@
     matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   let shownSecond = $state(Math.floor(clock.position()));
+  // The view's right edge in whole seconds, for tests: it changes at most
+  // once a second of recording, never per frame.
+  let viewEndSecond = $state(Math.floor(viewEndOf(clock.position())));
   let redraw = $state(0);
   // What the words describe: the span at the last 10-second mark, pause or seek.
   let described = $state(spanEnding(clock.position()));
@@ -143,6 +146,8 @@
   function onframe(position: number, viewEnd: number) {
     const second = Math.floor(position);
     if (second !== shownSecond) shownSecond = second;
+    const end = Math.floor(viewEnd);
+    if (end !== viewEndSecond) viewEndSecond = end;
     if (playing !== clock.playing) {
       playing = clock.playing;
       // The recording ran out: that is a pause too.
@@ -181,6 +186,11 @@
     lastJump = undefined;
     describeAll();
     redraw++;
+  }
+
+  /** DEMO-14: under reduced motion the view moves by whole pages. */
+  function turnPage(pages: number) {
+    seekTo(stepPage(clock.position(), pages, clock.min, duration));
   }
 
   function onslide(event: Event) {
@@ -257,7 +267,7 @@
   data-testid="demo-panel"
   aria-label="Live demo"
 >
-  <div class="strip">
+  <div class="strip" data-view-end={viewEndSecond}>
     <Trace
       {trace}
       {beats}
@@ -279,6 +289,20 @@
       <span class="icon" class:pause={playing} aria-hidden="true"></span>
       {playing ? "Pause" : "Play"}
     </button>
+    {#if reducedMotion}
+      <button
+        class="quiet"
+        type="button"
+        aria-label="Previous 10 seconds"
+        onclick={() => turnPage(-1)}>Previous</button
+      >
+      <button
+        class="quiet"
+        type="button"
+        aria-label="Next 10 seconds"
+        onclick={() => turnPage(1)}>Next</button
+      >
+    {/if}
     <label class="field t-small">
       <span class="field-name">Speed</span>
       <select bind:value={speed} onchange={changeSpeed}>

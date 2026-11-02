@@ -183,6 +183,12 @@
       wake();
     };
     scheme.addEventListener("change", onScheme);
+    // R37: a theme message from the site sets `data-theme` on the root.
+    const themed = new MutationObserver(onScheme);
+    themed.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     const observer = new ResizeObserver(size);
     observer.observe(wrapper);
     const onVisible = () => loop.visibilityChanged();
@@ -192,6 +198,7 @@
       loop.stop();
       observer.disconnect();
       scheme.removeEventListener("change", onScheme);
+      themed.disconnect();
       document.removeEventListener("visibilitychange", onVisible);
     };
   });

@@ -15,6 +15,7 @@
   import type { Manifest, RecordEntry } from "./lib/data/manifest";
   import { LabelingSession } from "./lib/labeling";
   import type { ParityCounts } from "./lib/parity";
+  import { listenForTheme } from "./lib/theme/messages";
   import { VISIBLE_S } from "./lib/worker/chunks";
   import { Labeler } from "./lib/worker/client";
   import { canRunModel } from "./lib/worker/support";
@@ -42,6 +43,7 @@
   // One Worker for the page; each record gets its own labeling session.
   let labeler: Labeler | undefined;
   let choosing = 0;
+  let pageElement: HTMLDivElement;
 
   const labelSource = $derived(
     modelState === "fallback" ? "python" : labelsShown > 0 ? "browser" : "none",
@@ -107,8 +109,32 @@
     error = reason instanceof Error ? reason.message : String(reason);
   }
 
+  /** Resolves once the element is on screen (in an iframe: in the site's). */
+  function whenSeen(element: Element): {
+    seen: Promise<void>;
+    stop: () => void;
+  } {
+    let observer: IntersectionObserver | undefined;
+    const seen = new Promise<void>((resolve) => {
+      observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer?.disconnect();
+        resolve();
+      });
+      observer.observe(element);
+    });
+    return { seen, stop: () => observer?.disconnect() };
+  }
+
   onMount(() => {
+    // DEMO-13, R37: listen from the start; the site posts on iframe load.
+    const stopTheme = listenForTheme(window, (theme) => {
+      document.documentElement.dataset.theme = theme;
+    });
+    // Design call 12: the embed fetches nothing until it is seen.
+    const visible = embed ? whenSeen(pageElement) : undefined;
     void (async () => {
+      await visible?.seen;
       const data = await fetchManifest();
       manifest = data;
       if (canRunModel()) {
@@ -139,11 +165,15 @@
         data.fs_hz,
       );
     })().catch(failed);
-    return () => labeler?.terminate();
+    return () => {
+      stopTheme();
+      visible?.stop();
+      labeler?.terminate();
+    };
   });
 </script>
 
-<div class="page" class:embed>
+<div class="page" class:embed bind:this={pageElement}>
   {#if !embed}
     <Header />
   {/if}
