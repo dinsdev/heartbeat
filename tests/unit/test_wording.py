@@ -202,6 +202,36 @@ def test_every_published_path_is_checked(path: str) -> None:
     assert check_published(Path(path), "We diagnose nothing.\n") != []
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "web/index.html",
+        "web/src/App.svelte",
+        "web/src/components/Header.svelte",
+        "web/src/lib/data/load.ts",
+        "web/dist/index.html",
+        "web/dist/data/ATTRIBUTION.1a2b3c4d.txt",
+    ],
+)
+def test_the_demo_text_is_published(path: str) -> None:
+    # PUB-05: the demo's own text, in its source and in the build.
+    assert check_published(Path(path), "We diagnose nothing.\n") != []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "web/src/lib/parity.test.ts",
+        "web/e2e/smoke.spec.ts",
+        # Bundles mix in library text, such as Svelte's `seamless` attribute
+        # name; they keep the dash tier.
+        "web/dist/assets/index-a1b2c3.js",
+    ],
+)
+def test_tests_and_bundled_javascript_are_not_published(path: str) -> None:
+    assert check_published(Path(path), "A seamless diagnosis.\n") == []
+
+
 # Published tier: passes
 
 

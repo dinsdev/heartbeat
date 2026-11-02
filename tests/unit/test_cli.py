@@ -43,22 +43,23 @@ def test_help_lists_every_subcommand(capsys: pytest.CaptureFixture[str]) -> None
         assert name in out
 
 
-# The Phase 2 to 5 subcommands are built and have their own tests here and in
-# test_folds.py, test_stages.py, test_cards.py and test_verify.py; the rest stay
-# stubs until their phase.
-BUILT = {n for n, p in EXPECTED_PHASES.items() if p <= 5}
+# Every subcommand is built by Phase 6 and has its own tests here and in
+# test_folds.py, test_stages.py, test_cards.py, test_verify.py and
+# test_demo_cli.py. The stub path stays for subcommands added later.
 
 
-@pytest.mark.parametrize(
-    ("name", "phase"),
-    sorted((n, p) for n, p in EXPECTED_PHASES.items() if n not in BUILT),
-)
-def test_stub_exits_2_and_says_when_it_arrives(
-    name: str, phase: int, capsys: pytest.CaptureFixture[str]
+def test_every_subcommand_has_a_handler() -> None:
+    assert set(cli.HANDLERS) == set(EXPECTED_PHASES)
+
+
+def test_a_subcommand_without_a_handler_exits_2_and_says_when_it_arrives(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    assert main([name]) == 2
+    handlers = {n: h for n, h in cli.HANDLERS.items() if n != "build-demo-data"}
+    monkeypatch.setattr(cli, "HANDLERS", handlers)
+    assert main(["build-demo-data"]) == 2
     captured = capsys.readouterr()
-    assert captured.err.strip() == f"heartbeat {name}: not built yet (Phase {phase})"
+    assert captured.err.strip() == "heartbeat build-demo-data: not built yet (Phase 6)"
     assert captured.out == ""
 
 

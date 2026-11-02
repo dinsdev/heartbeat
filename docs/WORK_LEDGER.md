@@ -2012,3 +2012,316 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Cleanup:** the merged local branch `phase-5-export` deleted with `git branch -d` and the remote branch pruned with `git fetch --prune`. No stashes remain.
 
 **Carried into Phase 6 and 7, report only:** the freeze gate allows only `freeze.json` to differ from the freeze commit, so a reproduction after the sealed log is committed will refuse (Din decides before Phase 7); one seed-2 DS1 beat at 1.53e-5 in the all-DS1 parity survey (`results/export.json`, DS1, CPU; not gated, no label change); commit `7d97b86` keeps the path-bearing ONNX files in the published history; `heartbeat --help` still says "arrives in Phase N" beside built commands.
+
+## 2026-11-01: Phase 6 settling 1, the phase runs as two goals
+
+**Decided (Din):** Phase 6 runs as two `/goal` agent runs with a design sign-off between them.
+
+- **Goal A:** the data and inference engine (`build-demo-data` on DS1, the Worker with ONNX Runtime Web, TypeScript preprocessing, browser parity, the fallback, size gates) plus a design probe: the real page shell rendered at phone and desktop widths, light and dark, with screenshots for Din's review.
+- **Goal B, after Din signs off the probe:** the full interface, the accessibility suite, headers and CSP, the deploy workflow and the G4 handoff note.
+
+**Why:** a `/goal` run continues until its end condition holds, so a mid-run design review is cleaner as a goal boundary. The engine and the look are independent, so Goal A builds both and Din sees the look before the interface is built and tested, when a redirect is cheap.
+
+## 2026-11-01: Phase 6 settling 2, the trace is drawn on ECG paper
+
+**Decided (Din):** the trace is drawn in ink on the page's paper color with a faint ECG grid (1 mm minor and 5 mm major lines at the standard 25 mm/s and 10 mm/mV), following the light or dark theme.
+
+**Why:** it uses the brand's own warm paper and "look closer", stays calm and editorial, gives honest time and voltage scale, and avoids the bedside-monitor look that D7's framing steers away from. Not chosen: a fixed dark screen panel (a dark slab in light mode, reads as a medical device) and a plain surface without a grid (loses the scale cue). Class colors must still pass 3:1 against both paper colors (D6, R34).
+
+## 2026-11-01: Phase 6 settling 3, class colors
+
+**Decided (Din):** N (normal) is neutral, drawn in the brand's muted text color. S, V and F use a heartbeat-only data palette kept in a heartbeat token file beside the vendored brand tokens (never inside the vendored copy, so the OPS-10 drift check stays clean). Teal is never a class color: it keeps meaning "interactive" (controls, links, the focus ring). Q beats get a grey dash. The hex values below are starting points the Goal A design probe may tune, as long as R34 (at least 3:1 against the paper color in light and dark) passes and teal stays out.
+
+| Class  | Light, on `#F4F1EA` | Dark, on `#1F1E1C`               |
+| ------ | ------------------- | -------------------------------- |
+| N      | `#4A555C` (6.8)     | `#A29E95` (6.2)                  |
+| S      | `#9A5B0C` (4.8)     | `#E0A04A` (7.4, the brand amber) |
+| V      | `#B23A26` (5.3)     | `#F0806A` (6.4)                  |
+| F      | `#7B4C9E` (5.5)     | `#B79BDD` (6.9)                  |
+| Q dash | `#8A8780` (3.2)     | `#6E6B65` (3.1)                  |
+
+**Why:** about nine in ten beats are N, so a neutral N lets irregular beats stand out with no extra marks. BRAND.md makes teal the one brand color for interaction, and brand amber is 2.0 on light paper, so light-mode S needs a darker amber. Brick and amber are close for red-green colorblind viewers; the letter on every beat (D6) carries the class, color only reinforces it.
+
+**Verified:** WCAG contrast ratios above computed with the relative-luminance formula in a throwaway scratchpad script (deleted after), against the BRAND.md background colors.
+
+## 2026-11-01: Phase 6 settling 4, full page layout: instrument first
+
+**Decided (Din):** the full page opens with a slim header (the dins lockup linking to dins.dev, the title "Heartbeat", one lead sentence), then the demo panel straight away (trace, controls, the D7 short line, the parity counter, the legend), then the beat table, then an about section (how it works, how record 200 was chosen, the one-beat label lag, the fuller D7 note, the attribution) and a footer. On phones it is one column in that order, controls under the canvas (D6).
+
+**Why:** the page autoplays (D6), so the trace should be above the fold on a phone as well as a desktop. Not chosen: an editorial intro above the demo (pushes the trace below the fold on phones) and a full-viewport tool with a drawer (hides the table and about text behind a click and adds dialog accessibility work).
+
+## 2026-11-01: Phase 6 settling 5, embed mode is site-sized with a compact control set
+
+**Decided (Din):** the `?embed=page` iframe fills whatever box the site gives it, laid out with container queries. G4 asks the site for a 16:10 box from 640 px wide and a taller box (about 4:5) below that. The embed carries a compact set: the trace, play and pause, speed, "Next irregular beat", "Next disagreement", the parity counter and model-loading note, a one-line legend, the D7 short line, and an "Open the full demo" link. The patient picker, scrub slider, beat table and about text live on the full page only. No resize protocol between the site and the iframe.
+
+**Why:** the site's `ProjectWindow` is a fixed 16:10 box (dins.dev M1 plan), about 214 px tall at a 343 px phone content width, too short for the full control set. Not chosen: auto-height by `postMessage` (more G4 work, a second message type to secure, layout shift on the case study) and a strict 16:10 box everywhere (too thin on phones).
+
+**Follow-on for G4:** the handoff note includes the two aspect ratios and the 640 px switch.
+
+## 2026-11-01: Phase 6 settling 6, the DS1 demo data and the training-patient note
+
+**Decided (Din):** while the demo runs on DS1 (DEMO-17, C1), `build-demo-data` ships all 22 DS1 records. The default record is 223, chosen by D4's rule applied to DS1 expert labels: most S plus V beats among records with at least 25 of each (223: S 73, V 473; 201 and 207 also qualify). `build-demo-data` writes a flag to `manifest.json` saying the data is DS1, and the flag drives a visible note in both the full page and the embed: "Development build: these are training patients the model has already seen, so its labels here look better than they would on new patients." The note goes away by itself when DS2 data replaces DS1 data after the sealed run (Phase 7). The traces (about 29 MB, a guess from D4's 1.3 MB per record) are built in CI and stay gitignored under `web/public/data/`.
+
+**Why:** the shipped seed-0 model was trained on all of DS1, so every label in the Phase 6 demo is in-sample and looks better than it deserves, and Worker Previews on `workers.dev` are public. Shipping all 22 records follows D4's no-cherry-picking rule and keeps edge cases such as records with no irregular beats in the picker. Not chosen: three hand-picked records (cherry-picking) or no note (a shared preview link would mislead).
+
+**Verified:** S and V counts from `manifests/mitdb-beat-counts.toml` (PhysioNet's whole-record table; S is A, a, J, S and V is V, E), DS1 records only. The agent rechecks the default against the prepared beats, since the first and last beats are dropped (B3).
+
+## 2026-11-01: Phase 6 settling 7, drag to scrub with momentum
+
+**Decided (Din):** on the full page, visitors can drag the trace itself to scrub, on top of the native range input. The paper tracks the pointer or finger 1:1; on release it coasts with the release velocity and friction, and rubber-bands at the start and end of the recording; any new touch or click stops it at once. Playback pauses during a drag and resumes on release if it was playing. `touch-action: pan-y` on the canvas keeps vertical page scrolling on phones. The range input stays the keyboard and assistive path (WCAG 2.5.7, a single-pointer alternative to dragging). Under reduced motion there is no coasting or rubber-banding: a drag moves the page by whole 10-second pages. The physics live in the plain TypeScript trace module (D2) and are unit-tested. The embed has no scrubbing (settling 5).
+
+**Why:** the trace is paper (settling 2), and paper you can handle directly, with interruptible motion, is the apple-design principle that fits this demo. Not chosen: drag without momentum (loses the fling) and the slider only (feels like a video).
+
+## 2026-11-01: Phase 6 settling 8, the design probe is one direction in the real app
+
+**Decided (Din):** Goal A ends with one considered design direction built in the real Svelte shell on the real engine (record 223, live labels), not static mockups or competing variants. Din gets a short design read (type, spacing, beat marker style, motion choices and the reasons), screenshots at 375, 768 and 1280 px wide in light and dark, the embed at 16:10 and 4:5, and a local URL to try. Goal B starts after Din signs it off.
+
+**Why:** BRAND.md and settlings 2 to 7 already pin most of the look, so variants would differ only in details, and this demo's look lives in the canvas, the data and the motion, which static mockups skip.
+
+## 2026-11-01: Phase 6 task plan and goal prompts approved
+
+**Approved (Din, 2026-11-01):** the Phase 6 task plan as committed in `50d2426` (PLAN.md section 8), including its 22 design calls.
+
+**Approved (Din, 2026-11-01):** two `/goal` prompts from the planning session, Goal A (engine and design probe, 3,749 characters) and Goal B (interface, accessibility and deploy, 3,905 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort on branch `phase-6-demo`; Goal A ends at Din's sign-off of the probe, Goal B starts only after that sign-off is in this ledger.
+
+## 2026-11-01: Phase 6 Goal A design read (Task A8, settling 8, design call 22)
+
+**Read:** a research instrument on a personal portfolio, for recruiters, admissions readers and engineers who look closely; a calm editorial paper-and-ink language; native CSS on the vendored dins tokens, a Svelte shell and a plain TypeScript canvas. From design-taste-frontend: dials of variance 4 (one column, instrument first, no hero composition), motion 4 (the trace is the motion; nothing else animates on its own) and density 5. Its stack defaults (React, Tailwind, Motion, a sans display face, its ban on Fraunces) do not apply: BRAND.md names Fraunces and the vendored tokens win (design call 22). From apple-design: feedback on press, the rAF loop tied to the clock rather than to frames, and reduced motion as a calmer equivalent, not a broken one. Springs, momentum and rubber-banding wait for drag to scrub in Goal B (settling 7).
+
+**Type:** Fraunces 500 for the title and the about headings through the brand's `.t-h1` to `.t-h3`; Instrument Sans for the lead, body, controls and notes; the mono token for the record, the time and the beat letters (tabular). JetBrains Mono is not in `brand/fonts` of dins.dev, so mono text renders in the token's fallback stack (SF Mono or Menlo on Apple devices); worth adding in the dins.dev repo.
+
+**Spacing and layout:** the brand's 4 px scale, page max 1200 px, the 16 px gutter. A compact header (lockup, title, a two-sentence lead) puts the strip about 240 CSS px from the top at 1280 px and about 280 at 375 px (read off the screenshots), above the fold on both. Then the controls bar, the legend, the D7 line, the training-patient note, the about text and the footer, one column throughout (settling 4).
+
+**Paper and trace:** the strip is the page's own paper with a hairline inset frame and the medium radius. Grid from the brand's line color, 7% (1 mm) and 16% (5 mm) in light, 10% and 22% in dark; below 2 CSS px per mm the 1 mm lines are left out (phones) and the 5 mm lines stay. 0 mV sits on a 5 mm line, and the grid scrolls with the paper. The trace is ink at 1.25 px, drawn from the min and max per device pixel column, newest samples at the right edge. Strip height 50 mm at nominal scale, at least 180 px; the embed fills its box.
+
+**Beat markers:** a letter rail at the top of the strip, mono 600 at 11 to 15 px, colored by class (`heartbeat-tokens.css`, R34). A disagreement is a ring in the model letter's class color with the experts' letter beneath. Q is the grey dash. A beat whose label is not known yet (the Worker has not answered, or the next beat has not played, since post-RR reads it) shows a small open circle, so the one-beat lag is visible rather than hidden.
+
+**Controls and notes:** one pill button (play and pause, teal, pressing scales to 0.97 in 100 ms), the record and time in mono, the status line (loading note, counter with a mismatch count in the V color when any, or the fallback note). Teal appears only on the button, links and the focus ring (settling 3). The training-patient note has an amber rule beside it (amber as decoration, text in ink, BRAND.md color rule 2).
+
+**Embed:** `?embed=page` drops the header, about text and footer and lays out with a size container: the strip takes the free height, then the bar, a one-line legend, the D7 line, the training-patient note and "Open the full demo" (new tab, `rel="noopener"`). In a container under 480 px wide the notes and legend drop to the label size, which took the 4:5 strip from 91 to 149 px at 343 by 429 (measured in the browser pane). Both boxes fit without scrolling (760 by 475 and 343 by 429).
+
+**The closest call, for Din:** at 375 px the 10-second span keeps 25 mm/s and 10 mm/mV, so 1 mV is about 13.7 CSS px (343 px of content over 250 mm). QRS complexes and the wider V beats read clearly and the letters do not collide; P and T waves are faint. I judge it legible, so not a stop (stop 8), but it is the tightest point of the locked scale. If Din wants more, the option is a phone-only gain (for example 20 mm/mV, labeled on the strip), which would amend settling 2 and design call 5.
+
+**Not in the probe (Goal B):** speeds, the scrub slider and drag, Next irregular beat and Next disagreement, the patient picker, the beat table and status summary, reduced-motion paging, embed deferred loading, theme messages, axe and keyboard tests.
+
+**Copy for Din's review (design call 21):** the lead, the legend lines, the about text (including "cardiologists annotated every beat", from PhysioNet's description, to recheck with the citations in Phase 8) and the footer. All pass the wording lint, whose published tier now covers the demo's source.
+
+## 2026-11-01: Phase 6 Goal A built and verified locally; waiting on Din's sign-off of the probe
+
+**Built (tasks A1 to A8, on `phase-6-demo`):**
+
+- A1, `61c611b`: `current-phase = 6`; the `heartbeat.demo` package.
+- A2, `b343584`: `heartbeat build-demo-data` and its rebuild stage (last, upstream `prepare` and `export`); hashed traces and columnar beats files, the model files, an attribution note and `manifest.json`; DS1 only with no sealed entry, refused before any file is opened (R31, R32).
+- A3, `6dee84d`: TypeScript preprocessing (R30).
+- A4, `86a1e2f`: the labeler Worker on ONNX Runtime Web 1.30.0, the parity rule and label store, chunked labeling, R29 and the all-records survey.
+- A5, `5390aff`: the loading note and the labeled fallback (R33).
+- A6, `2477414`: the vendored brand with `SOURCE.json` and the drift check, `heartbeat-tokens.css` and R34.
+- A7, `6019d14`: the size gates on the build (R39), CI's web job, the wording lint on the build, the two phone profiles.
+- A8, `ad30d4b`: the design probe; design read in the entry above.
+
+**Parity survey (design call 9; Playwright report from `pnpm -C web run e2e`, DS1, the shipped seed-0 model in the browser against the stored Python values):** every kept beat of the 22 DS1 records, 50,977 beats, in Desktop Chrome, Desktop Safari, Pixel 7 and iPhone 15 profiles: 0 label mismatches, 0 beats over 1e-5, largest probability difference 9.308e-7 in each (the stored probabilities are millionths, so up to 5e-7 of that is rounding). Largest per record 5.012e-7 (101) to 9.308e-7 (109). R29 on the 50 fixture beats against the fixture's seed-0 logits and probabilities: largest difference 3.815e-6, labels exact, in all four projects. No stop.
+
+**Probability precision and record 215 (design call 2; from `uv run heartbeat build-demo-data` and the real-data test, DS1, CPU):** ten-millionths put record 215's beats file at 111,657 bytes, over the 100 KB gate (203 also over, at 100,791), so the files store millionths: rounding moves a probability by at most 5e-7, a twentieth of the tolerance. Record 215's beats file is then 98,213 bytes, the largest, with 1.8% headroom under the gate; noted as a risk if the format grows. Default record 223 from 20 s by D4's rule on the kept beats (S 73, V 473, as settling 6 counted on the whole record; the dropped first and last beats are neither S nor V).
+
+**Size gates (`pnpm -C web run build`, local):** model 210,503 bytes; the demo's JavaScript without ONNX Runtime 24,975 bytes gzip (page 23,285 plus the Worker's own code 1,690); ONNX Runtime's chunk 23,483 bytes gzip and its `.wasm` 14.2 MB raw, both outside the JavaScript gate; largest beats file 98,213 bytes. All under their gates.
+
+**Deviations from the plan, each small:**
+
+1. CI (design call 18): the web job builds the demo data itself (download from the cache, prepare, build-demo-data) instead of receiving an artifact from the python job. An upload and download artifact pair would add two third-party actions, and the Goal A prompt rules out any new dependency. Same data (the build is byte-identical across runs, tested), only actions already pinned. Goal B or Din may switch to artifacts with Din's go.
+2. A1 left the CLI and stage wiring to A2, where the handler exists; git keeps no empty folders, so each web folder arrived with its first module.
+3. `PROBABILITY_SCALE`, `BEATS_SIZE_LIMIT_BYTES` and `DEMO_DATA_DIR` live in `heartbeat.demo.build`, not `constants.py` and `paths.py`: every rebuild stage fingerprints those two files, so adding there would have rerun the whole 104-minute rebuild for nothing. Checked: after A2 every existing stage's fingerprint equals its saved state, and `uv run heartbeat rebuild` ran only `build-demo-data` plus the always-run checks, in 4.1 s.
+4. `rebuild` now prints "stopped after build-demo-data; no freeze record: stopping before DS2" whenever no freeze record exists. The R28 real-data test expected a "stopped after" line, which only printed while a stage was still planned; the test is unchanged.
+5. The wording lint's published tier now covers the demo's own text (`web/src` components and modules, `web/index.html`, the built HTML and text files). Bundled JavaScript keeps the dash tier only: the Svelte runtime carries the `seamless` iframe attribute name.
+6. Vitest processes CSS (`css: true`) so R34 can read the token files, and `tsconfig.json` gains `resolveJsonModule` for the fixture imports. The R34 parser first read the light block wrongly; a planted 2.0:1 color caught it, and the test now pins the parsed paper colors.
+7. The probe's 1x clock and markers are in; speeds, scrubbing and paging stay Goal B as planned.
+
+**Verified (local, at `ad30d4b` plus this commit's docs):** `scripts/check.sh` exit 1 and `uv run pytest` exit 1, each on exactly one test, `test_every_row_due_by_the_current_phase_has_a_test`, which stays red until Goal B covers R35, R36, R37, R38 and R40 (the plan's stated Goal A end); every other test passes (`uv run pytest`: 1,068 passed, 1 failed, 70 s; the web half of `check.sh` passes: lint, format, svelte-check, Vitest 62 tests). `uv run heartbeat verify` 6 of 6. `pnpm -C web run build` exit 0 with the size gates. `pnpm -C web run e2e` 28 passed in 15.3 s (four projects). `uv run python -m heartbeat.checks.rule_coverage` exit 1: uncovered R35, R36, R37, R38, R40 (phase 6), pending R43; R29 to R34 and R39 covered. `uv run python -m heartbeat.checks.repo_config` exit 0. `uv run python -m heartbeat.checks.wording` exit 0 on the repo and on `web/dist`. `uv run python -m heartbeat.checks.brand --source ~/Develop/dins.dev` exit 0 (7 files). DS1 only throughout: no DS2 signal, label or prediction was read, plotted or shipped (stop 6 clear); no new dependency, pin change, download or edit to `manifests/`, `config/folds.json`, `.claude/`, `models/heartbeat-v1/` or `~/Develop/dins.dev` (stop 5 clear); no push, deploy or secret.
+
+**Throwaway checks (scratchpad, deleted):** a step-by-step runner of `check.sh` that continues past the red test; the screenshot script (Playwright, Chromium, device scale 2, the clock fast-forwarded 131 s for the disagreement frames); a probe of what Vitest returns for raw CSS imports (empty strings without `css: true`). Mutation checks, each reverted: the Worker's temperature times 1.001 failed R29 at 3.2e-4; a 2.0:1 light S color failed R34; a planted 100,000-byte beats file failed the size-gate script with exit 1.
+
+**Not verified:** CI (waits for Din's push); the timings of D5 (Goal B, task B6); any screen reader or keyboard pass (Goal B and Phase 8). Local Node is 24.21.0 while `.node-version` pins 24.22.0; CI uses the pin.
+
+**Waiting on Din:** the push of `phase-6-demo` so CI runs the engine (CI's python job will be red on the same coverage test until Goal B), and the sign-off of the probe (look, copy, the 375 px scale call in the design read). Goal B starts only after that sign-off is in this ledger.
+
+## 2026-11-01: Din signs off the Phase 6 design probe; Goal B may start
+
+**Decided:** Din signed off the probe (Task A8) in chat on 2026-11-01: the look, the copy and the 375 px scale call in the design read. So the locked 10 mm/mV scale holds at every width (settling 2 and design call 5 unchanged, no phone-only gain). The sign-off did not address deviation 1 (CI's web job builds its own demo data); it stays as built until Din says otherwise.
+
+**Pushed:** Din pushed `phase-6-demo` at `a5c0de7`; CI run 41357721418 started on it. Its result is not recorded here yet. The python job is expected red on the coverage test alone until Goal B covers R35, R36, R37, R38 and R40.
+
+**Pull request:** none yet. The phase opens one pull request when Goal B is done (section 1: phases merge to `main` after CI passes and Din agrees); merging now would put the red coverage test on `main`.
+
+**Accepted:** the probe's design direction only. TASKS 6.1 to 6.3 and 6.5 stay In progress; their rows are accepted when the phase is.
+
+## 2026-11-01: Phase 6 Goal B built and verified locally; waiting on Din's Cloudflare setup and push
+
+**Built (tasks B1 to B7, on `phase-6-demo`):**
+
+- B1, `57c39e0`: playback at 0.5x to 4x, the 10-second floor, one frame loop that runs only while something moves, drag to scrub (1:1, coast, rubber band, spring, interruptible), the jump lookups, R38.
+- B2, `c6008ed`: Speed, the recording picker with class counts, the 5-second position slider, Next irregular beat and Next disagreement with their "none" notes, the beat table, the status line every 10 seconds of playback (DEMO-10 to DEMO-12). Also fixed an effect that read and wrote the redraw counter and left labels unrequested; a new browser test fails on any page error.
+- B3, `c4c7c72`: reduced motion (DEMO-14), the embed's deferred loading and autoplay on view, theme messages (R37).
+- B4, `1813985`: axe (R35) and the keyboard walk (R36); the embed link raised to 24 px and the selects drawn.
+- B5, `535dbaf`: `web/public/_headers` with design call 16's CSP, nosniff, the referrer policy, no `X-Frame-Options`, immutable caching only for hashed files (R40). `vite preview` serves the same `/*` headers, so every Playwright test runs under the shipped CSP, with zero policy violations: nothing looser was needed (stop 1 clear).
+- B6, `a52195b`: wrangler 4.151.1, `web/wrangler.jsonc`, `deploy.yml` called from `ci.yml`, `repo_config`'s deploy checks, the timing spec.
+- B7, `24ca941`: `docs/G4_HANDOFF.md`.
+
+**Deviations from the plan, each small:**
+
+1. R38 runs on all four Playwright projects. The plan named the two desktop ones; the guard forbids a skip and the phone profiles pass.
+2. Next disagreement reads the label the trace shows, and for beats the Worker has not labeled yet looks ahead through the shipped Python labels (parity says they match). Once there the trace shows what the browser computes.
+3. The default record 223 starts at 20 s (D4); every other record starts at 0 s.
+4. The parity counter counts compared beats (labels the Worker returned with a stored Python value), not beats in the recording.
+5. The embed leaves out the 10-second status line along with the picker, slider and table (settling 5's compact set). In a 4:5 box at phone width the trace strip is about 85 px tall (Goal A probe screenshot measurement, not a test).
+6. The theme module is `web/src/lib/theme/messages.ts` beside `contrast.ts`, not `lib/theme.ts` as design call 1 names it.
+7. The selects are drawn (`appearance: none`, a gradient chevron): WebKit kept native selects at 23 px whatever their `min-height`, under R36's 24 px target.
+8. On WebKit the keyboard walk presses Option+Tab, which Safari needs to reach links and buttons.
+9. The embed tests frame the demo from a routed `https://dins.dev` page that Playwright serves, with `https://heartbeat.test` proxied to the local preview, so `frame-ancestors` sees real origins and nothing leaves the machine. A test checks that another origin is refused.
+10. The R45 frozen-install check in `repo_config` now applies per workflow (each workflow that runs `uv run` must run `uv sync --frozen`, each that runs pnpm must run `pnpm install --frozen-lockfile`). Stricter than before; deploy.yml would otherwise have satisfied it for ci.yml. No test changed.
+
+**Deploy design (design call 19, B6):** `ci.yml` gains a `preview` job that needs `python` and `web` and runs only on pull requests whose head is this repo; it calls `deploy.yml` (`workflow_call`) with the two secrets named. `deploy.yml`'s `preview` job rebuilds the DS1 demo data and the page with CI's pinned actions, runs `wrangler versions upload --preview-alias pr-<number>`, and writes the URLs to the job summary. Its `production` job runs `wrangler deploy` only on `workflow_dispatch` from `main` (Phase 8). Why not `workflow_run`: it fires only from the default branch's workflow file and would run a fork's code with the secrets. Why not have `deploy.yml` call `ci.yml`: CI would run twice and OPS-05 wants `ci.yml` on push and pull request. `repo_config` checks the triggers (no `pull_request_target` or `workflow_run`), read-only permissions, the guards, the caller's needs and same-repo guard, wrangler only in `deploy.yml`, and the wrangler config keys (`uv run pytest tests/unit/test_repo_config.py`: 75 passed, each of the 24 broken-copy cases failing for its own reason).
+
+**Cloudflare facts (Cloudflare docs, read 2026-11-01, not yet tried on the account):**
+
+- `wrangler versions upload` fails on a Worker that does not exist yet, so Din creates it once with a local `wrangler deploy` while logged in.
+- The CI token: an account-owned API token scoped to the `heartbeat` Worker with the Editor role. Creating the Worker needs Din's own login.
+- Preview and alias URLs have the form `<alias>-heartbeat.din.workers.dev`, which `frame-ancestors` allows.
+- Open for Din: the docs now recommend Workers Previews (`wrangler preview`) over aliased Version Preview URLs. The plan's design call 19 names Version Previews and the workflow uses them; switching is a later call.
+
+**Headers through the Worker runtime (`pnpm -C web exec wrangler dev --port 8799`, local workerd 1.20261012.1, checked by hand with curl):** the CSP on every path; `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` and on `/data/101.5803e294.trace.i16`; `public, max-age=0, must-revalidate` on `manifest.json` and `/`; `/index.html` answers 307; an unknown path 404. Local dev sent Brotli on every file; whether Cloudflare's edge compresses `.wasm` and `.i16` is checked after the first preview.
+
+**Timings (design call 20, D5; reported, not gated; `pnpm -C web exec playwright test e2e/timings.spec.ts`, `web/test-results/timings.json`, Chromium 156.0.8078.4, `vite preview` serving files uncompressed, 4x CPU slowdown):**
+
+| Measure | Desktop Chrome | Pixel 7 on fast 4G |
+| --- | --- | --- |
+| First trace drawn | 271 ms | 1,829 ms |
+| First live label | 399 ms | 16,060 ms |
+| Worker batches, median beats per batch | 14, 1 | 34, 1 |
+| Inference per beat, median and pooled | 0.3 ms, 0.315 ms | 11.5 ms, 3.793 ms |
+| Frames in 10 s at 1x: median, p95, over 20 ms | 16.7 ms, 16.7 ms, 0 | 16.7 ms, 16.7 ms, 0 |
+| JS heap | 10 MB | 10 MB |
+| Response bodies | 15.53 MB | 15.53 MB |
+
+Limits, all three material:
+
+1. The slowdown reaches the main thread only. Chromium refuses CPU throttling on a Worker target ("Operation is only supported for pages, not workers", Chromium 156), and a separate probe run at 1x and 4x (scratchpad `timings-1x.json` and `timings-4x.json`, deleted) showed no slowdown in the Worker (pooled inference per beat: desktop 0.46 ms at 1x and 0.30 at 4x, phone 3.50 and 3.43). So inference times are this Mac's full speed, not a slow phone's.
+2. The preview serves the 14,239,897-byte `.wasm` uncompressed (PRD: about 2.4 MB with Brotli), so the phone's 16 s to the first label is mostly that download over fast 4G and an upper bound. Fast 4G is DevTools' preset (9 Mbit/s down at 90%, 165 ms latency; devtools-frontend `NetworkManager.ts`).
+3. The phone run's per-beat inference is higher than desktop's although the Worker is not throttled. Not investigated; the next look is the preview on Cloudflare.
+
+**Parity and size gates (unchanged from Goal A):** the survey and R29 numbers in Goal A's entry hold; `pnpm -C web run e2e` reran both in all four projects. `pnpm -C web run build`: page JavaScript 29,029 bytes gzip plus the Worker's own 1,690 (30,719 of the 60,000 gate; Goal A was 24,975, the controls and scrubber added the rest); ONNX Runtime's chunk 23,483 gzip and its `.wasm` 14.2 MB raw, outside the JavaScript gate; model 210,503 bytes; largest beats file 98,213 bytes (record 215).
+
+**CI so far:** run 41357721418 on Din's push of `a5c0de7` (Goal A): `web` green; `python` red on `test_every_row_due_by_the_current_phase_has_a_test` alone (1 failed, 1,068 passed), as expected until Goal B covered R35 to R38 and R40. Goal B is not pushed yet.
+
+**Verified (local, at `24ca941` plus this commit's docs):** `scripts/check.sh` exit 0 (Python lint, types and unit tests; web lint, format, svelte-check, Vitest 118 tests in 18 files). `uv run pytest` exit 0: 1,097 passed in 73.6 s. `uv run heartbeat verify` 6 of 6. `pnpm -C web run build` exit 0 with the size gates. `pnpm -C web run e2e` exit 0: 201 passed in 1.7 minutes (103 s wall), Desktop Chrome, Desktop Safari, Pixel 7 and iPhone 15 projects, the timing spec included. `uv run python -m heartbeat.checks.rule_coverage` exit 0: R29 to R40 covered, only R43 pending (Phase 7). `uv run python -m heartbeat.checks.repo_config` exit 0. `uv run python -m heartbeat.checks.wording` exit 0.
+
+**Throwaway checks (scratchpad, deleted after this entry):** screenshot scripts for B2 and B4 (Playwright, Chromium and WebKit, light and dark), a CDP probe of Worker throttling, the 1x timing run, the `wrangler dev` header check, logs of the runs above.
+
+**Not verified:** anything on Cloudflare (preview URL, edge compression of `.wasm` and `.i16`, whether previews survive with `workers_dev` off); CI on Goal B; a screen reader pass and real phones (the manual checklist in the hand-off). DS1 only throughout: no DS2 signal, label or prediction was read, plotted or shipped. No dependency apart from wrangler, no pin change or download, no edit to `manifests/`, `config/folds.json`, `.claude/`, `models/heartbeat-v1/` or `~/Develop/dins.dev`; no push, deploy or secret.
+
+**Waiting on Din:** the first `wrangler deploy`, the API token, the two GitHub secrets, the push and the pull request. Accepted: nothing new; only Din sets it.
+
+## 2026-11-02: Din's Cloudflare setup for Worker Previews; CI red on R38 in WebKit
+
+**Done (Din, from this Mac, outputs pasted into the session):**
+
+- `pnpm -C web exec wrangler login` (OAuth, wrangler 4.151.1).
+- `pnpm -C web run build && pnpm -C web exec wrangler deploy`: size gates passed, 63 files read from `web/dist` (DS1 demo data only), "Uploaded heartbeat", "No targets deployed", version `303c7149-5b9c-4847-b6b0-c2dc5fc1f750`. So the Worker exists with no `workers.dev` URL and no route, as `workers_dev: false` intends. Wrangler also printed "No updated asset files to upload", which suggests a `heartbeat` Worker with this build was already on the account; Din to confirm in the dashboard that it has no route or `workers.dev` URL.
+- An account-owned API token with one policy: Workers, Specified Workers `heartbeat`, Individual Workers Editor; no zone permissions. The dashboard's starting draft also held all-zones Workers Routes Write and account-wide Workers Scripts Write, KV Write and Account Settings Read (plus 7 more); Din removed both before creating it. Cloudflare's Workers authorization docs (read 2026-11-02) give Editor on the Worker as the minimum for `wrangler versions upload`, and per-Worker scope needs the Worker to exist first, hence the deploy before the token.
+- `gh secret set -f .env --repo dinsdev/heartbeat`: `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` set as Actions secrets. The local `.env` is gitignored (`.gitignore` line 34, checked with `git check-ignore`; Claude did not read it). Recommended to Din: delete it now that GitHub holds the values.
+
+**Unknown until the first preview job:** whether wrangler needs any account-level permission beyond Editor on the Worker (for example to print the preview URL). If the job fails on authorization, add only the permission it names.
+
+**CI on the Goal B push (run 41511303371, `a76d881`):** `python` green; `web` red on one test of 201, `[webkit] e2e/longtasks.spec.ts` R38, worst frame gap 83 ms against the 50 ms limit (the long-task list itself was empty). Every parity check in the run passed (survey: 50,977 DS1 beats, 0 label mismatches, largest difference 1.004e-6). Passes on this Mac. The preview job needs `web`, so no preview runs until this is fixed; the limit stays at 50 ms (rule 3).
+
+**Waiting on Din:** the go to investigate R38, then the pull request.
+
+## 2026-11-02: R38 in WebKit CI, first look (not fixed)
+
+**Evidence from run 41511303371:** the runner (`ubuntu-24.04`, public repo, so 4 vCPU) ran Playwright with 2 workers. The dot reporter put the webkit R38 failure (worst gap 83 ms) inside the stretch where the webkit survey was running in the other worker (`e2e/survey.spec.ts`, about 45 s of WASM inference on the runner). R38 passed in the other three projects in the same run. No numbers for the passing projects: the test attached its measurements but CI uploads no artifacts.
+
+**Local runs (this Mac, 10 cores, Playwright's macOS WebKit; scratchpad JSON reports, deleted):**
+
+| Run | WebKit worst gap | Median |
+| --- | --- | --- |
+| R38 alone | 15 ms | 8 ms |
+| R38 beside the survey, 2 workers (the survey took 6 s) | 13 ms | 8 ms |
+| R38 beside six survey repeats, 2 workers, 8 `yes` CPU hogs | 9 to 10 ms (6 repeats) | 8 ms |
+| All four projects, after the logging change below | 10 to 12.2 ms | 4.5 to 8 ms |
+
+Not reproduced. macOS ranks the browser above the hogs, and the macOS WebKit build is not the Linux one CI runs, so these runs neither confirm nor rule out contention.
+
+**Hypotheses, both open:** (1) host contention: the survey's inference in the other worker starves the R38 page on 4 vCPU, so the timer probe sees a gap that is not the app's main thread; (2) the app's per-frame work is heavier on Linux WebKit at Desktop Safari's 1280 by 720 viewport (iPhone 15, also WebKit, passed). Telling them apart needs Linux numbers.
+
+**Change:** `e2e/longtasks.spec.ts` now prints one line per project (worst and median gap, gap count, long tasks over 50 ms, the five longest gaps with when each ended), like the survey and R29 do. Assertions and the 50 ms limit unchanged (rule 3). Verified: `pnpm -C web exec playwright test e2e/longtasks.spec.ts`, 4 passed.
+
+**Next:** Din pushes; the CI log then gives the numbers for all four projects. If the webkit failure repeats while the survey overlaps, the fix candidate is running R38 apart from the other tests, which changes how a gate runs and is Din's call. If the gaps are high in webkit regardless, the fix is in the app.
+
+**Second CI run (41520593333 at `fef0cea`, same runner type, 2 workers):** `web` red on four tests of 201. R38's new log line, per project:
+
+| Project   | Worst gap | Median | Gaps  | Long Tasks API over 50 ms | Result |
+| --------- | --------- | ------ | ----- | ------------------------- | ------ |
+| chromium  | 51.8 ms   | 4.1 ms | 5,136 | 0                         | fail   |
+| webkit    | 54.0 ms   | 8.0 ms | 2,585 | (no API)                  | fail   |
+| pixel-7   | 29.3 ms   | 4.1 ms | 5,103 | 0                         | pass   |
+| iphone-15 | 54.0 ms   | 8.0 ms | 2,682 | (no API)                  | fail   |
+
+Read: on the runner every project sits near the 50 ms limit (29 to 54 ms here; webkit 83 ms in the first run), against 10 to 15 ms on this Mac. Webkit's five longest gaps (50 to 54 ms, at 17.2, 24, 28.8, 28.9 and 29.7 s) are a pattern, not one spike, and its gap count is about 30% below this Mac's (2,585 against 3,750). In chromium, the browser's own Long Tasks API saw no task over 50 ms in the same 30 seconds, so the 51.8 ms gap spans several tasks or a descheduled thread. Which projects fail changes between runs (run 1: webkit only; run 2: chromium, webkit, iphone-15). The dot reporter again places each R38 near its project's survey, but has no per-test times, so the overlap is likely, not shown.
+
+**A second, separate failure:** `[iphone-15] e2e/embed.spec.ts:68` "the embed loads when seen but does not play" failed with `route.fetch: Test ended` in `e2e/host.ts:26`: the proxy route was still fetching the 14 MB `.wasm` when the test ended. A teardown race in the test helper (Playwright's message names `page.unrouteAll({ behavior: 'ignoreErrors' })`), not an app failure. Not changed yet: rule 3, Din's call.
+
+## 2026-11-02: R38 runs on its own; the embed teardown race fixed
+
+**Decided (Din, 2026-11-02, "Yes, both"):** (1) R38 runs apart from every other browser test, so the gate measures the app rather than the machine it shares; the 50 ms limit, the 30 s at 4x and the four projects are unchanged. (2) The host helper drops its proxy route when each test ends. Both are test changes under rule 3, made on Din's go.
+
+**Why (1):** see the two CI runs above: every project near 50 ms on the runner against 10 to 15 ms on this Mac, failing projects changing run to run, and Chromium's Long Tasks API reporting no task over 50 ms while the timer probe saw 51.8 ms. The timer probe counts time the page waits for a CPU as well as time it works, so on a shared 4 vCPU runner it measures the neighbors too. Running R38 alone removes the neighbors. Whether that is the whole cause is the next CI run's question: if the gaps stay near 50 ms with R38 alone, the cause is the app's frame work on Linux and the fix moves to the app.
+
+**Changed:**
+
+- `web/e2e/longtasks.spec.ts`: tag `@alone` on the describe, and a comment saying why. Assertions untouched.
+- `web/package.json`: `e2e` runs `playwright test --grep-invert @alone`, then `playwright test --grep @alone --workers=1`, and exits 1 if either pass failed (checked with `sh -c` for all four pass and fail pairs), so a failure in the first pass never hides R38's result. `pnpm -C web run e2e` stays the one command; AGENTS.md's row updated.
+- `web/e2e/host.ts`: `unhost(page)` calls `page.context().unrouteAll({ behavior: "ignoreErrors" })`; `embed.spec.ts`, `headers.spec.ts` and `theme.spec.ts` call it in `test.afterEach`. It only drops requests still in flight after a test's last step; a request that fails during a test still fails that test's checks.
+
+**Verified (this Mac):**
+
+- The race reproduced before the fix: `pnpm -C web exec playwright test e2e/embed.spec.ts -g "loads when seen but does not play" --project=iphone-15 --repeat-each=30`, 1 failed of 30 (`route.fetch: Test ended`; an earlier batch of 30 failed more than once). After the fix, three batches of 30: 90 passed.
+- `pnpm -C web run e2e`: exit 0; first pass 197 passed (5 workers, 1.2 min), then R38 alone, 4 passed (1 worker, 2.1 min); 196 s in all. R38 alone: chromium 13.0 ms, webkit 12.0, pixel-7 10.3, iphone-15 14.0 (worst gaps).
+- `scripts/check.sh` exit 0.
+
+**Not verified:** CI with these changes (Din's push). The CI web job will run about 2 minutes longer, since the four R38 runs no longer overlap (a guess from the local run).
+
+**CI with R38 alone (run 41523521046 at `ea8f1e5`):** green, both jobs. First pass 197 passed (2 workers, 5.0 min), then R38 alone, 4 passed (1 worker, 2.2 min); the embed race did not recur.
+
+| Project | Worst gap, beside the survey (run 41520593333) | Worst gap, alone | Median, alone |
+| --- | --- | --- | --- |
+| chromium | 51.8 ms | 12.4 ms | 4.1 ms |
+| webkit | 54.0 ms (83 ms in run 41511303371) | 39.0 ms | 8.0 ms |
+| pixel-7 | 29.3 ms | 12.4 ms | 4.1 ms |
+| iphone-15 | 54.0 ms | 18.0 ms | 8.0 ms |
+
+Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac's range. Desktop WebKit on Linux stays the outlier: worst 39 ms (at 0 s, the probe's first tick), then 25 to 27 ms through the run, and about 24% fewer gaps than on this Mac (2,862 against 3,750). It passes with 11 ms of margin. Flagged, not acted on: if it creeps toward 50 ms, the next look is the app's frame work at Desktop Safari's 1280 by 720 viewport on Linux WebKit.
+
+## 2026-11-02: First Worker Preview on pull request 7; the workers.dev subdomain is not `din`
+
+**The preview job (run 41525310325, PR dinsdev/heartbeat#7 at `8f8e27f`):** passed in 1 min 2 s with the token scoped to Editor on `heartbeat` only, so no further permission was needed. Wrangler uploaded 23 of 60 asset files (37 already on Cloudflare) and printed version `0914590f-a96b-4d86-b20d-9a1c1c91eaec`, `https://0914590f-heartbeat.dineshddawo.workers.dev` and the alias `https://pr-7-heartbeat.dineshddawo.workers.dev`.
+
+**Checked on the alias with curl (2026-11-02):**
+
+- `/`: 200, the full CSP from `_headers`, `nosniff`, `strict-origin-when-cross-origin`, `x-robots-tag: noindex`, no `X-Frame-Options`, `public, max-age=0, must-revalidate`.
+- `/assets/ort-wasm-simd-threaded-DcHrbrbl.wasm`: `content-encoding: br`, 3,274,094 bytes on the wire (14,239,897 raw), immutable caching. The PRD's "about 2.4 MB with Brotli" was an estimate; the edge sends 3.27 MB. Not changed in the PRD (a requirement text; Din's call).
+- `/data/101.5803e294.trace.i16`: no compression, 1,300,000 bytes, immutable caching, as D4 accepted. No `content-type` header is sent for `.i16`; the page reads it with `arrayBuffer()`, so nothing depends on it.
+- `/data/manifest.json`: `br`, `max-age=0, must-revalidate`.
+
+**Finding:** the account's workers.dev subdomain is `dineshddawo`, not `din`. Design call 16 (PLAN section 8), `web/public/_headers`, `web/e2e/headers.spec.ts`, `deploy.yml`'s comment, this ledger's Goal B entry and `docs/G4_HANDOFF.md` all assume `*.din.workers.dev`. So `frame-ancestors` does not cover this account's previews, and it does allow whoever holds the `din` subdomain to frame the demo. Low harm today (the demo has no sign-in and no actions, and production is not deployed until Phase 8), but the policy and the hand-off to dins.dev carry a wrong value. Not changed yet: the expected CSP is in a test (rule 3) and the value is in an approved design call.
+
+## 2026-11-02: The workers.dev subdomain fixed, aligned with the dins.dev plan
+
+**Decided (Din, 2026-11-02, "Fix it and align with the dins.dev plan"):** `frame-ancestors` allows `https://*.dineshddawo.workers.dev`, the account's real workers.dev subdomain, in place of `https://*.din.workers.dev`. Design call 16's value changes with this go; PLAN section 8 keeps the call and notes the correction.
+
+**The dins.dev plan, read at dins.dev `d75677f` (read only, nothing changed there):** `docs/site/plans/M0-foundation.md` puts the site's previews at `<branch>-dins-site.<account-subdomain>.workers.dev` and its production before the soft go-live at `dins-site.<subdomain>.workers.dev`; `docs/site/PLAN.md` keeps production on workers.dev until launch, then `dins.dev`. The plans write the subdomain as a placeholder, so `din` was this project's assumption, not the site's. `pnpm -C web exec wrangler whoami` shows one account, so the site's Workers and Heartbeat share the subdomain. A CSP host wildcard covers whole labels only, so `*.dineshddawo.workers.dev` is the narrowest source that covers `<branch>-dins-site` previews; every Worker on it is Din's.
+
+**Changed:** `web/public/_headers`; `web/e2e/headers.spec.ts` (test first: the expected CSP, and the framing test now checks that `https://dins.dev` and `https://feat-case-study-dins-site.dineshddawo.workers.dev` may frame the demo while `https://evil.example` and `https://dins-site.din.workers.dev` may not); `deploy.yml`'s comment; PLAN design call 16; `docs/G4_HANDOFF.md` sections on the CSP, `frame-src` for site previews, the theme on preview origins, and preview origins; AGENTS.md's test count (213).
+
+**Not changed, flagged:** R37 accepts theme messages only from `https://dins.dev`, so the site's previews and its pre-launch production on workers.dev do not sync the theme (the hand-off says so). Widening R37 would be a separate call.
+
+**Verified (this Mac):** with the old `_headers`, the updated R40 tests failed in Chromium for the expected reasons (the CSP string, the dins-site preview blocked, and the `din` origin allowed to frame); after the fix `pnpm -C web exec playwright test e2e/headers.spec.ts` 32 passed (four projects). `pnpm -C web run e2e` exit 0: 209 passed, then R38 alone 4 passed (worst gaps 9.8 to 15.0 ms). `scripts/check.sh`, `uv run python -m heartbeat.checks.repo_config` and the wording lint exit 0. Not verified: CI and the preview's served header (after Din's push).
+
+**CI and the preview after the fix (run 41528854902 at `cd8e78d`, PR dinsdev/heartbeat#7):** green: `python` 1,097 passed; `web` 209 browser tests, then R38 alone 4 passed (worst gaps: chromium 12.6 ms, webkit 27.0, pixel-7 12.2, iphone-15 26.0); the preview job uploaded version `4ba91571-bb03-4a32-b101-61c20df815a7`. `curl -sS -D - https://pr-7-heartbeat.dineshddawo.workers.dev/` returns 200 with `frame-ancestors 'self' https://dins.dev https://*.dineshddawo.workers.dev`. Task 6.6 has now run on Cloudflare.

@@ -1,0 +1,114 @@
+name: Deploy
+
+# OPS-06, Phase 6 design call 19. CI calls this workflow once its python and
+# web jobs pass on a pull request from this repo (never a fork), so the preview
+# is built from code that passed every check. The production job runs only when
+# Din starts it on main, until Phase 8 switches it on (TASKS 8.5).
+# `repo_config` checks the triggers, guards and permissions.
+
+on:
+  workflow_call:
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # R45: `uv run` never re-locks in CI; everything installs from uv.lock.
+  UV_FROZEN: "1"
+  WRANGLER_SEND_METRICS: "false"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The DS1 demo data and the build, as in CI's web job.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+          enable-cache: true
+      - run: uv sync --frozen
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/raw/mitdb/1.0.0
+          key: mitdb-1.0.0-${{ hashFiles('manifests/mitdb-1.0.0.sha256') }}
+      - run: uv run heartbeat download
+      - run: uv run heartbeat prepare
+      - run: uv run heartbeat build-demo-data
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm -C web install --frozen-lockfile
+      - run: pnpm -C web run build
+      # A version that serves no traffic, with its own URL and a stable
+      # pr-<number> alias, both on *.dineshddawo.workers.dev (frame-ancestors
+      # allows it).
+      - name: Upload a preview version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          pnpm -C web exec wrangler versions upload --preview-alias "pr-$PR" --tag "${HEAD:0:12}" --message "Pull request $PR at $HEAD" | tee "$RUNNER_TEMP/upload.log"
+          grep -Eo 'https://[a-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/upload.log" | sort -u > "$RUNNER_TEMP/urls.txt"
+          test -s "$RUNNER_TEMP/urls.txt"
+          { echo "### Preview for pull request $PR"; echo; sed 's/^/- /' "$RUNNER_TEMP/urls.txt"; } >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+          enable-cache: true
+      - run: uv sync --frozen
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/raw/mitdb/1.0.0
+          key: mitdb-1.0.0-${{ hashFiles('manifests/mitdb-1.0.0.sha256') }}
+      - run: uv run heartbeat download
+      - run: uv run heartbeat prepare
+      - run: uv run heartbeat build-demo-data
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm -C web install --frozen-lockfile
+      - run: pnpm -C web run build
+      - name: Deploy to production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm -C web exec wrangler deploy --message "main at $GITHUB_SHA"

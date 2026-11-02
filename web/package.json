@@ -7,12 +7,12 @@
     "node": "24.x"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/size-gates.js",
     "check": "svelte-check --fail-on-warnings",
     "lint": "eslint .",
     "format:check": "prettier --check . ../*.md ../docs/*.md",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test --grep-invert @alone; s=$?; playwright test --grep @alone --workers=1 || s=1; exit $s"
   },
   "dependencies": {
     "onnxruntime-web": "1.30.0"
@@ -30,6 +30,7 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
     "vite": "8.3.4",
-    "vitest": "5.0.4"
+    "vitest": "5.0.4",
+    "wrangler": "4.151.1"
   }
 }

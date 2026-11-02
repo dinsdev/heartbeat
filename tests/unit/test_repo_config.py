@@ -1,6 +1,7 @@
 """R45 (the 14-day rule in config and CI) and R46 (actions pinned to commits).
 
-Also the repo-level rule-coverage test (Task 1.7), which needs R45 and R46.
+Also the deploy checks (OPS-06, Phase 6 design call 19) and the repo-level
+rule-coverage test (Task 1.7), which needs R45 and R46.
 """
 
 import json
@@ -10,7 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from heartbeat.checks.repo_config import check_action_pins, check_release_age, main
+from heartbeat.checks.repo_config import (
+    check_action_pins,
+    check_deploy,
+    check_release_age,
+    main,
+)
 from heartbeat.checks.rule_coverage import (
     collect_rule_ids,
     current_phase,
@@ -25,6 +31,8 @@ CONFIG_FILES = (
     "web/pnpm-workspace.yaml",
     "renovate.json",
     ".github/workflows/ci.yml",
+    ".github/workflows/deploy.yml",
+    "web/wrangler.jsonc",
 )
 SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
 
@@ -235,6 +243,127 @@ def test_repo_has_a_workflow_to_check() -> None:
     assert list((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
 
 
+# Deploy: triggers, guards, permissions and the wrangler config (OPS-06)
+
+PREVIEW_GUARD = (
+    "if: github.event_name == 'pull_request' && "
+    "github.event.pull_request.head.repo.full_name == github.repository"
+)
+PRODUCTION_GUARD = (
+    "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
+)
+
+
+def test_deploy_passes_on_the_repo() -> None:
+    assert check_deploy(REPO_ROOT) == []
+
+
+def test_deploy_passes_on_an_unchanged_copy(repo: Path) -> None:
+    assert check_deploy(repo) == []
+
+
+@pytest.mark.parametrize(
+    ("name", "old", "new"),
+    [
+        # CI calls the deploy only after both jobs, only for this repo's PRs.
+        (".github/workflows/ci.yml", "needs: [python, web]", "needs: [python]"),
+        (".github/workflows/ci.yml", PREVIEW_GUARD, "if: true"),
+        (
+            ".github/workflows/ci.yml",
+            " && github.event.pull_request.head.repo.full_name == github.repository",
+            "",
+        ),
+        (
+            ".github/workflows/ci.yml",
+            "uses: ./.github/workflows/deploy.yml",
+            "uses: ./.github/workflows/other.yml",
+        ),
+        # Runs with secrets on code from a fork.
+        (".github/workflows/ci.yml", "  pull_request:\n", "  pull_request_target:\n"),
+        (
+            ".github/workflows/ci.yml",
+            "  pull_request:\n",
+            "  pull_request:\n  workflow_run:\n",
+        ),
+        # Deploy triggers: called by CI or started by Din, nothing else.
+        (
+            ".github/workflows/deploy.yml",
+            "  workflow_dispatch:\n",
+            "  workflow_dispatch:\n  push:\n",
+        ),
+        (".github/workflows/deploy.yml", "  workflow_dispatch:\n", ""),
+        # Production only by hand, only from main; previews only on PRs.
+        (
+            ".github/workflows/deploy.yml",
+            PRODUCTION_GUARD,
+            "if: github.event_name == 'workflow_dispatch'",
+        ),
+        (
+            ".github/workflows/deploy.yml",
+            PRODUCTION_GUARD,
+            "if: github.ref == 'refs/heads/main'",
+        ),
+        (
+            ".github/workflows/deploy.yml",
+            "    if: github.event_name == 'pull_request'\n",
+            "",
+        ),
+        (
+            ".github/workflows/deploy.yml",
+            "wrangler versions upload",
+            "wrangler versions deploy",
+        ),
+        (
+            ".github/workflows/deploy.yml",
+            "wrangler versions upload",
+            "wrangler deploy",
+        ),
+        # Read-only token everywhere.
+        (".github/workflows/deploy.yml", "  contents: read", "  contents: write"),
+        (
+            ".github/workflows/deploy.yml",
+            "permissions:\n  contents: read\n",
+            "permissions: write-all\n",
+        ),
+        (".github/workflows/deploy.yml", "permissions:\n  contents: read\n", ""),
+        (
+            ".github/workflows/deploy.yml",
+            "    timeout-minutes: 15\n    concurrency:",
+            "    timeout-minutes: 15\n    permissions:\n      id-token: write\n"
+            "    concurrency:",
+        ),
+        (".github/workflows/ci.yml", "permissions:\n  contents: read\n", ""),
+        # wrangler runs in deploy.yml only.
+        (
+            ".github/workflows/ci.yml",
+            "      - run: pnpm -C web run e2e\n",
+            "      - run: pnpm -C web run e2e\n"
+            "      - run: pnpm -C web exec wrangler deploy\n",
+        ),
+        # The Worker: assets only, production off workers.dev, previews on.
+        ("web/wrangler.jsonc", '"workers_dev": false', '"workers_dev": true'),
+        ("web/wrangler.jsonc", '  "workers_dev": false,\n', ""),
+        ("web/wrangler.jsonc", '"preview_urls": true', '"preview_urls": false'),
+        ("web/wrangler.jsonc", '"directory": "./dist"', '"directory": "./public"'),
+        (
+            "web/wrangler.jsonc",
+            '  "name": "heartbeat",\n',
+            '  "name": "heartbeat",\n  "main": "src/worker.ts",\n',
+        ),
+    ],
+)
+def test_deploy_fails_when_broken(repo: Path, name: str, old: str, new: str) -> None:
+    edit(repo, name, old, new)
+    assert check_deploy(repo) != []
+
+
+def test_deploy_fails_when_a_file_is_missing(repo: Path) -> None:
+    (repo / ".github" / "workflows" / "deploy.yml").unlink()
+    assert any("deploy.yml" in problem for problem in check_deploy(repo))
+    (repo / "web" / "wrangler.jsonc").unlink()
+    assert any("wrangler.jsonc" in problem for problem in check_deploy(repo))
+
+
 # Command line
 
 
@@ -247,6 +376,14 @@ def test_main_reports_problems(repo: Path, capsys: pytest.CaptureFixture[str]) -
     out = capsys.readouterr().out
     assert "uv sync" in out
     assert "actions/checkout@v5" in out
+
+
+def test_main_reports_deploy_problems(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    edit(repo, "web/wrangler.jsonc", '"workers_dev": false', '"workers_dev": true')
+    main(["--root", str(repo)])
+    assert "workers_dev" in capsys.readouterr().out
 
 
 # Task 1.7: the repo-level rule-coverage check

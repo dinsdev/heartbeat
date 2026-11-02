@@ -258,7 +258,8 @@ def test_missing_input_file_has_its_own_fingerprint(counting: Counting) -> None:
 
 def test_pipeline_has_the_built_stages_in_order() -> None:
     # Phase 4 design call 8: four stages after the baseline's cross-validate;
-    # Phase 5 design call 8: the stages after train-final.
+    # Phase 5 design call 8: the stages after train-final; Phase 6 design
+    # call 2: build-demo-data last.
     assert [s.name for s in PIPELINE] == [
         "download",
         "prepare",
@@ -272,6 +273,7 @@ def test_pipeline_has_the_built_stages_in_order() -> None:
         "export",
         "reproduce-test",
         "cards",
+        "build-demo-data",
     ]
     by_name = {s.name: s for s in PIPELINE}
     assert by_name["check-folds"].always_run
@@ -288,6 +290,7 @@ def test_pipeline_has_the_built_stages_in_order() -> None:
     assert by_name["reproduce-test"].always_run
     assert by_name["cards"].upstream == ("describe-data", "select", "exhibit", "export")
     assert by_name["cards"].always_run
+    assert by_name["build-demo-data"].upstream == ("prepare", "export")
     assert not any(
         s.always_run
         for s in PIPELINE
@@ -325,6 +328,17 @@ def test_pipeline_code_folders_match_the_plan() -> None:
         "export": {*training, "export", "sealed"},
         "reproduce-test": {*training, "export", "sealed"},
         "cards": {"cards", "export", "sealed", *shared},
+        "build-demo-data": {
+            "demo",
+            "data",
+            "signal",
+            "models",
+            "evaluate",
+            "sealed",
+            "export",
+            "runs.py",
+            *shared,
+        },
     }
 
 
@@ -687,8 +701,28 @@ def test_cards_reads_the_results_and_the_log_and_writes_both_cards() -> None:
     assert list(stage.outputs(context)) == [MODEL_CARD, DATA_CARD]
 
 
-def test_planned_stages_follow_with_their_phases() -> None:
-    assert list(PLANNED) == [("build-demo-data", 6)]
+def test_build_demo_data_reads_the_model_the_export_record_and_the_log() -> None:
+    from heartbeat.demo.build import DEMO_DATA_DIR
+    from heartbeat.paths import TEST_LOG
+
+    stage = {s.name: s for s in PIPELINE}["build-demo-data"]
+    context = rebuild_context()
+    assert set(stage.inputs(context)) == {
+        SPLITS_MANIFEST,
+        RESULTS_DIR / "export.json",
+        TEST_LOG,
+        *(
+            MODELS_DIR / name
+            for name in ("model.onnx", "scaler.json", "calibration.json", "NOTICE")
+        ),
+    }
+    assert list(stage.outputs(context)) == [DEMO_DATA_DIR / "manifest.json"]
+    assert "demo" in stage.code
+
+
+def test_every_planned_stage_is_built() -> None:
+    # OPS-01's stage list is complete with Phase 6's build-demo-data.
+    assert list(PLANNED) == []
 
 
 # rebuild through the CLI
@@ -696,6 +730,9 @@ def test_planned_stages_follow_with_their_phases() -> None:
 
 def _patch_rebuild(counting: Counting, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli, "PIPELINE", counting.stages())
+    # The stop message and refusal for stages not built yet, kept for later
+    # phases though OPS-01's list is complete.
+    monkeypatch.setattr(cli, "PLANNED", (("later-stage", 7),))
     monkeypatch.setattr(cli, "rebuild_context", lambda exact=False: counting.context())
 
 
@@ -708,9 +745,28 @@ def test_rebuild_stops_after_the_last_built_stage_and_names_the_next(
     assert main(["rebuild"]) == 0
     out = capsys.readouterr().out
     assert "first: ran" in out
-    assert "next stage build-demo-data (Phase 6)" in out
+    assert "next stage later-stage (Phase 7)" in out
     assert main(["rebuild"]) == 0
     assert "first: skipped (unchanged)" in capsys.readouterr().out
+
+
+def test_rebuild_says_it_stopped_before_ds2_without_a_freeze_record(
+    counting: Counting,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    from heartbeat import stages as stages_module
+
+    monkeypatch.setattr(cli, "PIPELINE", counting.stages())
+    monkeypatch.setattr(cli, "rebuild_context", lambda exact=False: counting.context())
+    monkeypatch.setattr(stages_module, "MODELS_DIR", tmp_path)
+    assert main(["rebuild"]) == 0
+    out = capsys.readouterr().out
+    assert "stopped after third; no freeze record: stopping before DS2" in out
+    (tmp_path / "freeze.json").write_text("{}\n", encoding="utf-8")
+    assert main(["rebuild"]) == 0
+    assert "stopped after" not in capsys.readouterr().out
 
 
 def test_rebuild_from_and_exact_parse(
@@ -743,8 +799,8 @@ def test_rebuild_from_a_planned_stage_says_it_is_not_built(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _patch_rebuild(counting, monkeypatch)
-    assert main(["rebuild", "--from", "build-demo-data"]) == 2
-    assert "Phase 6" in capsys.readouterr().err
+    assert main(["rebuild", "--from", "later-stage"]) == 2
+    assert "Phase 7" in capsys.readouterr().err
 
 
 def test_rebuild_exits_1_when_a_stage_fails(

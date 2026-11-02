@@ -16,6 +16,7 @@ docs/references/
 .venv/
 web/node_modules/
 web/dist/
+web/.wrangler/
 
 # Tool caches
 .ruff_cache/
