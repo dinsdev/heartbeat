@@ -2425,3 +2425,11 @@ Nothing else lands on `main` between steps 2 and 5. Goal B starts from step 5's 
 **Known risk, accepted:** CI on step 5's commit is the first CI run on DS2 demo data; if a web test trips on something Goal A could not rehearse, `main` stays red until Goal B fixes it.
 
 **Not chosen:** a short pull request for each of the two commits.
+
+## 2026-11-02: Phase 7 settling 7, `rebuild --exact` is not part of Phase 7
+
+**Decided (Din):** Phase 7 logs the default-mode reproduction only (OPS-03, settling 1). `rebuild --exact` stays optional for later, run in a scratch clone and never in the working repo, with Din's go, and its outcome goes in the ledger whichever way it comes out.
+
+**Why:** it is not in Phase 7's exit criteria. It retrains cross-validation on CPU, so it rewrites `results/` with numbers that differ from the committed MPS ones in whatever checkout it runs in, and whether CPU cross-validation selects the same width and epoch count has not been measured; a different selection would fail its bit-for-bit claim and need a decision.
+
+**Not chosen:** an overnight `--exact` run in a scratch clone at the end of Phase 7.
