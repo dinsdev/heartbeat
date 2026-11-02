@@ -2337,3 +2337,25 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Cleanup:** the merged local branch `phase-6-demo` deleted with `git branch -d`. No stashes remain. Correction (same day): the remote branch was already gone when Din ran `git push origin --delete phase-6-demo` ("remote ref does not exist"), although the repo's `delete_branch_on_merge` is false; the entry had read a stale remote-tracking ref. `git fetch --prune` removed it. Din also deleted the leftover remote branch `phase-1-skeleton`; `main` is the only branch on GitHub.
 
 **Carried into Phase 7 and 8, report only:** desktop WebKit on Linux has the thinnest R38 margin (27 to 39 ms alone in CI, limit 50); the `.wasm` reaches visitors at 3,274,094 bytes with Brotli, against the PRD's estimate of about 2.4 MB (PRD text unchanged); R37 accepts theme messages only from `https://dins.dev`, so the site's previews and its pre-launch production on workers.dev do not sync the theme; `docs/G4_HANDOFF.md` waits for Din to carry it to dins.dev; the Phase 5 items above still stand.
+
+## 2026-11-02: Phase 7 settling 1, the freeze line, the reproduction gate and one reproduction per state (EVAL-05, OPS-03 clarification)
+
+**Found (read from the code while planning Phase 7, not run):**
+
+1. `model_details` in `src/heartbeat/cards/blocks.py` renders the freeze commit as soon as `models/heartbeat-v1/freeze.json` exists. Pushed alone, the freeze commit fails the card check in `heartbeat verify` (R50) in CI; re-rendering the card in the same commit fails `check_gate`, which allows only the record in the diff since the freeze commit.
+2. `reproduce-test` calls `run_sealed`, which runs the same strict `check_gate`. Right after `evaluate-test` the tree is dirty (the log); once the log, report, cards and ledger are committed, the diff holds more than the record. OPS-03's reproduction cannot pass as built. The unit tests spy `run_sealed`, and the DS1 rehearsal writes its log outside the repo, so no test reached this.
+3. `reproduce-test` is `always_run`: once 2 is fixed, every later `rebuild` would append another reproduction entry to the append-only log.
+
+**Decision (Din):**
+
+1. The freeze commit and date leave `model_details` and render in the test blocks from the sealed report's `freeze_commit`, so committing the freeze record changes no rendered block.
+2. `check_gate` gets two modes. A sealed run keeps today's rule: a clean tree and nothing changed since the freeze commit except the record. A reproduction needs a clean tree and no change since the freeze commit under the frozen paths: `src/`, `config/`, `manifests/`, `models/heartbeat-v1/` (the record aside), `pyproject.toml` and `uv.lock`. Docs, `results/` and `web/` may change. A test in a temporary git repo commits a sealed log, report and doc change after the freeze and checks that a reproduction passes and a sealed run still refuses; a change under any frozen path refuses a reproduction.
+3. `reproduce-test` becomes a fingerprinted stage (the freeze record, the log's sealed entry and the frozen inputs), so a checkout logs one reproduction per state. A clean clone logs its own, which is a real reproduction.
+
+**Reason:** the sealed run's gate stays as strict as before; the reproduction checks what it claims to (the frozen code, model and inputs) without forbidding the commits that must follow the sealed run.
+
+**Cost, accepted:** a later change under `src/` (for example Phase 9) makes a reproduction refuse loudly; that gets decided if it happens.
+
+**Rejected:** running the reproduction from a temporary git worktree at the freeze commit (survives later code changes, but needs its own environment and writes the log back across checkouts, for a case that arises only if Phase 9 happens).
+
+**Applied:** Phase 7 task plan (PLAN.md section 8, to come). All of it is code that lands before the freeze. Made before any DS2 result and before the Phase 7 gate; not part of the pre-registered plan (A3, C4, C5, C8).
