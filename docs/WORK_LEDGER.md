@@ -2254,3 +2254,16 @@ Not reproduced. macOS ranks the browser above the hogs, and the macOS WebKit bui
 **Change:** `e2e/longtasks.spec.ts` now prints one line per project (worst and median gap, gap count, long tasks over 50 ms, the five longest gaps with when each ended), like the survey and R29 do. Assertions and the 50 ms limit unchanged (rule 3). Verified: `pnpm -C web exec playwright test e2e/longtasks.spec.ts`, 4 passed.
 
 **Next:** Din pushes; the CI log then gives the numbers for all four projects. If the webkit failure repeats while the survey overlaps, the fix candidate is running R38 apart from the other tests, which changes how a gate runs and is Din's call. If the gaps are high in webkit regardless, the fix is in the app.
+
+**Second CI run (41520593333 at `fef0cea`, same runner type, 2 workers):** `web` red on four tests of 201. R38's new log line, per project:
+
+| Project   | Worst gap | Median | Gaps  | Long Tasks API over 50 ms | Result |
+| --------- | --------- | ------ | ----- | ------------------------- | ------ |
+| chromium  | 51.8 ms   | 4.1 ms | 5,136 | 0                         | fail   |
+| webkit    | 54.0 ms   | 8.0 ms | 2,585 | (no API)                  | fail   |
+| pixel-7   | 29.3 ms   | 4.1 ms | 5,103 | 0                         | pass   |
+| iphone-15 | 54.0 ms   | 8.0 ms | 2,682 | (no API)                  | fail   |
+
+Read: on the runner every project sits near the 50 ms limit (29 to 54 ms here; webkit 83 ms in the first run), against 10 to 15 ms on this Mac. Webkit's five longest gaps (50 to 54 ms, at 17.2, 24, 28.8, 28.9 and 29.7 s) are a pattern, not one spike, and its gap count is about 30% below this Mac's (2,585 against 3,750). In chromium, the browser's own Long Tasks API saw no task over 50 ms in the same 30 seconds, so the 51.8 ms gap spans several tasks or a descheduled thread. Which projects fail changes between runs (run 1: webkit only; run 2: chromium, webkit, iphone-15). The dot reporter again places each R38 near its project's survey, but has no per-test times, so the overlap is likely, not shown.
+
+**A second, separate failure:** `[iphone-15] e2e/embed.spec.ts:68` "the embed loads when seen but does not play" failed with `route.fetch: Test ended` in `e2e/host.ts:26`: the proxy route was still fetching the 14 MB `.wasm` when the test ended. A teardown race in the test helper (Playwright's message names `page.unrouteAll({ behavior: 'ignoreErrors' })`), not an app failure. Not changed yet: rule 3, Din's call.
