@@ -2405,3 +2405,23 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Not chosen:** writing G1 after the sealed run and before the prose (PLAN.md's wording; less work, but the outline would be written knowing the outcome).
 
 **Applied:** Phase 7 task plan (PLAN.md section 8, to come); PLAN.md's Phase 7 line on G1 is read as "before the sealed run".
+
+## 2026-11-02: Phase 7 settling 6, the freeze and the sealed log land on `main` by direct pushes, from a runbook
+
+**Checked:** `gh api repos/dinsdev/heartbeat/branches/main` reports `"protected": false`, and the repo has no rulesets, so Din can push to `main` directly.
+
+**Decided (Din):** after Goal A's pull request is merged with CI green, Din runs a runbook on `main` (Goal A writes it with exact commands):
+
+1. `git pull`; `uv run heartbeat verify` and `uv run heartbeat check-folds` pass on a clean tree.
+2. `uv run heartbeat export --freeze`; commit only `models/heartbeat-v1/freeze.json`; `git push`; `git fetch` (R47).
+3. `uv run heartbeat evaluate-test`, once.
+4. `uv run heartbeat cards`, which renders the test blocks (R50).
+5. Commit `results/test_runs.jsonl`, the report under `results/test_runs/` and both cards in one commit, and push it right away (OPS-07).
+
+Nothing else lands on `main` between steps 2 and 5. Goal B starts from step 5's commit.
+
+**Why:** the code is reviewed in Goal A's pull request; these two commits are generated files, and a merge commit between the freeze and the sealed run is one more thing the strict gate would have to accept.
+
+**Known risk, accepted:** CI on step 5's commit is the first CI run on DS2 demo data; if a web test trips on something Goal A could not rehearse, `main` stays red until Goal B fixes it.
+
+**Not chosen:** a short pull request for each of the two commits.
