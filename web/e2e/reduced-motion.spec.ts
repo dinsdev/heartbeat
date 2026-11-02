@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { demoManifest, otherRecord } from "./manifest";
+
 // DEMO-14: the full page autoplays on load. Under reduced motion it does not,
 // the paper never scrolls, and the view moves in fixed 10-second pages with
 // Previous and Next; playing swaps pages every 10 seconds of recording.
@@ -74,10 +76,14 @@ test.describe("under reduced motion", () => {
 
   test("Previous stops at the first page of the recording", async ({
     page,
+    request,
   }) => {
+    const other = otherRecord(await demoManifest(request));
     await page.goto("/");
-    await page.getByLabel("Recording").selectOption("115");
-    await expect(page.getByRole("img", { name: /record 115/ })).toBeVisible();
+    await page.getByLabel("Recording").selectOption(other);
+    await expect(
+      page.getByRole("img", { name: new RegExp(`record ${other},`) }),
+    ).toBeVisible();
     await expect.poll(() => seconds(page)).toBe(10);
     await page.getByRole("button", { name: "Previous 10 seconds" }).click();
     await page.waitForTimeout(300);

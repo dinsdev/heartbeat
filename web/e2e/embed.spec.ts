@@ -1,6 +1,7 @@
 import { expect, test, type Request } from "@playwright/test";
 
 import { hostAt, unhost } from "./host";
+import { demoManifest } from "./manifest";
 
 test.afterEach(({ page }) => unhost(page));
 
@@ -13,7 +14,9 @@ const HEAVY = /\.(wasm|onnx|i16)(\?|$)|worker/;
 
 test("the embed shows the compact set and links to the full demo", async ({
   page,
+  request,
 }) => {
+  const manifest = await demoManifest(request);
   await page.goto("/?embed=page");
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
   for (const name of ["Next irregular beat", "Next disagreement"]) {
@@ -21,7 +24,11 @@ test("the embed shows the compact set and links to the full demo", async ({
   }
   await expect(page.getByLabel("Speed")).toBeVisible();
   await expect(page.getByTestId("playhead")).toBeVisible();
-  await expect(page.getByText("Record 223")).toBeVisible();
+  await expect(
+    page.getByText(
+      new RegExp(`^Record ${manifest.default.record} \\d+:\\d\\d`),
+    ),
+  ).toBeVisible();
   await expect(
     page.getByText("Research demo, not medical advice.", { exact: false }),
   ).toBeVisible();
