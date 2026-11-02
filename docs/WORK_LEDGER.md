@@ -2395,3 +2395,13 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Not chosen:** `evaluate-test` also writing per-beat seed-0 values into its committed report (literal sealed-run values, but a larger sealed code path and a committed file of a few MB, a guess).
 
 **Applied:** `docs/PRD.md` DEMO-07. Before the Phase 7 gate and before any DS2 result.
+
+## 2026-11-02: Phase 7 settling 5, the G1 outline is written before the freeze, with every EVAL-10 outcome
+
+**Decided (Din):** Goal A writes the G1 case study outline as `docs/CASE_STUDY_OUTLINE.md`, mapped to the dins.dev `projects` collection schema (zod, `~/Develop/dins.dev/docs/site/plans/M1-pages.md`). It pre-writes the headline sentence for each EVAL-10 outcome (CNN clearly better; no clear difference; baseline matches or beats the CNN), and every number appears only as a slot naming its source key in the sealed report. It lands in the freeze commit. The wording lint covers it as published text (R44).
+
+**Why:** the strict sealed gate (settling 1) refuses any doc change between the freeze and the sealed run, so the outline is either in the freeze commit or written after the results. In the freeze commit, it is on `origin/main` before any result exists, so the case study can say its structure and claims were fixed in advance, which is the point of the project.
+
+**Not chosen:** writing G1 after the sealed run and before the prose (PLAN.md's wording; less work, but the outline would be written knowing the outcome).
+
+**Applied:** Phase 7 task plan (PLAN.md section 8, to come); PLAN.md's Phase 7 line on G1 is read as "before the sealed run".
