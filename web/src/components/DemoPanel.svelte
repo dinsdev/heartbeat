@@ -387,7 +387,9 @@
     {/if}
     {#if embed}
       <p>
-        <a href={fullHref} target="_blank" rel="noopener">Open the full demo</a>
+        <a class="full" href={fullHref} target="_blank" rel="noopener"
+          >Open the full demo</a
+        >
       </p>
     {/if}
   </div>
@@ -471,13 +473,21 @@
     color: var(--color-muted);
   }
 
+  /* Drawn, not native: WebKit keeps a native select near 23 px tall whatever
+     its min-height, under WCAG 2.5.8's 24 px. The chevron is two gradients. */
   select {
+    appearance: none;
     min-height: 32px;
     max-width: 100%;
-    padding: 0 var(--space-2);
+    padding: 0 calc(var(--space-2) + 16px) 0 var(--space-2);
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-md);
-    background: var(--color-paper);
+    background:
+      linear-gradient(45deg, transparent 50%, currentColor 50%) no-repeat
+        calc(100% - 15px) 55% / 5px 5px,
+      linear-gradient(135deg, currentColor 50%, transparent 50%) no-repeat
+        calc(100% - 10px) 55% / 5px 5px,
+      var(--color-paper);
     color: var(--color-ink);
     font: inherit;
   }
@@ -555,6 +565,13 @@
 
   .embed .notes {
     gap: var(--space-1);
+  }
+
+  /* WCAG 2.5.8: the link is a target of its own, at least 24 px tall. */
+  .full {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
   }
 
   /* A narrow embed (about 4:5 on phones): smaller text, more paper. */
