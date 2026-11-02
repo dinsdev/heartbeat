@@ -2433,3 +2433,17 @@ Nothing else lands on `main` between steps 2 and 5. Goal B starts from step 5's 
 **Why:** it is not in Phase 7's exit criteria. It retrains cross-validation on CPU, so it rewrites `results/` with numbers that differ from the committed MPS ones in whatever checkout it runs in, and whether CPU cross-validation selects the same width and epoch count has not been measured; a different selection would fail its bit-for-bit claim and need a decision.
 
 **Not chosen:** an overnight `--exact` run in a scratch clone at the end of Phase 7.
+
+## 2026-11-02: Phase 7 settling 8, what counts as a sealed run if `evaluate-test` fails partway (A3, EVAL-06 clarification)
+
+**Gap:** `run_sealed` gates, prepares DS2 in memory, scores, builds the report, writes the report file, then appends the log line, and prints nothing before the end. A crash before the report file leaves no DS2 number anywhere, yet fixing the code changes the tree, so the freeze record no longer matches, and `write_freeze` refuses a second record.
+
+**Decision (Din):**
+
+1. A sealed run counts once any DS2 number has been written to disk or shown. From then on A3 applies: the run gets a ledger entry (and its log entry if it got that far), the fix lands, the rerun is logged, and both stay on record.
+2. A crash before any DS2 number exists is not a run. Din records the traceback in the ledger, with no numbers. The fix goes through a pull request; a commit with its own ledger entry removes `models/heartbeat-v1/freeze.json`; Din freezes again from the runbook. Only code may change; the model files may not.
+3. Goal A writes both cases into Din's runbook.
+
+**Reason:** the rule protects what matters, that no test number informs a change, without turning a crash nobody saw a number from into a "rerun" in the case study. Deciding it now means nobody improvises it after a failure.
+
+**Not chosen:** every start that passes the gate counts as a run, crash or not.
