@@ -2287,3 +2287,14 @@ Read: on the runner every project sits near the 50 ms limit (29 to 54 ms here; w
 - `scripts/check.sh` exit 0.
 
 **Not verified:** CI with these changes (Din's push). The CI web job will run about 2 minutes longer, since the four R38 runs no longer overlap (a guess from the local run).
+
+**CI with R38 alone (run 41523521046 at `ea8f1e5`):** green, both jobs. First pass 197 passed (2 workers, 5.0 min), then R38 alone, 4 passed (1 worker, 2.2 min); the embed race did not recur.
+
+| Project | Worst gap, beside the survey (run 41520593333) | Worst gap, alone | Median, alone |
+| --- | --- | --- | --- |
+| chromium | 51.8 ms | 12.4 ms | 4.1 ms |
+| webkit | 54.0 ms (83 ms in run 41511303371) | 39.0 ms | 8.0 ms |
+| pixel-7 | 29.3 ms | 12.4 ms | 4.1 ms |
+| iphone-15 | 54.0 ms | 18.0 ms | 8.0 ms |
+
+Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac's range. Desktop WebKit on Linux stays the outlier: worst 39 ms (at 0 s, the probe's first tick), then 25 to 27 ms through the run, and about 24% fewer gaps than on this Mac (2,862 against 3,750). It passes with 11 ms of margin. Flagged, not acted on: if it creeps toward 50 ms, the next look is the app's frame work at Desktop Safari's 1280 by 720 viewport on Linux WebKit.
