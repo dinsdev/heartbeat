@@ -2,7 +2,7 @@
 # so the policy below reaches the page, the Worker script and every file.
 # No X-Frame-Options: frame-ancestors decides who may embed the demo.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://dins.dev https://*.din.workers.dev
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://dins.dev https://*.dineshddawo.workers.dev
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 

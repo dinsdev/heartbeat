@@ -60,7 +60,8 @@ jobs:
       - run: pnpm -C web install --frozen-lockfile
       - run: pnpm -C web run build
       # A version that serves no traffic, with its own URL and a stable
-      # pr-<number> alias, both on *.din.workers.dev (frame-ancestors allows it).
+      # pr-<number> alias, both on *.dineshddawo.workers.dev (frame-ancestors
+      # allows it).
       - name: Upload a preview version
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

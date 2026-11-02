@@ -24,7 +24,7 @@ const CSP = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
-  "frame-ancestors 'self' https://dins.dev https://*.din.workers.dev",
+  "frame-ancestors 'self' https://dins.dev https://*.dineshddawo.workers.dev",
 ].join("; ");
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -80,7 +80,7 @@ test("R40: every response carries the CSP with frame-ancestors and 'wasm-unsafe-
   const all = rules().get("/*")!;
   expect(all.get("content-security-policy")).toBe(CSP);
   expect(all.get("content-security-policy")).toContain(
-    "frame-ancestors 'self' https://dins.dev https://*.din.workers.dev",
+    "frame-ancestors 'self' https://dins.dev https://*.dineshddawo.workers.dev",
   );
   expect(all.get("content-security-policy")).toContain("'wasm-unsafe-eval'");
   expect(all.get("x-content-type-options")).toBe("nosniff");
@@ -146,13 +146,27 @@ test("the preview serves the same policy, and the page runs under it with no vio
   expect(violations).toEqual([]);
 });
 
-test("R40: dins.dev may frame the demo and another site may not", async ({
-  page,
-  baseURL,
-}) => {
-  const allowed = await hostAt(page, "https://dins.dev", baseURL!);
-  await expect(allowed.locator("main")).toBeAttached();
-  const blocked = await hostAt(page, "https://evil.example", baseURL!);
-  await page.waitForTimeout(1500);
-  await expect(blocked.locator("main")).toHaveCount(0);
-});
+// The site's previews and its production before launch run on this account's
+// workers.dev subdomain (dins.dev M0 plan: <branch>-dins-site.<subdomain>).
+for (const origin of [
+  "https://dins.dev",
+  "https://feat-case-study-dins-site.dineshddawo.workers.dev",
+]) {
+  test(`R40: ${origin} may frame the demo`, async ({ page, baseURL }) => {
+    const allowed = await hostAt(page, origin, baseURL!);
+    await expect(allowed.locator("main")).toBeAttached();
+  });
+}
+
+// Another site, and the `din` subdomain design call 16 first assumed, which
+// belongs to some other account.
+for (const origin of [
+  "https://evil.example",
+  "https://dins-site.din.workers.dev",
+]) {
+  test(`R40: ${origin} may not frame the demo`, async ({ page, baseURL }) => {
+    const blocked = await hostAt(page, origin, baseURL!);
+    await page.waitForTimeout(1500);
+    await expect(blocked.locator("main")).toHaveCount(0);
+  });
+}

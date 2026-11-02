@@ -10,10 +10,10 @@ For the dins.dev repo (PUB-08, Heartbeat Phase 6 task B7). Din carries this note
 - Every response carries this CSP (`web/public/_headers`, checked by `web/e2e/headers.spec.ts`):
 
   ```
-  frame-ancestors 'self' https://dins.dev https://*.din.workers.dev
+  frame-ancestors 'self' https://dins.dev https://*.dineshddawo.workers.dev
   ```
 
-  and no `X-Frame-Options`, so only dins.dev, Heartbeat itself and Workers previews on the `din` subdomain may frame it.
+  and no `X-Frame-Options`, so only dins.dev, Heartbeat itself and Workers on this account's workers.dev subdomain (`dineshddawo`) may frame it. That covers the site's previews (`<branch>-dins-site.dineshddawo.workers.dev`) and its production before launch (`dins-site.dineshddawo.workers.dev`), as the site's M0 plan lays them out.
 
 ## 1. Let `demo.src` take the Heartbeat origin
 
@@ -82,7 +82,7 @@ The site plans use Astro's `security.csp`. Add the origin to `frame-src` (and ke
 "frame-src 'self' https://heartbeat.dins.dev",
 ```
 
-If M3's Turnstile entry already sets `frame-src https://challenges.cloudflare.com`, merge the two into one directive. To try the case study against a Heartbeat preview before Phase 8, a site preview build can add `https://*.din.workers.dev` to `frame-src`; production should list only `https://heartbeat.dins.dev`.
+If M3's Turnstile entry already sets `frame-src https://challenges.cloudflare.com`, merge the two into one directive. To try the case study against a Heartbeat preview before Phase 8, a site preview build can add `https://*.dineshddawo.workers.dev` to `frame-src`; production should list only `https://heartbeat.dins.dev`.
 
 ## 4. Post the theme to the iframe
 
@@ -117,11 +117,11 @@ export function postThemeToFrames(
 
 and call `postThemeToFrames(next)` from the toggle after it sets `html[data-theme]`. If the visitor never touched the toggle and the site has no `data-theme`, posting the resolved system theme is fine; both sides follow the same media query anyway.
 
-A site preview on `*.din.workers.dev` has a different origin, so the embed ignores its messages and follows the system theme there. That is expected.
+A site preview, or the site's production before launch, runs on `*.dineshddawo.workers.dev`, a different origin, so the embed ignores its messages and follows the system theme there. That is expected; the theme sync starts working at launch on `https://dins.dev`.
 
 ## 5. Preview origins
 
-Heartbeat's `frame-ancestors` allows `https://*.din.workers.dev`: Heartbeat's own Version Preview URLs (`<version>-heartbeat.din.workers.dev`, `pr-<number>-heartbeat.din.workers.dev`) and any dins.dev preview on the same Workers subdomain. If the site's previews run somewhere else (Pages, another subdomain), tell Din: the pattern lives in `web/public/_headers` and its test, and changing it is a Heartbeat commit.
+Heartbeat's `frame-ancestors` allows `https://*.dineshddawo.workers.dev`, the account's workers.dev subdomain (checked on Heartbeat's first preview, 2026-11-02): Heartbeat's own Version Preview URLs (`<version>-heartbeat.dineshddawo.workers.dev`, `pr-<number>-heartbeat.dineshddawo.workers.dev`), the site's previews (`<branch>-dins-site.dineshddawo.workers.dev`) and `dins-site.dineshddawo.workers.dev` before launch. A CSP wildcard covers whole labels only, so it cannot be narrowed to `dins-site` previews; every Worker on the subdomain is Din's. If the subdomain is ever renamed in the Cloudflare dashboard, or the site's previews run somewhere else (Pages, another account), tell Din: the pattern lives in `web/public/_headers` and its test, and changing it is a Heartbeat commit.
 
 ## How to check it on the site
 
