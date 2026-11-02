@@ -2334,6 +2334,6 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 
 **Accepted without, per Din:** the screen reader pass and real phones from the manual checklist were not done before acceptance; they stay open for Phase 8 (TASKS 8.4 already holds the VoiceOver pass). The `pr-7-heartbeat.dineshddawo.workers.dev` alias keeps serving the last upload for these checks.
 
-**Cleanup:** the merged local branch `phase-6-demo` deleted with `git branch -d`. The remote branch is still on GitHub; Din deletes it. No stashes remain.
+**Cleanup:** the merged local branch `phase-6-demo` deleted with `git branch -d`. No stashes remain. Correction (same day): the remote branch was already gone when Din ran `git push origin --delete phase-6-demo` ("remote ref does not exist"), although the repo's `delete_branch_on_merge` is false; the entry had read a stale remote-tracking ref. `git fetch --prune` removed it. Din also deleted the leftover remote branch `phase-1-skeleton`; `main` is the only branch on GitHub.
 
 **Carried into Phase 7 and 8, report only:** desktop WebKit on Linux has the thinnest R38 margin (27 to 39 ms alone in CI, limit 50); the `.wasm` reaches visitors at 3,274,094 bytes with Brotli, against the PRD's estimate of about 2.4 MB (PRD text unchanged); R37 accepts theme messages only from `https://dins.dev`, so the site's previews and its pre-launch production on workers.dev do not sync the theme; `docs/G4_HANDOFF.md` waits for Din to carry it to dins.dev; the Phase 5 items above still stand.
