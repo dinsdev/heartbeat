@@ -2152,3 +2152,69 @@ DS1 only throughout: no DS2 signal, label or prediction was loaded, plotted or s
 **Pull request:** none yet. The phase opens one pull request when Goal B is done (section 1: phases merge to `main` after CI passes and Din agrees); merging now would put the red coverage test on `main`.
 
 **Accepted:** the probe's design direction only. TASKS 6.1 to 6.3 and 6.5 stay In progress; their rows are accepted when the phase is.
+
+## 2026-11-01: Phase 6 Goal B built and verified locally; waiting on Din's Cloudflare setup and push
+
+**Built (tasks B1 to B7, on `phase-6-demo`):**
+
+- B1, `57c39e0`: playback at 0.5x to 4x, the 10-second floor, one frame loop that runs only while something moves, drag to scrub (1:1, coast, rubber band, spring, interruptible), the jump lookups, R38.
+- B2, `c6008ed`: Speed, the recording picker with class counts, the 5-second position slider, Next irregular beat and Next disagreement with their "none" notes, the beat table, the status line every 10 seconds of playback (DEMO-10 to DEMO-12). Also fixed an effect that read and wrote the redraw counter and left labels unrequested; a new browser test fails on any page error.
+- B3, `c4c7c72`: reduced motion (DEMO-14), the embed's deferred loading and autoplay on view, theme messages (R37).
+- B4, `1813985`: axe (R35) and the keyboard walk (R36); the embed link raised to 24 px and the selects drawn.
+- B5, `535dbaf`: `web/public/_headers` with design call 16's CSP, nosniff, the referrer policy, no `X-Frame-Options`, immutable caching only for hashed files (R40). `vite preview` serves the same `/*` headers, so every Playwright test runs under the shipped CSP, with zero policy violations: nothing looser was needed (stop 1 clear).
+- B6, `a52195b`: wrangler 4.151.1, `web/wrangler.jsonc`, `deploy.yml` called from `ci.yml`, `repo_config`'s deploy checks, the timing spec.
+- B7, `24ca941`: `docs/G4_HANDOFF.md`.
+
+**Deviations from the plan, each small:**
+
+1. R38 runs on all four Playwright projects. The plan named the two desktop ones; the guard forbids a skip and the phone profiles pass.
+2. Next disagreement reads the label the trace shows, and for beats the Worker has not labeled yet looks ahead through the shipped Python labels (parity says they match). Once there the trace shows what the browser computes.
+3. The default record 223 starts at 20 s (D4); every other record starts at 0 s.
+4. The parity counter counts compared beats (labels the Worker returned with a stored Python value), not beats in the recording.
+5. The embed leaves out the 10-second status line along with the picker, slider and table (settling 5's compact set). In a 4:5 box at phone width the trace strip is about 85 px tall (Goal A probe screenshot measurement, not a test).
+6. The theme module is `web/src/lib/theme/messages.ts` beside `contrast.ts`, not `lib/theme.ts` as design call 1 names it.
+7. The selects are drawn (`appearance: none`, a gradient chevron): WebKit kept native selects at 23 px whatever their `min-height`, under R36's 24 px target.
+8. On WebKit the keyboard walk presses Option+Tab, which Safari needs to reach links and buttons.
+9. The embed tests frame the demo from a routed `https://dins.dev` page that Playwright serves, with `https://heartbeat.test` proxied to the local preview, so `frame-ancestors` sees real origins and nothing leaves the machine. A test checks that another origin is refused.
+10. The R45 frozen-install check in `repo_config` now applies per workflow (each workflow that runs `uv run` must run `uv sync --frozen`, each that runs pnpm must run `pnpm install --frozen-lockfile`). Stricter than before; deploy.yml would otherwise have satisfied it for ci.yml. No test changed.
+
+**Deploy design (design call 19, B6):** `ci.yml` gains a `preview` job that needs `python` and `web` and runs only on pull requests whose head is this repo; it calls `deploy.yml` (`workflow_call`) with the two secrets named. `deploy.yml`'s `preview` job rebuilds the DS1 demo data and the page with CI's pinned actions, runs `wrangler versions upload --preview-alias pr-<number>`, and writes the URLs to the job summary. Its `production` job runs `wrangler deploy` only on `workflow_dispatch` from `main` (Phase 8). Why not `workflow_run`: it fires only from the default branch's workflow file and would run a fork's code with the secrets. Why not have `deploy.yml` call `ci.yml`: CI would run twice and OPS-05 wants `ci.yml` on push and pull request. `repo_config` checks the triggers (no `pull_request_target` or `workflow_run`), read-only permissions, the guards, the caller's needs and same-repo guard, wrangler only in `deploy.yml`, and the wrangler config keys (`uv run pytest tests/unit/test_repo_config.py`: 75 passed, each of the 24 broken-copy cases failing for its own reason).
+
+**Cloudflare facts (Cloudflare docs, read 2026-11-01, not yet tried on the account):**
+
+- `wrangler versions upload` fails on a Worker that does not exist yet, so Din creates it once with a local `wrangler deploy` while logged in.
+- The CI token: an account-owned API token scoped to the `heartbeat` Worker with the Editor role. Creating the Worker needs Din's own login.
+- Preview and alias URLs have the form `<alias>-heartbeat.din.workers.dev`, which `frame-ancestors` allows.
+- Open for Din: the docs now recommend Workers Previews (`wrangler preview`) over aliased Version Preview URLs. The plan's design call 19 names Version Previews and the workflow uses them; switching is a later call.
+
+**Headers through the Worker runtime (`pnpm -C web exec wrangler dev --port 8799`, local workerd 1.20261012.1, checked by hand with curl):** the CSP on every path; `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` and on `/data/101.5803e294.trace.i16`; `public, max-age=0, must-revalidate` on `manifest.json` and `/`; `/index.html` answers 307; an unknown path 404. Local dev sent Brotli on every file; whether Cloudflare's edge compresses `.wasm` and `.i16` is checked after the first preview.
+
+**Timings (design call 20, D5; reported, not gated; `pnpm -C web exec playwright test e2e/timings.spec.ts`, `web/test-results/timings.json`, Chromium 156.0.8078.4, `vite preview` serving files uncompressed, 4x CPU slowdown):**
+
+| Measure | Desktop Chrome | Pixel 7 on fast 4G |
+| --- | --- | --- |
+| First trace drawn | 271 ms | 1,829 ms |
+| First live label | 399 ms | 16,060 ms |
+| Worker batches, median beats per batch | 14, 1 | 34, 1 |
+| Inference per beat, median and pooled | 0.3 ms, 0.315 ms | 11.5 ms, 3.793 ms |
+| Frames in 10 s at 1x: median, p95, over 20 ms | 16.7 ms, 16.7 ms, 0 | 16.7 ms, 16.7 ms, 0 |
+| JS heap | 10 MB | 10 MB |
+| Response bodies | 15.53 MB | 15.53 MB |
+
+Limits, all three material:
+
+1. The slowdown reaches the main thread only. Chromium refuses CPU throttling on a Worker target ("Operation is only supported for pages, not workers", Chromium 156), and a separate probe run at 1x and 4x (scratchpad `timings-1x.json` and `timings-4x.json`, deleted) showed no slowdown in the Worker (pooled inference per beat: desktop 0.46 ms at 1x and 0.30 at 4x, phone 3.50 and 3.43). So inference times are this Mac's full speed, not a slow phone's.
+2. The preview serves the 14,239,897-byte `.wasm` uncompressed (PRD: about 2.4 MB with Brotli), so the phone's 16 s to the first label is mostly that download over fast 4G and an upper bound. Fast 4G is DevTools' preset (9 Mbit/s down at 90%, 165 ms latency; devtools-frontend `NetworkManager.ts`).
+3. The phone run's per-beat inference is higher than desktop's although the Worker is not throttled. Not investigated; the next look is the preview on Cloudflare.
+
+**Parity and size gates (unchanged from Goal A):** the survey and R29 numbers in Goal A's entry hold; `pnpm -C web run e2e` reran both in all four projects. `pnpm -C web run build`: page JavaScript 29,029 bytes gzip plus the Worker's own 1,690 (30,719 of the 60,000 gate; Goal A was 24,975, the controls and scrubber added the rest); ONNX Runtime's chunk 23,483 gzip and its `.wasm` 14.2 MB raw, outside the JavaScript gate; model 210,503 bytes; largest beats file 98,213 bytes (record 215).
+
+**CI so far:** run 41357721418 on Din's push of `a5c0de7` (Goal A): `web` green; `python` red on `test_every_row_due_by_the_current_phase_has_a_test` alone (1 failed, 1,068 passed), as expected until Goal B covered R35 to R38 and R40. Goal B is not pushed yet.
+
+**Verified (local, at `24ca941` plus this commit's docs):** `scripts/check.sh` exit 0 (Python lint, types and unit tests; web lint, format, svelte-check, Vitest 118 tests in 18 files). `uv run pytest` exit 0: 1,097 passed in 73.6 s. `uv run heartbeat verify` 6 of 6. `pnpm -C web run build` exit 0 with the size gates. `pnpm -C web run e2e` exit 0: 201 passed in 1.7 minutes (103 s wall), Desktop Chrome, Desktop Safari, Pixel 7 and iPhone 15 projects, the timing spec included. `uv run python -m heartbeat.checks.rule_coverage` exit 0: R29 to R40 covered, only R43 pending (Phase 7). `uv run python -m heartbeat.checks.repo_config` exit 0. `uv run python -m heartbeat.checks.wording` exit 0.
+
+**Throwaway checks (scratchpad, deleted after this entry):** screenshot scripts for B2 and B4 (Playwright, Chromium and WebKit, light and dark), a CDP probe of Worker throttling, the 1x timing run, the `wrangler dev` header check, logs of the runs above.
+
+**Not verified:** anything on Cloudflare (preview URL, edge compression of `.wasm` and `.i16`, whether previews survive with `workers_dev` off); CI on Goal B; a screen reader pass and real phones (the manual checklist in the hand-off). DS1 only throughout: no DS2 signal, label or prediction was read, plotted or shipped. No dependency apart from wrangler, no pin change or download, no edit to `manifests/`, `config/folds.json`, `.claude/`, `models/heartbeat-v1/` or `~/Develop/dins.dev`; no push, deploy or secret.
+
+**Waiting on Din:** the first `wrangler deploy`, the API token, the two GitHub secrets, the push and the pull request. Accepted: nothing new; only Din sets it.

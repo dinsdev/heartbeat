@@ -16,7 +16,7 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 ## Commands
 
-Working today (Phase 6, Goal A):
+Working today (Phase 6):
 
 | What | Command |
 | --- | --- |
@@ -54,16 +54,20 @@ Working today (Phase 6, Goal A):
 | Web lint, format (web files and every Markdown file), types, unit tests | `pnpm -C web run lint`, `pnpm -C web run format:check`, `pnpm -C web run check`, `pnpm -C web run test` |
 | One Vitest file | `pnpm -C web exec vitest run <file>` |
 | Web build, then the size gates on `dist/` (R39; needs the demo data) | `pnpm -C web run build` |
-| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; about 15 s) | `pnpm -C web run e2e` |
+| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; 201 tests, about 1.7 minutes; the build runs first) | `pnpm -C web run e2e` |
+| Reported timings, not a gate (D5; Chromium only, 4x CPU slowdown on the main thread, the phone on fast 4G; writes `web/test-results/timings.json`; about 1 minute) | `pnpm -C web exec playwright test e2e/timings.spec.ts` |
+| Serve `web/dist` through the Worker runtime locally, to check `_headers` (after a build; stop it when done) | `pnpm -C web exec wrangler dev --port 8799` |
 | One Playwright file | `pnpm -C web exec playwright test <file>` |
 
-Arriving later in Phase 6 (Goal B):
+Deploys (Din only; F5 denies wrangler's deploy and versions commands to Claude):
 
-| What | Command | Phase |
-| --- | --- | --- |
-| Worker Preview deploys from pull requests (Goal B, Din's go) | `.github/workflows/deploy.yml` | 6 |
+| What | Command |
+| --- | --- |
+| Create the Worker once, logged in with `wrangler login`, before the first preview (a versions upload fails on a Worker that does not exist) | `pnpm -C web run build && pnpm -C web exec wrangler deploy` |
+| Worker Preview on every pull request from this repo, after CI's python and web jobs pass; the URLs land in the job summary (needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets) | `.github/workflows/deploy.yml`, called by `ci.yml` |
+| Production deploy from `main`, started by hand (Phase 8, TASKS 8.5) | `gh workflow run deploy.yml --ref main` |
 
-Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first) and a `web` job (which builds the DS1 demo data from the same cache, then the gated build, the wording lint on `web/dist` and Playwright); `scripts/check.sh` skips the real-data tests, the build and Playwright.
+Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first), a `web` job (which builds the DS1 demo data from the same cache, then the gated build, the wording lint on `web/dist` and Playwright), and on pull requests from this repo a `preview` job that calls `deploy.yml` once both pass; `scripts/check.sh` skips the real-data tests, the build and Playwright.
 
 Long jobs: CNN cross-validation takes about 70 to 76 minutes on MPS, the exhibit about 20 minutes, `train-final` about 15 minutes on CPU at the selected width 1 and 10 epochs, a full `rebuild` about 104 minutes and a clean-clone rebuild about 104 to 114 minutes (all measured 2026-10-30), `rebuild --exact` about 15 hours (a guess). Run long jobs in the background under `caffeinate -ims` and say how long they should take.
 
