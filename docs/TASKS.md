@@ -163,13 +163,13 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 7.1 | Gate checklist (PLAN.md section 3, Phase 7) with the R49 audit (Goal A) | Planned |
+| 7.1 | Gate checklist (PLAN.md section 3, Phase 7) with the R49 audit (Goal A) | Implemented and verified (2026-11-02), on `phase-7-freeze`: items 1 and 2 checked (CI run 41535302057 green on `main` at `e799a4a`; `uv run python -m heartbeat.checks.rule_coverage` exits 0 at `current-phase = 7`; R49 diff from `77daee4`: A3, B4, C4, C5 and C8 unchanged, three PRD 8.2 clarifications each with its own earlier entry, no stop); items 3 and 4 are Din's, runbook steps 1 and 2 (`29fb92b`; ledger: "Phase 7 gate checklist and the R49 audit") |
 | 7.2 | Freeze record committed and pushed (Din, from the runbook) | Planned |
 | 7.3 | `evaluate-test` once (Din); log, report and cards pushed; ledger entry with every headline number (Goal B) | Planned |
-| 7.4 | DS2 demo data from the frozen model, checked exactly against the sealed report (code in Goal A, built in Goal B); reproduction logged (Goal B) | Planned |
-| 7.5 | G1 case study outline, before the freeze (Goal A, settling 5) | Planned |
-| 7.6 | Settling 1 fixes: freeze line in the test blocks, frozen-paths reproduction gate, one reproduction per state (Goal A) | Planned |
-| 7.7 | Din's runbook for the freeze and the sealed run, with settling 8's failure cases (Goal A) | Planned |
+| 7.4 | DS2 demo data from the frozen model, checked exactly against the sealed report (code in Goal A, built in Goal B); reproduction logged (Goal B) | Code implemented and verified (2026-11-02), the build and the reproduction are Goal B's: DS2 mode prepares in memory and runs `check_against_sealed` before writing (`a5d5b88`, unit tests in `tests/unit/test_demo_build.py` and `tests/unit/test_sealed_check.py`); the DS1 rehearsal `tests/data/test_demo_ds2_rehearsal_real.py` passed (12.9 s, 16.0 s wall), including a planted mismatch that writes nothing; the web reads its split from the manifest (`3622cf8`, `pnpm -C web run e2e` 217 plus 4 passed) (ledger: "Phase 7 Goal A verification and runbook") |
+| 7.5 | G1 case study outline, before the freeze (Goal A, settling 5) | Implemented and verified (2026-11-02): `docs/CASE_STUDY_OUTLINE.md` (`77eab4f`), slots only, no result; published text under the wording lint (`test_the_case_study_outline_is_published_text`). Din reviews the drafts in the pull request |
+| 7.6 | Settling 1 fixes: freeze line in the test blocks, frozen-paths reproduction gate, one reproduction per state (Goal A) | Implemented and verified (2026-11-02): the freeze line from the sealed report (`b08796c`), `check_gate` sealed and reproduction modes with `FROZEN_PATHS` (`e7e733a`), `reproduce-test` fingerprinted (`065caa3`, R28 follow-up `f2c37c2`); `scripts/check.sh` and `CI=1 uv run pytest` (1148 passed) (ledger: "Phase 7 Goal A verification and runbook") |
+| 7.7 | Din's runbook for the freeze and the sealed run, with settling 8's failure cases (Goal A) | Implemented (2026-11-02): `docs/RUNBOOK_PHASE7.md`, Prettier and wording lint clean. Accepted when Din runs it |
 
 ### Phase 8: Content and launch
 

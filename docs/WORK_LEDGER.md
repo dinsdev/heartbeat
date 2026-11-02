@@ -2482,3 +2482,40 @@ The three PRD 8.2 changes, each matched to an entry made before this gate (dates
 No change lacks an entry, so R49 raises no stop. No DS2 result existed at any of these dates.
 
 **3. The freeze record is committed and pushed** and **4. the working tree is clean**: Din's, in `docs/RUNBOOK_PHASE7.md` steps 1 and 2 (`export --freeze` refuses a dirty tree, and `evaluate-test` refuses unless the freeze commit is on `origin/main`, R47).
+
+## 2026-11-02: Phase 7 Goal A verification and runbook (TASKS 7.4 to 7.7, Task A8)
+
+Goal A's code and documents are on `phase-7-freeze`, ready for a pull request. Commits: `b08796c` (A1, the freeze line), `e7e733a` (A2, the frozen-paths gate), `065caa3` (A3, one reproduction per state), `f2c37c2` (the R28 follow-up below), `a5d5b88` (A4, the DS2 demo build), `3622cf8` (A5, the web reads its split), `77eab4f` (A6, the G1 outline), `29fb92b` (A7, the gate checklist and R49 audit) and this entry's commit (A8, the runbook, a merge test and these notes). No DS2 signal, label or prediction was read: every DS2 path ran on DS1 stand-ins.
+
+**Verified (Claude, 2026-11-02), on this branch:**
+
+- `CI=1 uv run pytest`: 1148 passed in 88 s (real-data layer included), before the merge test below was added; that test then passed alone in both modes.
+- `scripts/check.sh`: exit 0 (after the merge test).
+- `uv run heartbeat verify`: 6 of 6 checks passed. `uv run heartbeat check-folds`: ok, 22 subjects in 5 folds.
+- `uv run python -m heartbeat.checks.rule_coverage`: exit 0 at `current-phase = 7` (R43, R47 covered; R49 MAN, met by the A7 entry).
+- `pnpm -C web run build` and `pnpm -C web run e2e` at `3622cf8`: 217 passed (1.2 min), then the R38 pass 4 passed (2.1 min). No web file changed after `3622cf8`.
+- The DS1 rehearsal of the DS2 demo build, `tests/data/test_demo_ds2_rehearsal_real.py`: passed in 12.9 s (16.0 s wall). It runs `run_sealed` on DS1 as a stand-in, builds the demo in DS2 mode with no prepared file readable, checks the manifest, then plants a one-count change in a per-patient cell of a second sealed report and confirms the build refuses, naming the cell, and writes nothing.
+- A DS2-shaped dry run of the web: the DS1 manifest rewritten in place to `split: DS2`, 21 records and a planted `sealed_run`, then `notes`, `embed`, `controls`, `reduced-motion` and `survey` specs on Chromium: 23 passed. The DS1 demo data was rebuilt afterwards and its manifest hash matched the one before.
+- The DS1 demo manifest is byte-identical before and after A4 (`build-demo-data`, same SHA-256).
+
+**Rulings (Claude's, for Din to review in the pull request):**
+
+1. `check_against_sealed` takes the subjects manifest as a fourth argument, because the report's per-patient rows are keyed by patient and the demo by record. Cost if wrong: one signature.
+2. The rule that only `sealed/run.py` imports `prepare_in_memory` widens to `demo/build.py` too, as design call 3 asks for the DS2 demo. The test names both files.
+3. The R28 real-data test expected `reproduce-test: ran (always runs)`; A3 removed `always_run`, so it now expects `ran (no earlier run)`, equally exact. A3's miss: `check.sh` skips the real-data layer, and the test fails the same way at A3's commit. Fixed in its own commit, `f2c37c2`. No assertion was loosened.
+4. The rehearsal helpers move from `tests/data/test_sealed_rehearsal_real.py` into `tests/rehearsal_support.py`, so both rehearsals share one frozen-repo setup.
+5. A DS2 demo build also checks the freeze record against the report's `freeze_commit` and the four model hashes, so a build after a refreeze cannot pair new models with an old report.
+6. The runbook's settling 8 case 1 says a rerun needs a fresh freeze like case 2, because the sealed gate refuses any change since the freeze commit. Settling 8 does not spell that out; Din to confirm.
+7. Added `test_a_branch_merged_after_the_freeze_refuses_naming_its_code` (R41, both gate modes) for review focus 1: a branch cut before the freeze, merged with `--no-ff` after it. It passed on its first run, since the gate diffs trees, so it guards the behavior rather than fixing a bug.
+
+**Known side effect.** A2 and A3 changed code under `export/` and `sealed/`, so the next real `rebuild` reruns `export` (about 65 s, measured 2026-10-30) and `build-demo-data`.
+
+**Final review: self-review** (Din did not ask for a subagent, so no fresh reviewer ran), against the five focus items:
+
+1. A change merged to `main` after the freeze: the merge test above, plus the existing sealed-gate tests on direct commits.
+2. The reproduction gate passing a `src/` change: `is_frozen` matches folder prefixes, the `AFTER_THE_SEAL` cases include a `docs/` change allowed beside a `src/` change refused, and a test shows a move out of `src/` is missed without `--no-renames`.
+3. A stale sealed report in the DS2 demo build: it reads the last sealed entry through `check_log`, a test rewrites a report and expects the hash refusal, and `results/test_runs.jsonl` is an input of the stage.
+4. A Playwright spec passing on DS2 through a DS1 assumption: the record helpers throw when nothing fits, `demoManifest` asserts the split's full record count, the survey compares its list to the manifest, and the DS2-shaped dry run above.
+5. The notes on the wrong split: `splitNotes` with Vitest on both splits, `notes.spec.ts` in full and embed modes, and the DS2-shaped dry run.
+
+Not verified here: anything on real DS2 data (Goal B), CI on this branch (after Din pushes), and Din's review of the DEMO-09 line and the outline drafts.

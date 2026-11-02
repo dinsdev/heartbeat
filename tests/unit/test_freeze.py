@@ -286,6 +286,22 @@ def test_a_change_under_a_frozen_path_refuses_a_reproduction(
 
 
 @pytest.mark.rule("R41")
+@pytest.mark.parametrize("mode", ["sealed", "reproduction"])
+def test_a_branch_merged_after_the_freeze_refuses_naming_its_code(
+    tmp_path: Path, mode: GateMode
+) -> None:
+    """Phase 7 review focus 1: a merge commit, from a branch cut before the freeze."""
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    git(repo, "switch", "-q", "-c", "fix", "HEAD~1")
+    _commit(repo, {"src/code.py": "x = 2\n"}, "fix")
+    git(repo, "switch", "-q", "main")
+    git(repo, "merge", "-q", "--no-ff", "-m", "merge fix", "fix")
+    with pytest.raises(FreezeError, match=r"src/code\.py"):
+        _gate(repo, mode=mode)
+
+
+@pytest.mark.rule("R41")
 def test_moving_a_file_out_of_a_frozen_path_refuses_a_reproduction(
     tmp_path: Path,
 ) -> None:
