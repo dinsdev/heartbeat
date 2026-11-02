@@ -2383,3 +2383,15 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Not chosen:** Claude runs only `build-demo-data` and Din runs the reproduction; rule 1 unchanged, with Din running both.
 
 **Applied:** `AGENTS.md` rigor rule 1. Before the Phase 7 gate and before any DS2 result.
+
+## 2026-11-02: Phase 7 settling 4, the DS2 demo labels are recomputed and checked against the sealed report (DEMO-07 clarification)
+
+**Gap:** DEMO-07 says each `beats.json` carries the sealed run's seed-0 labels and probabilities, but the sealed report holds aggregates only (per-model confusion matrices, the per-patient S and V table, intervals), no per-beat values.
+
+**Decision (Din):** `build-demo-data` scores DS2 with the frozen seed-0 `model.onnx` on CPU through the existing scoring path (the one the DS1 build already uses), then requires its pooled seed-0 confusion matrix and every per-patient S and V cell to equal the latest sealed report exactly. Any difference stops the build and goes to Din. `evaluate-test` is unchanged.
+
+**Reason:** the same frozen file through the same code gives the sealed run's labels, and the exact check against the committed report proves it for every count the report holds; the sealed path stays as rehearsed in Phase 5.
+
+**Not chosen:** `evaluate-test` also writing per-beat seed-0 values into its committed report (literal sealed-run values, but a larger sealed code path and a committed file of a few MB, a guess).
+
+**Applied:** `docs/PRD.md` DEMO-07. Before the Phase 7 gate and before any DS2 result.
