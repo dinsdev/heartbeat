@@ -1,4 +1,6 @@
-import { expect, test, type Page, type Request } from "@playwright/test";
+import { expect, test, type Request } from "@playwright/test";
+
+import { hostAt } from "./host";
 
 // Settling 5, design call 12: `?embed=page` is the case study's iframe. It
 // shows the compact control set, fetches nothing heavy (the runtime, the
@@ -6,19 +8,6 @@ import { expect, test, type Page, type Request } from "@playwright/test";
 // reduced motion is set.
 
 const HEAVY = /\.(wasm|onnx|i16)(\?|$)|worker/;
-
-/** A host page with the embed far below the fold, as the case study has it. */
-async function host(page: Page, baseURL: string) {
-  await page.setContent(
-    `<!doctype html><body style="margin:0">
-      <div style="height:3000px">Case study text</div>
-      <iframe id="demo" title="Heartbeat demo" src="${baseURL}/?embed=page"
-        style="display:block;width:800px;height:500px;border:0"></iframe>
-      <div style="height:400px"></div>
-    </body>`,
-  );
-  return page.frameLocator("#demo");
-}
 
 test("the embed shows the compact set and links to the full demo", async ({
   page,
@@ -58,7 +47,10 @@ test("the embed fetches nothing heavy until it scrolls into view, then plays", a
   };
   page.on("request", note);
   page.on("worker", () => heavy.push("a Worker started"));
-  const demo = await host(page, baseURL!);
+  // The case study with the embed far below the fold.
+  const demo = await hostAt(page, "https://dins.dev", baseURL!, {
+    above: 3000,
+  });
   // The embed's page itself is loaded and waiting.
   await expect(demo.locator("main")).toBeAttached();
   await page.waitForTimeout(1500);
@@ -77,7 +69,9 @@ test.describe("under reduced motion", () => {
     page,
     baseURL,
   }) => {
-    const demo = await host(page, baseURL!);
+    const demo = await hostAt(page, "https://dins.dev", baseURL!, {
+      above: 3000,
+    });
     await page.locator("#demo").scrollIntoViewIfNeeded();
     await expect(demo.getByRole("button", { name: "Play" })).toBeVisible();
     await expect(
