@@ -90,7 +90,8 @@ def test_rebuild_without_a_freeze_record_reads_no_ds2_record(
     assert NO_FREEZE_MESSAGE in caplog.text
     assert ran == [s.name for s in PIPELINE if s.name != "reproduce-test"]
     out = capsys.readouterr().out
-    assert "reproduce-test: ran (always runs)" in out
+    # Phase 7 A3: no longer always_run, and the state folder is fresh.
+    assert "reproduce-test: ran (no earlier run)" in out
     assert f"stopped after {PIPELINE[-1].name}" in out
     assert not (tmp_path / "test_runs.jsonl").exists()
     assert set(splits.ds2)
