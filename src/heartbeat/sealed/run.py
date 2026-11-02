@@ -22,7 +22,7 @@ from numpy.typing import NDArray
 from heartbeat.constants import BOOTSTRAP_DRAWS, CNN_SEEDS
 from heartbeat.data.prepare import prepare_in_memory
 from heartbeat.export.bundle import seed_folder
-from heartbeat.export.freeze import check_gate
+from heartbeat.export.freeze import GateMode, check_gate
 from heartbeat.models.augment import model_windows
 from heartbeat.models.inputs import RRScaler, apply_rr_scaler, rr_model_inputs
 from heartbeat.sealed.log import append_entry, read_log
@@ -179,7 +179,10 @@ def run_sealed(
         ReproductionMismatchError: After logging a reproduction whose report
             differs from the last sealed one.
     """
-    gate = check_gate(repo, models_dir, require_remote=require_remote)
+    if entry_type not in ("sealed", "reproduction"):
+        raise ValueError(f"unknown entry type {entry_type!r}")
+    mode: GateMode = "sealed" if entry_type == "sealed" else "reproduction"
+    gate = check_gate(repo, models_dir, mode, require_remote=require_remote)
     beats = load_records(records, raw_dir, lead, subjects)
     scores = score_models(beats, models_dir)
     report = sealed_report(

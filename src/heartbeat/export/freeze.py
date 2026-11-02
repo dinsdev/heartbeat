@@ -5,10 +5,12 @@ commit, the hashes of the config, the fold pin and the lockfile, the hash of
 every model file, and the date. It refuses on a dirty tree, when a record
 exists, or when a model file differs from `results/export.json`.
 
-`check_gate` is what `evaluate-test` runs before it reads anything: a clean
-tree; a record that parses; nothing changed since the recorded commit except
-the record itself; every recorded hash matching the files; and (R47) the
-recorded commit on `origin/main`.
+`check_gate` is what `evaluate-test` and `reproduce-test` run before they read
+anything: a clean tree; a record that parses; every recorded hash matching the
+files; and (R47) the recorded commit on `origin/main`. Since the recorded
+commit, a sealed run allows nothing to change but the record itself; a
+reproduction allows anything outside `FROZEN_PATHS`, so the sealed log, its
+report, the cards and docs may land first (Phase 7 settling 1).
 """
 
 import hashlib
@@ -17,7 +19,7 @@ import subprocess
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, get_args
 
 from heartbeat.export.bundle import FREEZE_NAME, bundle_files
 from heartbeat.runs import canonical_json, write_text_atomic
@@ -25,6 +27,19 @@ from heartbeat.runs import canonical_json, write_text_atomic
 # Design call 5: the inputs a frozen model depends on besides its own files.
 FROZEN_INPUTS = ("config/default.toml", "manifests/folds.sha256", "uv.lock")
 REMOTE_REF = "origin/main"
+
+# Phase 7 settling 1, design call 1: what a reproduction requires unchanged
+# since the freeze commit (the record aside). A trailing slash is a folder.
+FROZEN_PATHS = (
+    "src/",
+    "config/",
+    "manifests/",
+    "models/heartbeat-v1/",
+    "pyproject.toml",
+    "uv.lock",
+)
+
+GateMode = Literal["sealed", "reproduction"]
 
 FREEZE_LABEL = (
     "freeze record: written by `heartbeat export --freeze` before the sealed "
@@ -59,6 +74,22 @@ def _record_path(repo: Path, models_dir: Path) -> str:
     return (models_dir / FREEZE_NAME).relative_to(repo).as_posix()
 
 
+def is_frozen(path: str) -> bool:
+    """Whether a repo-relative POSIX path is under `FROZEN_PATHS`."""
+    return any(
+        path.startswith(frozen) if frozen.endswith("/") else path == frozen
+        for frozen in FROZEN_PATHS
+    )
+
+
+def _changed_since(repo: Path, commit: str) -> list[str]:
+    """Every path changed from `commit` to HEAD, both sides of a rename."""
+    diff = _git(repo, "diff", "--name-only", "--no-renames", "-z", commit, "HEAD")
+    if diff.returncode != 0:
+        raise FreezeError(f"git diff from {commit[:12]} failed: {diff.stderr.strip()}")
+    return sorted(name for name in diff.stdout.split("\0") if name)
+
+
 def write_freeze(
     repo: Path, models_dir: Path, export_record: Mapping[str, Any], today: date
 ) -> Path:
@@ -90,9 +121,16 @@ def write_freeze(
 
 
 def check_gate(
-    repo: Path, models_dir: Path, require_remote: bool = True
+    repo: Path, models_dir: Path, mode: GateMode, require_remote: bool = True
 ) -> dict[str, Any]:
-    """Refuse unless the tree is exactly the frozen one plus its record.
+    """Refuse unless the tree matches the freeze record for this mode.
+
+    Args:
+        repo: The git checkout.
+        models_dir: The bundle holding the record.
+        mode: "sealed" allows only the record to change since the freeze
+            commit; "reproduction" allows changes outside `FROZEN_PATHS`.
+        require_remote: R47's `origin/main` check.
 
     Returns:
         `{"record": <the record>, "sha256": <the record file's SHA256>}`.
@@ -100,6 +138,8 @@ def check_gate(
     Raises:
         FreezeError: Naming the first cause found.
     """
+    if mode not in get_args(GateMode):
+        raise FreezeError(f"unknown gate mode {mode!r}")
     _require_clean(repo)
     path = models_dir / FREEZE_NAME
     if not path.is_file():
@@ -116,13 +156,20 @@ def check_gate(
         raise FreezeError(f"cannot parse {path}: {error}") from error
     if _git(repo, "cat-file", "-e", f"{commit}^{{commit}}").returncode != 0:
         raise FreezeError(f"freeze commit {commit} is not in this repository")
-    diff = _git(repo, "diff", "--name-only", commit, "HEAD")
-    changed = sorted(diff.stdout.split())
-    if diff.returncode != 0 or changed != [_record_path(repo, models_dir)]:
-        others = [c for c in changed if c != _record_path(repo, models_dir)]
+    record_path = _record_path(repo, models_dir)
+    changed = _changed_since(repo, commit)
+    if record_path not in changed:
         raise FreezeError(
-            f"changed since the freeze commit {commit[:12]} besides the record: "
-            f"{others or changed}"
+            f"the record is not committed after the freeze commit {commit[:12]}"
+        )
+    others = [c for c in changed if c != record_path]
+    if mode == "reproduction":
+        others = [c for c in others if is_frozen(c)]
+    if others:
+        allowed = "besides the record" if mode == "sealed" else "under a frozen path"
+        raise FreezeError(
+            f"changed since the freeze commit {commit[:12]} {allowed} ({mode}): "
+            f"{others}"
         )
     if sorted(inputs) != sorted(FROZEN_INPUTS):
         raise FreezeError(f"the record's inputs are {sorted(inputs)}")

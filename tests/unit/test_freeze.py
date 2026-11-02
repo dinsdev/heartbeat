@@ -1,4 +1,8 @@
-"""EVAL-05, R41 (and R47, built now): the freeze record and the sealed-run gate."""
+"""EVAL-05, R41, R47: the freeze record and the gate's two modes.
+
+A sealed run allows nothing but the record since the freeze commit; a
+reproduction allows anything outside the frozen paths (Phase 7 settling 1).
+"""
 
 import json
 from datetime import date
@@ -9,7 +13,13 @@ import pytest
 from run_support import git
 
 from heartbeat.export.bundle import bundle_files
-from heartbeat.export.freeze import FreezeError, check_gate, write_freeze
+from heartbeat.export.freeze import (
+    FROZEN_PATHS,
+    FreezeError,
+    GateMode,
+    check_gate,
+    write_freeze,
+)
 
 TODAY = date(2027, 1, 15)
 
@@ -57,8 +67,12 @@ def _freeze(repo: Path) -> Path:
     return path
 
 
-def _gate(repo: Path, remote: bool = False) -> dict[str, Any]:
-    return check_gate(repo, repo / "models" / "heartbeat-v1", require_remote=remote)
+def _gate(
+    repo: Path, remote: bool = False, mode: GateMode = "sealed"
+) -> dict[str, Any]:
+    return check_gate(
+        repo, repo / "models" / "heartbeat-v1", mode, require_remote=remote
+    )
 
 
 def test_the_record_holds_the_commit_inputs_models_and_date(tmp_path: Path) -> None:
@@ -200,3 +214,114 @@ def test_the_freeze_commit_must_be_on_origin_main(tmp_path: Path) -> None:
     git(repo, "push", "-q", "origin", "main")
     git(repo, "fetch", "-q", "origin")
     assert _gate(repo, remote=True)["record"]["date"] == "2027-01-15"
+
+
+def _commit(repo: Path, files: dict[str, str], message: str) -> None:
+    for name, text in files.items():
+        path = repo / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", message)
+
+
+# What lands on main after the sealed run (runbook step 5, then Goal B).
+AFTER_THE_SEAL = {
+    "results/test_runs.jsonl": '{"type": "sealed"}\n',
+    "results/test_runs/1-sealed.json": "{}\n",
+    "docs/MODEL_CARD.md": "rendered\n",
+    "docs/src/notes.md": "a doc under a folder named src\n",
+    "web/src/App.svelte": "<p>DS2</p>\n",
+}
+
+
+def test_frozen_paths_name_the_code_config_manifests_model_and_lock() -> None:
+    assert FROZEN_PATHS == (
+        "src/",
+        "config/",
+        "manifests/",
+        "models/heartbeat-v1/",
+        "pyproject.toml",
+        "uv.lock",
+    )
+
+
+@pytest.mark.rule("R41")
+def test_after_the_seal_a_reproduction_passes_and_a_sealed_run_refuses(
+    tmp_path: Path,
+) -> None:
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    _commit(repo, AFTER_THE_SEAL, "the sealed log, report and cards")
+    assert _gate(repo, mode="reproduction")["record"]["date"] == "2027-01-15"
+    with pytest.raises(FreezeError) as refused:
+        _gate(repo, mode="sealed")
+    for name in AFTER_THE_SEAL:
+        assert name in str(refused.value)
+
+
+@pytest.mark.rule("R41")
+@pytest.mark.parametrize(
+    "changed",
+    [
+        "src/code.py",
+        "src/heartbeat/new.py",
+        "config/default.toml",
+        "config/folds.json",
+        "manifests/splits.toml",
+        "models/heartbeat-v1/model.onnx",
+        "models/heartbeat-v1/scaler.json",
+        "pyproject.toml",
+        "uv.lock",
+    ],
+)
+def test_a_change_under_a_frozen_path_refuses_a_reproduction(
+    tmp_path: Path, changed: str
+) -> None:
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    _commit(repo, {**AFTER_THE_SEAL, changed: "changed after the freeze\n"}, "x")
+    with pytest.raises(FreezeError, match=changed.replace(".", r"\.")):
+        _gate(repo, mode="reproduction")
+
+
+@pytest.mark.rule("R41")
+def test_moving_a_file_out_of_a_frozen_path_refuses_a_reproduction(
+    tmp_path: Path,
+) -> None:
+    """Both sides of a rename count, so a move out of `src/` is seen."""
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    (repo / "docs").mkdir()
+    git(repo, "mv", "src/code.py", "docs/code.py")
+    git(repo, "commit", "-q", "-m", "move")
+    with pytest.raises(FreezeError, match=r"src/code\.py"):
+        _gate(repo, mode="reproduction")
+
+
+@pytest.mark.rule("R41")
+@pytest.mark.parametrize("mode", ["sealed", "reproduction"])
+def test_a_dirty_tree_refuses_both_modes(tmp_path: Path, mode: GateMode) -> None:
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    _commit(repo, AFTER_THE_SEAL, "the sealed log")
+    (repo / "docs" / "MODEL_CARD.md").write_text("edited\n", encoding="utf-8")
+    with pytest.raises(FreezeError, match="dirty"):
+        _gate(repo, mode=mode)
+
+
+@pytest.mark.rule("R41")
+def test_a_reproduction_still_checks_the_recorded_hashes(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    _commit(repo, AFTER_THE_SEAL, "the sealed log")
+    _tamper(repo, "models", "models/heartbeat-v1/model.onnx")
+    with pytest.raises(FreezeError, match=r"model\.onnx"):
+        _gate(repo, mode="reproduction")
+
+
+def test_an_unknown_mode_refuses(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    _freeze(repo)
+    with pytest.raises(FreezeError, match="mode"):
+        _gate(repo, mode="rehearsal")  # type: ignore[arg-type]
