@@ -2325,3 +2325,15 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Verified (this Mac):** with the old `_headers`, the updated R40 tests failed in Chromium for the expected reasons (the CSP string, the dins-site preview blocked, and the `din` origin allowed to frame); after the fix `pnpm -C web exec playwright test e2e/headers.spec.ts` 32 passed (four projects). `pnpm -C web run e2e` exit 0: 209 passed, then R38 alone 4 passed (worst gaps 9.8 to 15.0 ms). `scripts/check.sh`, `uv run python -m heartbeat.checks.repo_config` and the wording lint exit 0. Not verified: CI and the preview's served header (after Din's push).
 
 **CI and the preview after the fix (run 41528854902 at `cd8e78d`, PR dinsdev/heartbeat#7):** green: `python` 1,097 passed; `web` 209 browser tests, then R38 alone 4 passed (worst gaps: chromium 12.6 ms, webkit 27.0, pixel-7 12.2, iphone-15 26.0); the preview job uploaded version `4ba91571-bb03-4a32-b101-61c20df815a7`. `curl -sS -D - https://pr-7-heartbeat.dineshddawo.workers.dev/` returns 200 with `frame-ancestors 'self' https://dins.dev https://*.dineshddawo.workers.dev`. Task 6.6 has now run on Cloudflare.
+
+## 2026-11-02: Phase 6 accepted
+
+**Decision (Din):** TASKS 6.1 to 6.7 are Accepted. Din opened and merged PR dinsdev/heartbeat#7 (merge commit `9dd637a` on `main`, 21:58:01Z).
+
+**State at acceptance:** the Phase 6 exit is met: R29 to R40 pass locally and in CI, and the Worker Preview runs on Cloudflare with the corrected CSP (entries above). CI on the pull request, all green at `fc5d210`: the push run and the pull request run, `python`, `web` and `preview`. Superseded: run 41511303371 at `a76d881` and run 41520593333 at `fef0cea` (R38 beside the survey, and the embed teardown race; both fixed, entries above). CI run 41533097271 on `main` after the merge (21:58:04Z to 22:06:42Z), success. On `main` after the merge, `uv run heartbeat check-folds` exits 0 and `uv run heartbeat verify` passes 6 of 6.
+
+**Accepted without, per Din:** the screen reader pass and real phones from the manual checklist were not done before acceptance; they stay open for Phase 8 (TASKS 8.4 already holds the VoiceOver pass). The `pr-7-heartbeat.dineshddawo.workers.dev` alias keeps serving the last upload for these checks.
+
+**Cleanup:** the merged local branch `phase-6-demo` deleted with `git branch -d`. The remote branch is still on GitHub; Din deletes it. No stashes remain.
+
+**Carried into Phase 7 and 8, report only:** desktop WebKit on Linux has the thinnest R38 margin (27 to 39 ms alone in CI, limit 50); the `.wasm` reaches visitors at 3,274,094 bytes with Brotli, against the PRD's estimate of about 2.4 MB (PRD text unchanged); R37 accepts theme messages only from `https://dins.dev`, so the site's previews and its pre-launch production on workers.dev do not sync the theme; `docs/G4_HANDOFF.md` waits for Din to carry it to dins.dev; the Phase 5 items above still stand.
