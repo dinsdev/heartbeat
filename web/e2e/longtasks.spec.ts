@@ -7,6 +7,11 @@ import { expect, test } from "@playwright/test";
 // chain of zero-delay timers runs in both engines: a gap over 50 ms between
 // two of them means the main thread was busy that long. The probe is the
 // stricter of the two, since a gap can span several tasks.
+// The probe also counts time the page waits for a CPU, so the test runs on
+// its own (tag `@alone`: `pnpm run e2e` runs it after everything else, with
+// one worker). On CI's 4 vCPU runner, running beside the other tests (the
+// parity survey among them) put every project near the limit (ledger,
+// 2026-11-02).
 const LIMIT_MS = 50;
 const PLAY_MS = 30_000;
 
@@ -17,7 +22,7 @@ interface Probe {
   __probe: boolean;
 }
 
-test.describe("R38: long tasks during playback", () => {
+test.describe("R38: long tasks during playback", { tag: "@alone" }, () => {
   test.setTimeout(PLAY_MS + 30_000);
 
   test("R38: no main-thread task over 50 ms in 30 seconds at 4x", async ({

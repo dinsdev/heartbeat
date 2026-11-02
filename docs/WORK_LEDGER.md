@@ -2267,3 +2267,23 @@ Not reproduced. macOS ranks the browser above the hogs, and the macOS WebKit bui
 Read: on the runner every project sits near the 50 ms limit (29 to 54 ms here; webkit 83 ms in the first run), against 10 to 15 ms on this Mac. Webkit's five longest gaps (50 to 54 ms, at 17.2, 24, 28.8, 28.9 and 29.7 s) are a pattern, not one spike, and its gap count is about 30% below this Mac's (2,585 against 3,750). In chromium, the browser's own Long Tasks API saw no task over 50 ms in the same 30 seconds, so the 51.8 ms gap spans several tasks or a descheduled thread. Which projects fail changes between runs (run 1: webkit only; run 2: chromium, webkit, iphone-15). The dot reporter again places each R38 near its project's survey, but has no per-test times, so the overlap is likely, not shown.
 
 **A second, separate failure:** `[iphone-15] e2e/embed.spec.ts:68` "the embed loads when seen but does not play" failed with `route.fetch: Test ended` in `e2e/host.ts:26`: the proxy route was still fetching the 14 MB `.wasm` when the test ended. A teardown race in the test helper (Playwright's message names `page.unrouteAll({ behavior: 'ignoreErrors' })`), not an app failure. Not changed yet: rule 3, Din's call.
+
+## 2026-11-02: R38 runs on its own; the embed teardown race fixed
+
+**Decided (Din, 2026-11-02, "Yes, both"):** (1) R38 runs apart from every other browser test, so the gate measures the app rather than the machine it shares; the 50 ms limit, the 30 s at 4x and the four projects are unchanged. (2) The host helper drops its proxy route when each test ends. Both are test changes under rule 3, made on Din's go.
+
+**Why (1):** see the two CI runs above: every project near 50 ms on the runner against 10 to 15 ms on this Mac, failing projects changing run to run, and Chromium's Long Tasks API reporting no task over 50 ms while the timer probe saw 51.8 ms. The timer probe counts time the page waits for a CPU as well as time it works, so on a shared 4 vCPU runner it measures the neighbors too. Running R38 alone removes the neighbors. Whether that is the whole cause is the next CI run's question: if the gaps stay near 50 ms with R38 alone, the cause is the app's frame work on Linux and the fix moves to the app.
+
+**Changed:**
+
+- `web/e2e/longtasks.spec.ts`: tag `@alone` on the describe, and a comment saying why. Assertions untouched.
+- `web/package.json`: `e2e` runs `playwright test --grep-invert @alone`, then `playwright test --grep @alone --workers=1`, and exits 1 if either pass failed (checked with `sh -c` for all four pass and fail pairs), so a failure in the first pass never hides R38's result. `pnpm -C web run e2e` stays the one command; AGENTS.md's row updated.
+- `web/e2e/host.ts`: `unhost(page)` calls `page.context().unrouteAll({ behavior: "ignoreErrors" })`; `embed.spec.ts`, `headers.spec.ts` and `theme.spec.ts` call it in `test.afterEach`. It only drops requests still in flight after a test's last step; a request that fails during a test still fails that test's checks.
+
+**Verified (this Mac):**
+
+- The race reproduced before the fix: `pnpm -C web exec playwright test e2e/embed.spec.ts -g "loads when seen but does not play" --project=iphone-15 --repeat-each=30`, 1 failed of 30 (`route.fetch: Test ended`; an earlier batch of 30 failed more than once). After the fix, three batches of 30: 90 passed.
+- `pnpm -C web run e2e`: exit 0; first pass 197 passed (5 workers, 1.2 min), then R38 alone, 4 passed (1 worker, 2.1 min); 196 s in all. R38 alone: chromium 13.0 ms, webkit 12.0, pixel-7 10.3, iphone-15 14.0 (worst gaps).
+- `scripts/check.sh` exit 0.
+
+**Not verified:** CI with these changes (Din's push). The CI web job will run about 2 minutes longer, since the four R38 runs no longer overlap (a guess from the local run).

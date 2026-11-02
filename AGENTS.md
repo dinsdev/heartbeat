@@ -54,7 +54,7 @@ Working today (Phase 6):
 | Web lint, format (web files and every Markdown file), types, unit tests | `pnpm -C web run lint`, `pnpm -C web run format:check`, `pnpm -C web run check`, `pnpm -C web run test` |
 | One Vitest file | `pnpm -C web exec vitest run <file>` |
 | Web build, then the size gates on `dist/` (R39; needs the demo data) | `pnpm -C web run build` |
-| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; 201 tests, about 1.7 minutes; the build runs first) | `pnpm -C web run e2e` |
+| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; 201 tests, about 3.3 minutes; the build runs first; R38 runs last on its own, one worker, as its own pass) | `pnpm -C web run e2e` |
 | Reported timings, not a gate (D5; Chromium only, 4x CPU slowdown on the main thread, the phone on fast 4G; writes `web/test-results/timings.json`; about 1 minute) | `pnpm -C web exec playwright test e2e/timings.spec.ts` |
 | Serve `web/dist` through the Worker runtime locally, to check `_headers` (after a build; stop it when done) | `pnpm -C web exec wrangler dev --port 8799` |
 | One Playwright file | `pnpm -C web exec playwright test <file>` |
