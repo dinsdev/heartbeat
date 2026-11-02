@@ -1,19 +1,24 @@
-"""`build-demo-data` on synthetic DS1 records (Phase 6 Task A2; R31, R32).
+"""`build-demo-data` on synthetic records (Phase 6 Task A2, Phase 7 Task A4).
 
 The committed `models/heartbeat-v1/` files and `results/export.json` label
-the synthetic beats, so these tests need no download.
+the synthetic beats, so these tests need no download. The DS2 tests put the
+synthetic records in DS2's place in a stand-in split, and seal them with the
+sealed run's own scoring functions (R31, R32, DEMO-07, DEMO-17).
 """
 
+import copy
 import hashlib
 import json
 import re
+import shutil
 from collections.abc import Callable
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
-from demo_support import write_prepared
+from demo_support import CLASSES, synthetic_record, write_prepared
 
 from heartbeat.constants import AAMI_CLASS, FS_HZ
 from heartbeat.data.loader import SealedRecordError
@@ -21,15 +26,19 @@ from heartbeat.data.manifests import Splits, load_beat_counts, load_splits
 from heartbeat.data.npz import PreparedRecord, load_prepared
 from heartbeat.demo.build import (
     PROBABILITY_SCALE,
-    DemoSplitError,
+    DemoRecordError,
     build_demo_data,
     choose_default_record,
     decode_beats,
     default_start_s,
+    demo_records,
     encode_beats,
 )
 from heartbeat.demo.manifest import MANIFEST_NAME, check_manifest
+from heartbeat.demo.sealed_check import SealedMismatchError
 from heartbeat.evaluate.calibration import calibrated_probs
+from heartbeat.export.bundle import bundle_files
+from heartbeat.export.freeze import FreezeError
 from heartbeat.models.augment import model_windows
 from heartbeat.models.inputs import apply_rr_scaler, rr_model_inputs
 from heartbeat.paths import (
@@ -38,6 +47,8 @@ from heartbeat.paths import (
     RESULTS_DIR,
     SPLITS_MANIFEST,
 )
+from heartbeat.sealed.log import append_entry
+from heartbeat.sealed.report import CNN, sealed_report
 from heartbeat.sealed.score import (
     load_calibration,
     load_scaler,
@@ -354,6 +365,34 @@ def test_with_no_sealed_entry_the_build_is_ds1_and_opens_only_ds1_files(
 
 
 @pytest.mark.rule("R32")
+def test_with_no_sealed_entry_nothing_is_prepared_from_the_raw_cache(
+    prepared_dir: Path, tmp_path: Path, splits: Splits
+) -> None:
+    """Rule 1: the in-memory path opens DS2 files, so only a sealed entry opens it."""
+    prepared: list[str] = []
+
+    def spy(raw: Path, record: str, lead: str, subject: str) -> PreparedRecord:
+        prepared.append(record)
+        raise AssertionError("prepare_in_memory called before a sealed run")
+
+    manifest = build_demo_data(
+        ("101", "223"),
+        prepared_dir,
+        MODELS_DIR,
+        EXPORT_RECORD,
+        tmp_path / "no-log.jsonl",
+        tmp_path / "data",
+        splits,
+        raw_dir=tmp_path / "raw",
+        subjects={"101": "101", "223": "223"},
+        prepare=spy,
+    )
+    assert prepared == []
+    assert manifest["split"] == "DS1"
+    assert "sealed_run" not in manifest
+
+
+@pytest.mark.rule("R32")
 def test_a_sealed_entry_stops_the_ds1_build(
     prepared_dir: Path, tmp_path: Path, splits: Splits
 ) -> None:
@@ -368,6 +407,209 @@ def test_a_sealed_entry_stops_the_ds1_build(
         "type": "sealed",
     }
     log.write_text(json.dumps(entry) + "\n", encoding="utf-8")
-    with pytest.raises(DemoSplitError, match="Phase 7"):
+    with pytest.raises(DemoRecordError, match="Phase 7"):
         build(prepared_dir, tmp_path / "data", splits, log_path=log)
     assert not (tmp_path / "data").exists()
+
+
+# After a sealed entry: DS2 from memory, checked against the sealed report
+# (Phase 7 design calls 3 and 4). The synthetic records stand in for DS2.
+
+STAND_IN = Splits(ds1=("118", "124"), ds2=("101", "223"), excluded={}, lead="MLII")
+SUBJECTS = {"101": "101", "223": "223", "118": "118", "124": "124"}
+FREEZE_COMMIT = "a" * 40
+
+
+class Sealed:
+    """A frozen copy of the models and a log, scored by the sealed path."""
+
+    def __init__(self, root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from heartbeat.sealed import run as run_module
+
+        self.root = root
+        self.models = root / "models" / "heartbeat-v1"
+        shutil.copytree(MODELS_DIR, self.models)
+        self.freeze(FREEZE_COMMIT)
+        self.log = root / "results" / "test_runs.jsonl"
+        self.records = {
+            record: synthetic_record(record, classes, seed)
+            for seed, (record, classes) in enumerate(CLASSES.items())
+        }
+        self.prepared: list[str] = []
+        monkeypatch.setattr(
+            run_module, "prepare_in_memory", lambda raw, r, lead, s: self.records[r]
+        )
+        beats = run_module.load_records(
+            STAND_IN.ds2, root / "raw", STAND_IN.lead, SUBJECTS
+        )
+        self.report = {
+            **sealed_report(
+                beats.beat_class,
+                beats.subject_id,
+                beats.record_id,
+                run_module.score_models(beats, self.models),
+                data_label="synthetic stand-in",
+                n_draws=20,
+            ),
+            "records": list(STAND_IN.ds2),
+            "freeze_commit": FREEZE_COMMIT,
+        }
+
+    def freeze(self, commit: str) -> None:
+        files = bundle_files(self.models, self.root)
+        record = {
+            "commit": commit,
+            "date": "2027-01-15",
+            "inputs": {},
+            "models": {f["path"]: f["sha256"] for f in files},
+        }
+        (self.models / "freeze.json").write_text(json.dumps(record), "utf-8")
+
+    def log_entry(self, report: dict[str, Any], entry_type: str = "sealed") -> None:
+        append_entry(
+            self.log,
+            self.root / "results" / "test_runs",
+            entry_type,
+            report,
+            commit="c" * 40,
+            freeze_sha256="f" * 64,
+            today=date(2027, 1, 16),
+            repo=self.root,
+        )
+
+    def prepare(
+        self, raw: Path, record: str, lead: str, subject: str
+    ) -> PreparedRecord:
+        assert raw == self.root / "raw"
+        assert (lead, subject) == (STAND_IN.lead, SUBJECTS[record])
+        self.prepared.append(record)
+        return self.records[record]
+
+    def build(
+        self,
+        out_dir: Path,
+        records: tuple[str, ...] = STAND_IN.ds2,
+        read: Reader = load_prepared,
+    ) -> dict[str, Any]:
+        return build_demo_data(
+            records,
+            self.root / "prepared",
+            self.models,
+            EXPORT_RECORD,
+            self.log,
+            out_dir,
+            STAND_IN,
+            read=read,
+            raw_dir=self.root / "raw",
+            subjects=SUBJECTS,
+            log_root=self.root,
+            prepare=self.prepare,
+        )
+
+
+@pytest.fixture
+def sealed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Sealed:
+    return Sealed(tmp_path / "repo", monkeypatch)
+
+
+def _no_prepared_file(path: Path) -> PreparedRecord:
+    raise AssertionError(f"opened {path}")
+
+
+@pytest.mark.rule("R32")
+def test_after_a_sealed_entry_the_build_is_ds2_and_opens_no_prepared_file(
+    sealed: Sealed, tmp_path: Path
+) -> None:
+    sealed.log_entry(sealed.report)
+    out = tmp_path / "data"
+    manifest = sealed.build(out, read=_no_prepared_file)
+    assert sealed.prepared == list(STAND_IN.ds2)
+    assert not (sealed.root / "prepared").exists()
+    assert manifest["split"] == "DS2"
+    assert manifest["sealed_run"] == {
+        "id": 1,
+        "report": "results/test_runs/1-sealed.json",
+    }
+    assert [r["record"] for r in manifest["records"]] == list(STAND_IN.ds2)
+    assert manifest["default"]["record"] in STAND_IN.ds2
+    assert check_manifest(out) == []
+
+
+@pytest.mark.rule("R32")
+@pytest.mark.parametrize("asked", ["118", "232", "999"])
+def test_after_a_sealed_entry_a_record_outside_ds2_is_refused_first(
+    sealed: Sealed, tmp_path: Path, asked: str
+) -> None:
+    sealed.log_entry(sealed.report)
+    with pytest.raises(DemoRecordError, match=asked):
+        sealed.build(tmp_path / "data", records=("101", asked))
+    assert sealed.prepared == []
+    assert not (tmp_path / "data").exists()
+
+
+def _planted(report: dict[str, Any]) -> dict[str, Any]:
+    planted = copy.deepcopy(report)
+    planted["per_patient"][CNN][1]["S"]["recall"]["numerator"] += 1
+    return planted
+
+
+def test_a_planted_per_patient_cell_stops_the_build_before_any_file(
+    sealed: Sealed, tmp_path: Path
+) -> None:
+    sealed.log_entry(_planted(sealed.report))
+    with pytest.raises(SealedMismatchError, match="patient 223 S recall"):
+        sealed.build(tmp_path / "data")
+    assert not (tmp_path / "data").exists()
+
+
+def test_the_build_checks_the_report_the_last_sealed_entry_names(
+    sealed: Sealed, tmp_path: Path
+) -> None:
+    """Review focus 3: never an earlier or a reproduction's report."""
+    sealed.log_entry(_planted(sealed.report))
+    sealed.log_entry(sealed.report)
+    sealed.log_entry(_planted(sealed.report), entry_type="reproduction")
+    manifest = sealed.build(tmp_path / "data")
+    assert manifest["sealed_run"] == {
+        "id": 2,
+        "report": "results/test_runs/2-sealed.json",
+    }
+    sealed.log_entry(_planted(sealed.report))
+    with pytest.raises(SealedMismatchError):
+        sealed.build(tmp_path / "again")
+
+
+def test_a_rewritten_report_stops_the_build(sealed: Sealed, tmp_path: Path) -> None:
+    from heartbeat.sealed.log import LogError
+
+    sealed.log_entry(sealed.report)
+    report = sealed.root / "results" / "test_runs" / "1-sealed.json"
+    report.write_text(json.dumps(_planted(sealed.report)), encoding="utf-8")
+    with pytest.raises(LogError, match="SHA256"):
+        sealed.build(tmp_path / "data")
+
+
+def test_a_model_file_that_differs_from_the_freeze_record_stops_the_build(
+    sealed: Sealed, tmp_path: Path
+) -> None:
+    sealed.log_entry(sealed.report)
+    record = json.loads((sealed.models / "freeze.json").read_text("utf-8"))
+    record["models"]["models/heartbeat-v1/calibration.json"] = "0" * 64
+    (sealed.models / "freeze.json").write_text(json.dumps(record), "utf-8")
+    with pytest.raises(FreezeError, match=r"calibration\.json"):
+        sealed.build(tmp_path / "data")
+
+
+def test_a_report_from_another_freeze_stops_the_build(
+    sealed: Sealed, tmp_path: Path
+) -> None:
+    sealed.log_entry(sealed.report)
+    sealed.freeze("b" * 40)
+    with pytest.raises(FreezeError, match="freeze"):
+        sealed.build(tmp_path / "data")
+
+
+def test_the_records_follow_the_log(sealed: Sealed) -> None:
+    assert demo_records(STAND_IN, sealed.log) == STAND_IN.ds1
+    sealed.log_entry(sealed.report)
+    assert demo_records(STAND_IN, sealed.log) == STAND_IN.ds2

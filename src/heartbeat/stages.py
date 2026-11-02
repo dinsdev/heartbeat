@@ -37,7 +37,7 @@ from heartbeat.data.manifests import (
 from heartbeat.data.npz import load_prepared
 from heartbeat.data.prepare import FLOOR_HITS_FILE, prepare_ds1
 from heartbeat.data.records import read_header_demographics
-from heartbeat.demo.build import DEMO_DATA_DIR, build_demo_data
+from heartbeat.demo.build import DEMO_DATA_DIR, build_demo_data, demo_records
 from heartbeat.demo.manifest import MANIFEST_NAME
 from heartbeat.export.build import export_models
 from heartbeat.export.bundle import FREEZE_NAME
@@ -763,21 +763,26 @@ def run_build_demo_data(
     models_dir: Path = MODELS_DIR,
     results_dir: Path = RESULTS_DIR,
 ) -> dict[str, Any]:
-    """Build the demo data from the prepared records and the committed model.
+    """Build the demo data from the committed model.
 
-    Every DS1 record by default (settling 6); DS1 only until a sealed run is
-    logged (DEMO-17, R32). Opens no run folder: the manifest names the model
-    by its SHA256 from `results/export.json`.
+    Every record of the demo's split by default (settling 6): DS1 from the
+    prepared files until a sealed run is logged (DEMO-17, R32), then DS2
+    prepared in memory and checked against the sealed report (Phase 7 design
+    calls 3 and 4). Opens no run folder: the manifest names the model by its
+    SHA256 from `results/export.json`.
     """
     splits = load_splits(SPLITS_MANIFEST)
     return build_demo_data(
-        splits.ds1 if records is None else records,
+        demo_records(splits, log_path) if records is None else records,
         settings.data.prepared_dir,
         models_dir,
         _result(results_dir, EXPORT_RESULT),
         log_path,
         out_dir,
         splits,
+        raw_dir=settings.data.raw_dir,
+        subjects=load_subjects(SUBJECTS_MANIFEST),
+        log_root=REPO_ROOT,
     )
 
 
@@ -997,9 +1002,10 @@ PIPELINE: tuple[Stage, ...] = (
     ),
     Stage(
         name="build-demo-data",
-        settings_keys=("data.prepared_dir",),
+        settings_keys=("data.raw_dir", "data.prepared_dir"),
         # Design call 2: the prepared traces and the exported model. DS1 only
-        # until the log holds a sealed run (R32), so the log is an input.
+        # until the log holds a sealed run (R32), then DS2 from the raw cache
+        # (Phase 7 design call 3), so the log and the subjects are inputs.
         upstream=("prepare", "export"),
         code=(
             "demo",
@@ -1014,6 +1020,7 @@ PIPELINE: tuple[Stage, ...] = (
         ),
         inputs=lambda context: (
             SPLITS_MANIFEST,
+            SUBJECTS_MANIFEST,
             RESULTS_DIR / f"{EXPORT_RESULT}.json",
             TEST_LOG,
             *(

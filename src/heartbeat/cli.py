@@ -33,7 +33,8 @@ from heartbeat.data.loader import (
 )
 from heartbeat.data.manifests import load_checksums, load_splits, load_subjects
 from heartbeat.data.prepare import FloorHitLimitError, prepare_ds1
-from heartbeat.demo.build import DEMO_DATA_DIR, DemoSplitError
+from heartbeat.demo.build import DEMO_DATA_DIR, DemoRecordError
+from heartbeat.demo.sealed_check import SealedMismatchError
 from heartbeat.evaluate.calibration import TemperatureAtBoundError
 from heartbeat.export.freeze import FreezeError, write_freeze
 from heartbeat.export.onnx import ExportError
@@ -405,7 +406,8 @@ def _cards(args: argparse.Namespace) -> int:
 
 
 def _build_demo_data(args: argparse.Namespace) -> int:
-    # Design call 2: web/public/data/, DS1 only until the sealed run (R32).
+    # Design call 2: web/public/data/, DS1 only until the sealed run (R32),
+    # then DS2 checked against the sealed report (Phase 7 design calls 3, 4).
     try:
         manifest = run_build_demo_data(
             load_settings(DEFAULT_CONFIG),
@@ -413,7 +415,15 @@ def _build_demo_data(args: argparse.Namespace) -> int:
             out_dir=DEMO_DATA_DIR,
             log_path=TEST_LOG,
         )
-    except (SealedRecordError, DemoSplitError, FileNotFoundError, ValueError) as error:
+    except (
+        SealedRecordError,
+        DemoRecordError,
+        SealedMismatchError,
+        LogError,
+        FreezeError,
+        FileNotFoundError,
+        ValueError,
+    ) as error:
         print(f"heartbeat build-demo-data: {error}", file=sys.stderr)
         return 1
     records = manifest["records"]

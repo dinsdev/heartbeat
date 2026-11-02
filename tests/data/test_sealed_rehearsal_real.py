@@ -8,69 +8,21 @@ has exported the models (Phase 5, Task 10).
 """
 
 import json
-import shutil
-from datetime import date
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
+from rehearsal_support import LABEL, frozen_repo, run_on_ds1
 from run_support import git
 
 from heartbeat.config import Settings
 from heartbeat.data.manifests import Splits
 from heartbeat.data.prepare import prepare_in_memory
-from heartbeat.export.bundle import bundle_files
-from heartbeat.export.freeze import FROZEN_INPUTS, FreezeError, write_freeze
-from heartbeat.paths import MODELS_DIR, REPO_ROOT
+from heartbeat.export.freeze import FreezeError
 from heartbeat.sealed import run as run_module
 from heartbeat.sealed.log import ENTRY_KEYS, check_log, read_log
-from heartbeat.sealed.run import comparable, run_sealed
-
-LABEL = "DS1 rehearsal, in-sample (never quoted)"
-
-
-def _frozen_repo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    shutil.copytree(MODELS_DIR, repo / "models" / "heartbeat-v1")
-    for name in FROZEN_INPUTS:
-        (repo / name).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(REPO_ROOT / name, repo / name)
-    models = repo / "models" / "heartbeat-v1"
-    export = {"files": bundle_files(models, repo)}
-    (repo / "results").mkdir()
-    (repo / "results" / "export.json").write_text(json.dumps(export), "utf-8")
-    git(repo, "init", "-q", "-b", "main")
-    git(repo, "add", "-A")
-    git(repo, "commit", "-q", "-m", "export")
-    write_freeze(repo, models, export, date(2027, 1, 15))
-    git(repo, "add", "-A")
-    git(repo, "commit", "-q", "-m", "freeze")
-    return repo
-
-
-def _run(
-    repo: Path,
-    out: Path,
-    settings: Settings,
-    splits: Splits,
-    subjects: dict[str, str],
-) -> dict[str, Any]:
-    return run_sealed(
-        splits.ds1,
-        settings.data.raw_dir,
-        repo / "models" / "heartbeat-v1",
-        out / "results" / "test_runs.jsonl",
-        out / "results" / "test_runs",
-        "sealed",
-        repo=repo,
-        log_root=out,
-        lead=splits.lead,
-        subjects=subjects,
-        data_label=LABEL,
-        require_remote=False,
-        today=date(2027, 1, 16),
-    )
+from heartbeat.sealed.run import comparable
 
 
 def _intervals(node: Any) -> list[dict[str, Any]]:
@@ -99,9 +51,9 @@ def test_the_sealed_path_runs_end_to_end_on_ds1(
         return prepare_in_memory(raw, record, lead, subject)
 
     monkeypatch.setattr(run_module, "prepare_in_memory", spy)
-    repo = _frozen_repo(tmp_path)
+    repo = frozen_repo(tmp_path)
     out = tmp_path / "out"
-    entry = _run(repo, out, settings, splits, subjects)
+    entry = run_on_ds1(repo, out, settings, splits, subjects)
     assert prepared == list(splits.ds1)
     assert not set(prepared) & set(splits.ds2)
 
@@ -142,7 +94,7 @@ def test_the_sealed_path_runs_end_to_end_on_ds1(
 
     # R42: a second run appends and rewrites nothing; its numbers repeat.
     before = log_path.read_bytes()
-    second = _run(repo, out, settings, splits, subjects)
+    second = run_on_ds1(repo, out, settings, splits, subjects)
     assert second["id"] == 2
     assert log_path.read_bytes().startswith(before)
     assert [e["id"] for e in read_log(log_path)] == [1, 2]
@@ -162,9 +114,9 @@ def test_the_gate_refuses_before_any_record_is_read(
     monkeypatch.setattr(
         run_module, "prepare_in_memory", lambda *a: prepared.append(a[1])
     )
-    repo = _frozen_repo(tmp_path)
+    repo = frozen_repo(tmp_path)
     (repo / "notes.txt").write_text("x\n", encoding="utf-8")
     with pytest.raises(FreezeError, match="dirty"):
-        _run(repo, tmp_path / "out", settings, splits, subjects)
+        run_on_ds1(repo, tmp_path / "out", settings, splits, subjects)
     assert prepared == []
     assert not (tmp_path / "out").exists()

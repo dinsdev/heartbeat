@@ -839,6 +839,7 @@ def test_build_demo_data_reads_the_model_the_export_record_and_the_log() -> None
     context = rebuild_context()
     assert set(stage.inputs(context)) == {
         SPLITS_MANIFEST,
+        SUBJECTS_MANIFEST,
         RESULTS_DIR / "export.json",
         TEST_LOG,
         *(
