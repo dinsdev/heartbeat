@@ -2455,3 +2455,30 @@ Written from settlings 1 to 8 into PLAN.md section 8 ("Phase 7: Freeze and the s
 ## 2026-11-02: Phase 7 task plan and goal prompts approved
 
 **Approved (Din, 2026-11-02):** the Phase 7 task plan as committed in `2c4dde5` (PLAN.md section 8), with its nine design calls, and two `/goal` prompts from the planning session: Goal A (everything before the freeze, 3,988 characters) and Goal B (after the sealed log is pushed, 3,902 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort. Goal A runs on `phase-7-freeze` and ends at a pull request; Goal B starts only once a sealed entry is on `origin/main`, on a new branch `phase-7-sealed`.
+
+## 2026-11-02: Phase 7 gate checklist and the R49 audit (TASKS 7.1, Task A7)
+
+Walked PLAN.md's Phase 7 gate on `phase-7-freeze` at `77eab4f`. Claude checks, Din confirms.
+
+**1. Rule-to-test rows pass in CI on `main`.** The latest CI run on `main` is run 41535302057 (push of `e799a4a`, 2026-11-02 22:12 UTC, which is `origin/main` today): `python` and `web` succeeded, `preview` skipped (it runs on pull requests only). Read with `gh run list --branch main` and `gh run view 41535302057`. On this branch, `uv run python -m heartbeat.checks.rule_coverage` exits 0 at `current-phase = 7`: R43 and R47 have tests, and R49 is MAN, met by this entry. This item holds for today's `main`; after Goal A's pull request merges, CI on the merge commit must be green again before the freeze (runbook step 0).
+
+**2. R49, the pre-registered plan.** Diffed each pre-registered section between the Phase 0 push commit `77daee4` (pushed 2026-10-29T05:29:47Z, an ancestor of HEAD) and HEAD, with a scratchpad script that cuts each section at its heading and diffs the two versions:
+
+| Section | Result |
+| --- | --- |
+| Ledger "2026-10-22: A3 decided" | unchanged |
+| Ledger "2026-10-26: B4 decided" (holds the A3 addendum) | unchanged |
+| Ledger "2026-10-26: C4 decided" | unchanged |
+| Ledger "2026-10-26: C5 decided" | unchanged |
+| Ledger "2026-10-27: C8 decided" | unchanged |
+| PRD section 8.2 | three lines changed, each a clarification with its own dated entry |
+
+The three PRD 8.2 changes, each matched to an entry made before this gate (dates from `git blame` and `git log`):
+
+1. EVAL-08 item 4 (each per-patient cell gated on its own denominator; "none flagged"): commit `4fe5e26`, 2026-10-29 21:58 -0400, entry "2026-10-29: Phase 3 settling, 3: the per-patient percentage gate (C4 clarification)".
+2. EVAL-09 (95% percentile intervals; undefined metrics skipped per metric with counts; paired differences skip a draw where either side is undefined): commit `22b9039`, 2026-10-29 22:02 -0400, entries "2026-10-29: Phase 3 settling, 5: 95% bootstrap intervals (C4 clarification)" and "2026-10-29: Phase 3 settling, 2: undefined metrics in bootstrap draws (C4 clarification)".
+3. EVAL-11 (each final model's temperature fitted on its own seed's out-of-fold predictions; the shipped model's is seed 0's): commit `5e697e0`, 2026-10-30 01:27 -0400, entry "2026-10-30: Phase 4 settling, 3: which seed is reported on DS1, and which temperature ships (C4, C6 clarification)".
+
+No change lacks an entry, so R49 raises no stop. No DS2 result existed at any of these dates.
+
+**3. The freeze record is committed and pushed** and **4. the working tree is clean**: Din's, in `docs/RUNBOOK_PHASE7.md` steps 1 and 2 (`export --freeze` refuses a dirty tree, and `evaluate-test` refuses unless the freeze commit is on `origin/main`, R47).
