@@ -15,9 +15,9 @@ import numpy as np
 import pytest
 from demo_support import write_prepared
 
-from heartbeat.constants import FS_HZ
+from heartbeat.constants import AAMI_CLASS, FS_HZ
 from heartbeat.data.loader import SealedRecordError
-from heartbeat.data.manifests import Splits, load_splits
+from heartbeat.data.manifests import Splits, load_beat_counts, load_splits
 from heartbeat.data.npz import PreparedRecord, load_prepared
 from heartbeat.demo.build import (
     PROBABILITY_SCALE,
@@ -32,7 +32,12 @@ from heartbeat.demo.manifest import MANIFEST_NAME, check_manifest
 from heartbeat.evaluate.calibration import calibrated_probs
 from heartbeat.models.augment import model_windows
 from heartbeat.models.inputs import apply_rr_scaler, rr_model_inputs
-from heartbeat.paths import MODELS_DIR, RESULTS_DIR, SPLITS_MANIFEST
+from heartbeat.paths import (
+    BEAT_COUNTS_MANIFEST,
+    MODELS_DIR,
+    RESULTS_DIR,
+    SPLITS_MANIFEST,
+)
 from heartbeat.sealed.score import (
     load_calibration,
     load_scaler,
@@ -275,6 +280,24 @@ def test_default_record_is_most_s_plus_v_among_records_with_25_of_each() -> None
         "223": _counts(73, 473),
     }
     assert choose_default_record(counts) == "223"
+
+
+@pytest.mark.rule("R43")
+def test_the_rule_picks_200_on_ds2s_published_counts() -> None:
+    """Phase 7 design call 6: D4's rule on PhysioNet's table, the counts D4 used.
+
+    The table counts every annotation of the record; the built manifest counts
+    kept beats only, which Goal B checks on the real DS2 build.
+    """
+    published = load_beat_counts(BEAT_COUNTS_MANIFEST)
+    counts = {}
+    for record in load_splits(SPLITS_MANIFEST).ds2:
+        by_class = dict.fromkeys(("N", "S", "V", "F", "Q"), 0)
+        for symbol, n in published[record].items():
+            if symbol in AAMI_CLASS:
+                by_class[AAMI_CLASS[symbol]] += n
+        counts[record] = by_class
+    assert choose_default_record(counts) == "200"
 
 
 def test_default_record_tie_goes_to_the_lower_record_id() -> None:
