@@ -721,6 +721,114 @@
     }
   }
 
+  /* The open list in the page's own materials where the browser allows it
+     (customizable select); elsewhere the system menu, as before. Still a
+     real select, so keys, labels and form behavior are the browser's. */
+  @supports (appearance: base-select) {
+    select,
+    select::picker(select) {
+      appearance: base-select;
+    }
+
+    select {
+      align-items: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Sized to the chosen text here, not the longest option as natively, so
+       the width is fixed and the slider stays put: a floor that fits the
+       longest record line, or the full row on a phone. */
+    @media (min-width: 30rem) {
+      .where select {
+        min-inline-size: 20rem;
+      }
+    }
+
+    @media (max-width: 29.99rem) {
+      .where .field {
+        flex: 1 1 100%;
+      }
+
+      .where select {
+        flex: 1;
+      }
+    }
+
+    select::picker-icon {
+      display: none;
+    }
+
+    select:open {
+      border-color: var(--color-accent);
+    }
+
+    select::picker(select) {
+      max-block-size: min(22rem, 60dvh);
+      margin-block: var(--space-1);
+      padding: var(--space-1);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      box-shadow: var(--hb-card-lift);
+      color: var(--color-ink);
+      transform-origin: top center;
+    }
+
+    option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-block-size: 32px;
+      padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    option::checkmark {
+      content: "";
+      inline-size: 6px;
+      block-size: 6px;
+      border-radius: var(--radius-pill);
+      background: var(--color-accent);
+    }
+
+    option:not(:checked)::checkmark {
+      visibility: hidden;
+    }
+
+    option:checked {
+      font-weight: 500;
+    }
+
+    option:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+      background: var(--color-accent-soft);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      option:hover {
+        background: var(--color-accent-soft);
+      }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      select::picker(select) {
+        transition:
+          opacity 160ms var(--hb-ease-out),
+          transform 160ms var(--hb-ease-out);
+      }
+
+      @starting-style {
+        select:open::picker(select) {
+          opacity: 0;
+          transform: translateY(-4px) scale(0.98);
+        }
+      }
+    }
+  }
+
   .record {
     display: inline-flex;
     align-items: center;
