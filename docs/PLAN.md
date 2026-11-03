@@ -126,6 +126,8 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 **Exit:** R43 passes and R41, R42 still pass; the demo switched to the 21 DS2 patients.
 
+**Exit checked (Claude, 2026-11-02, on `phase-7-sealed`, locally; CI waits for Din's push):** R43 passes (`tests/unit/test_demo_build.py` and the real-data `tests/data/test_demo_ds2_real.py`); R41 and R42 pass (`CI=1 uv run pytest`, 1154 passed; `uv run heartbeat verify`, 6 of 6, includes the sealed-run log); `uv run heartbeat build-demo-data` builds the 21 DS2 patients with the exact check against `results/test_runs/1-sealed.json`, and `pnpm -C web run e2e` passes on that build. The reproduction is logged as entry 2 and equals the sealed report apart from the run keys (ledger: "Phase 7 Goal B verification and hand-off").
+
 ### Phase 8: Content and launch (about 3 to 4 days)
 
 **Builds:** model card and data card: numbers rendered by `heartbeat cards` from committed results into the F6 templates, prose finished by hand; the case study (in the dins.dev repo, from G1); the stage video from patient 200 with the research-demo line (G2); Ask Ottie sources (G3); PhysioNet's citation rechecked; one VoiceOver pass; Din's review in a preview deploy; first production deploy (Din's go).
