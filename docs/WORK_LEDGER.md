@@ -2519,3 +2519,157 @@ Goal A's code and documents are on `phase-7-freeze`, ready for a pull request. C
 5. The notes on the wrong split: `splitNotes` with Vitest on both splits, `notes.spec.ts` in full and embed modes, and the DS2-shaped dry run.
 
 Not verified here: anything on real DS2 data (Goal B), CI on this branch (after Din pushes), and Din's review of the DEMO-09 line and the outline drafts.
+
+## 2026-11-02: The sealed run, logged (EVAL-06, EVAL-08, EVAL-10; TASKS 7.2, 7.3)
+
+**The run.** Din ran the runbook on `main` on the evening of 2026-11-02 (local time; the record and the log carry the UTC date, 2026-11-03).
+
+- Freeze record: `models/heartbeat-v1/freeze.json`, written by `heartbeat export --freeze` at `c1d21ee` (the merge of pull request 8), committed as `382f1c6` and pushed. SHA-256 `1359082b641d3dc00d5952f4100562a2c18d7aecbcda68023a8f846149298d82`.
+- Log: `results/test_runs.jsonl` entry id 1, type `sealed`, commit `382f1c6`, date 2026-11-03, report `results/test_runs/1-sealed.json` with SHA-256 `bbbb63e59e89d6c467125dc2e0bb4f3f829cccbeec5ac56440b885a5ed868289` (`shasum -a 256` of the committed file gives the same). The report's `freeze_commit` is `c1d21ee` and its `freeze_sha256` equals the record's hash; `dirty` is false.
+- Push: `7d28273` (log, report and the rendered model card) is on `origin/main`, read with `git fetch` and `git log origin/main` on 2026-11-02. Din confirmed the push in the Goal B prompt. Not sent to Goal B: the runbook's printed output lines and step 3's wall time; Din to add them here if wanted.
+
+**What was scored** (from the report): 21 DS2 patients, 47527 scored beats (N 42159, S 1781, V 3200, F 387), 7 Q beats not scored. Paired patient bootstrap: 10000 draws, seed 20261029, 2.5th and 97.5th percentiles, the same draws shared by CNN seeds 0, 1, 2 and the baseline.
+
+Every number below is read with `jq` from `results/test_runs/1-sealed.json` and is **DS2 test, CPU** (the committed ONNX models and `baseline.json`). Point, then the 95% interval. The rows were also compared with the code-rendered blocks of `docs/MODEL_CARD.md` and agree.
+
+**1. Headline (seed 0), EVAL-08 item 1, and the false positive rates, item 2.**
+
+| Metric | CNN seed 0 | Baseline | Draws skipped (CNN, baseline) |
+| --- | --- | --- | --- |
+| Macro F1 over N, S and V | 0.6325 (0.5177 to 0.6984) | 0.6632 (0.5035 to 0.7423) | 0, 0 |
+| Four-class macro F1 | 0.4763 (0.3898 to 0.5264) | 0.5200 (0.4002 to 0.5730) | 0, 0 |
+| S recall | 0.4475 (0.2412 to 0.8062) | 0.4829 (0.1187 to 0.5530) | 0, 0 |
+| S precision | 0.2328 (0.0179 to 0.5823) | 0.3874 (0.0181 to 0.7440) | 0, 0 |
+| V recall | 0.9641 (0.9084 to 0.9873) | 0.8403 (0.7051 to 0.9202) | 0, 0 |
+| V precision | 0.5604 (0.2711 to 0.8087) | 0.5805 (0.2936 to 0.8146) | 0, 0 |
+| S false positive rate | 0.0574 (0.0163 to 0.1140) | 0.0297 (0.0122 to 0.0521) | 0, 0 |
+| V false positive rate | 0.0546 (0.0198 to 0.1020) | 0.0438 (0.0167 to 0.0769) | 0, 0 |
+
+**2. AAMI EC57 definitions (de Chazal's Table V), item 2.** The 7 Q beats are left out.
+
+| Metric | CNN seed 0 | Baseline |
+| --- | --- | --- |
+| S sensitivity | 0.4475 (0.2412 to 0.8062) | 0.4829 (0.1187 to 0.5530) |
+| S positive predictivity | 0.2328 (0.0179 to 0.5823) | 0.3874 (0.0181 to 0.7440) |
+| S false positive rate | 0.0574 (0.0163 to 0.1140) | 0.0297 (0.0122 to 0.0521) |
+| V sensitivity | 0.9641 (0.9084 to 0.9873) | 0.8403 (0.7051 to 0.9202) |
+| V positive predictivity | 0.5636 (0.2717 to 0.8146) | 0.5812 (0.2938 to 0.8155) |
+| V false positive rate | 0.0539 (0.0193 to 0.1015) | 0.0437 (0.0166 to 0.0768) |
+
+**3. S without record 232, item 3** (bootstrap over the other 20 patients; no draw skipped).
+
+| Metric      | CNN seed 0                | Baseline                  |
+| ----------- | ------------------------- | ------------------------- |
+| S recall    | 0.6400 (0.1683 to 0.8395) | 0.1925 (0.0748 to 0.3243) |
+| S precision | 0.0888 (0.0121 to 0.1974) | 0.0536 (0.0098 to 0.1123) |
+
+**4. Per-patient S and V, item 4.** Raw counts in every cell; a percentage only at 10 or more beats in the cell's denominator.
+
+| Record | CNN S recall | CNN S precision | Baseline S recall | Baseline S precision | CNN V recall | CNN V precision | Baseline V recall | Baseline V precision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | 32 of 33, 97.0% | 32 of 35, 91.4% | 0 of 33, 0.0% | 0 of 1 | 1 of 1 | 1 of 1 | 1 of 1 | 1 of 35, 2.9% |
+| 103 | 1 of 2 | 1 of 13, 7.7% | 0 of 2 | 0 of 12, 0.0% | none present | none flagged | none present | 0 of 1 |
+| 105 | none present | 0 of 4 | none present | 0 of 4 | 39 of 41, 95.1% | 39 of 164, 23.8% | 41 of 41, 100.0% | 41 of 49, 83.7% |
+| 111 | none present | 0 of 52, 0.0% | none present | none flagged | 1 of 1 | 1 of 580, 0.2% | 1 of 1 | 1 of 4 |
+| 113 | 6 of 6 | 6 of 981, 0.6% | 1 of 6 | 1 of 38, 2.6% | none present | 0 of 90, 0.0% | none present | 0 of 43, 0.0% |
+| 117 | 1 of 1 | 1 of 3 | 1 of 1 | 1 of 2 | none present | 0 of 90, 0.0% | none present | none flagged |
+| 121 | 1 of 1 | 1 of 1 | 0 of 1 | none flagged | 1 of 1 | 1 of 11, 9.1% | 1 of 1 | 1 of 2 |
+| 123 | none present | 0 of 154, 0.0% | none present | 0 of 8 | 3 of 3 | 3 of 3 | 0 of 3 | 0 of 2 |
+| 200 | 19 of 30, 63.3% | 19 of 130, 14.6% | 2 of 30, 6.7% | 2 of 124, 1.6% | 810 of 825, 98.2% | 810 of 899, 90.1% | 683 of 825, 82.8% | 683 of 734, 93.1% |
+| 210 | 2 of 22, 9.1% | 2 of 8 | 6 of 22, 27.3% | 6 of 142, 4.2% | 174 of 195, 89.2% | 174 of 227, 76.7% | 134 of 195, 68.7% | 134 of 408, 32.8% |
+| 212 | none present | 0 of 49, 0.0% | none present | 0 of 7 | none present | 0 of 94, 0.0% | none present | 0 of 3 |
+| 213 | 0 of 28, 0.0% | 0 of 1 | 4 of 28, 14.3% | 4 of 15, 26.7% | 170 of 220, 77.3% | 170 of 265, 64.2% | 71 of 220, 32.3% | 71 of 103, 68.9% |
+| 214 | none present | 0 of 10, 0.0% | none present | 0 of 32, 0.0% | 245 of 256, 95.7% | 245 of 474, 51.7% | 240 of 256, 93.8% | 240 of 248, 96.8% |
+| 219 | 3 of 7 | 3 of 411, 0.7% | 0 of 7 | 0 of 236, 0.0% | 62 of 64, 96.9% | 62 of 74, 83.8% | 41 of 64, 64.1% | 41 of 404, 10.1% |
+| 221 | none present | 0 of 100, 0.0% | none present | 0 of 163, 0.0% | 395 of 396, 99.7% | 395 of 403, 98.0% | 376 of 396, 94.9% | 376 of 619, 60.7% |
+| 222 | 185 of 209, 88.5% | 185 of 798, 23.2% | 37 of 209, 17.7% | 37 of 442, 8.4% | none present | 0 of 28, 0.0% | none present | 0 of 313, 0.0% |
+| 228 | 1 of 3 | 1 of 7 | 0 of 3 | 0 of 5 | 355 of 362, 98.1% | 355 of 399, 89.0% | 357 of 362, 98.6% | 357 of 376, 94.9% |
+| 231 | 0 of 1 | 0 of 120, 0.0% | 0 of 1 | 0 of 149, 0.0% | 1 of 2 | 1 of 10, 10.0% | 1 of 2 | 1 of 21, 4.8% |
+| 232 | 541 of 1381, 39.2% | 541 of 541, 100.0% | 783 of 1381, 56.7% | 783 of 783, 100.0% | none present | 0 of 828, 0.0% | none present | 0 of 517, 0.0% |
+| 233 | 2 of 7 | 2 of 2 | 1 of 7 | 1 of 32, 3.1% | 825 of 830, 99.4% | 825 of 861, 95.8% | 739 of 830, 89.0% | 739 of 745, 99.2% |
+| 234 | 3 of 50, 6.0% | 3 of 3 | 25 of 50, 50.0% | 25 of 25, 100.0% | 3 of 3 | 3 of 4 | 3 of 3 | 3 of 5 |
+
+**5. Confusion matrices, item 5** (rows the true class, columns the label, order N, S, V, F; 7 Q beats not scored).
+
+| True class | CNN seed 0              | Baseline                |
+| ---------- | ----------------------- | ----------------------- |
+| N          | 33652, 2600, 1515, 4392 | 32806, 1156, 1141, 7056 |
+| S          | 86, 797, 874, 24        | 97, 860, 797, 27        |
+| V          | 45, 24, 3085, 46        | 86, 203, 2689, 222      |
+| F          | 335, 2, 31, 19          | 16, 1, 5, 365           |
+
+N and F recall and precision, with the report's F caveat ("F beats come almost entirely from one patient on each side, so the F numbers describe two people, not a class"):
+
+| Metric | CNN seed 0 | Baseline | Draws skipped (CNN, baseline) |
+| --- | --- | --- | --- |
+| N recall | 0.7982 (0.7074 to 0.8797) | 0.7781 (0.6441 to 0.8938) | 0, 0 |
+| N precision | 0.9863 (0.9651 to 0.9984) | 0.9940 (0.9867 to 0.9984) | 0, 0 |
+| F recall | 0.0491 (0.0331 to 0.3636) | 0.9432 (0.0870 to 0.9798) | 8, 8 |
+| F precision | 0.0042 (0.0003 to 0.0186) | 0.0476 (0.0003 to 0.0905) | 0, 0 |
+
+**6. Seeds 1 and 2, item 6** (point metrics; the report's `seed_range`).
+
+| Metric                   | Seed 0 | Seed 1 | Seed 2 | Seeds 1 and 2    |
+| ------------------------ | ------ | ------ | ------ | ---------------- |
+| Macro F1 over N, S and V | 0.6325 | 0.5491 | 0.7378 | 0.5491 to 0.7378 |
+| Four-class macro F1      | 0.4763 | 0.4138 | 0.5562 | 0.4138 to 0.5562 |
+| S recall                 | 0.4475 | 0.2201 | 0.6075 | 0.2201 to 0.6075 |
+| S precision              | 0.2328 | 0.1084 | 0.4019 | 0.1084 to 0.4019 |
+| V recall                 | 0.9641 | 0.8825 | 0.8994 | 0.8825 to 0.8994 |
+| V precision              | 0.5604 | 0.5858 | 0.7970 | 0.5858 to 0.7970 |
+| S false positive rate    | 0.0574 | 0.0705 | 0.0352 | 0.0352 to 0.0705 |
+| V false positive rate    | 0.0546 | 0.0451 | 0.0165 | 0.0165 to 0.0451 |
+
+**Calibration (EVAL-12, not an EVAL-08 item), DS2 test, CPU:** temperature (fitted on DS1 out-of-fold), one-vs-rest calibration error for S and V (10 equal-mass bins), log loss, Brier score. Baseline 1.1744, 0.0235, 0.0220, 0.2541, 0.1156. CNN seed 0 1.7040, 0.0054, 0.0525, 0.2450, 0.1087. Seed 1 1.6413, 0.0201, 0.0382, 0.2818, 0.1273. Seed 2 1.6622, 0.0131, 0.0137, 0.2276, 0.1100.
+
+**EVAL-10 verdict.** CNN seed 0 minus the baseline on the shared draws, macro F1 over N, S and V: -0.0307 (-0.1313 to 0.1202). The interval includes zero, so the verdict is **no clear difference**, which is the report's own `verdict` for that metric. Said plainly: the CNN did not beat the logistic-regression baseline on the headline metric, and the baseline's point estimate is the higher one. No metric's difference interval sits below zero, so the report does not support "baseline better" either. The CNN still ships, as the plan said before the test. The other paired differences:
+
+| Metric              | CNN minus baseline          | Verdict in the report    |
+| ------------------- | --------------------------- | ------------------------ |
+| S recall            | -0.0354 (-0.1719 to 0.6492) | no clear difference      |
+| S precision         | -0.1546 (-0.3624 to 0.1100) | no clear difference      |
+| V recall            | 0.1238 (0.0579 to 0.2097)   | CNN better than baseline |
+| V precision         | -0.0201 (-0.2184 to 0.1917) | no clear difference      |
+| Four-class macro F1 | -0.0437 (-0.1158 to 0.0748) | no clear difference      |
+
+No draw was skipped for any difference. The G1 outline's "no clear difference" sentence is the one the case study uses.
+
+**Facts worth carrying to Phase 8, not decisions:** seed 0 is the pre-registered headline (EVAL-08 item 6). Seed 2's point macro F1 over N, S and V, 0.7378, is above both seed 0's (0.6325) and the baseline's (0.6632); nothing is chosen from that (rule 1), and the case study reports seed 0 with the seed range as planned. S results lean on two records: 232 holds 1381 of the 1781 S beats, and without it the CNN's S recall is 0.6400 against the baseline's 0.1925. The CNN labels 335 of the 387 F beats as N.
+
+**Scoring sanity, read by hand from the report:** each confusion row sums to the report's class count (CNN: 42159, 1781, 3200, 387), the matrices total 47527, and seed 0's S recall 797 / 1781, S precision 797 / 3423 and V recall 3085 / 3200 reproduce the pooled metrics. Nothing here suggests a scoring bug.
+
+## 2026-11-02: Phase 7 Goal B verification and hand-off (TASKS 7.1 to 7.7; Tasks B2 to B4)
+
+Goal B's work is on `phase-7-sealed`, cut from `7d28273`, ready for a preview pull request. Commits: `7e683ba` and `bf33914` (two test fixtures, below), `91504f0` (B1, "The sealed run, logged"), `a7e8af1` (the scrub specs on DS2), `a75c5ec` (R43 and the DS2 build on real records), `52e9877` (export rerun by rebuild, run keys only), `ef68dfb` (reproduction entry 2) and this entry's commit. No file under a frozen path changed (`git diff --name-only 382f1c6 HEAD` lists only `docs/`, `results/`, `tests/`, `web/e2e/` and `AGENTS.md`).
+
+**CI on `main` was red after Din's pushes, and why (read with `gh run view`).** Run 41575972952 at `382f1c6` (the freeze): `python` failed 3 real-data tests, `web` cancelled by the next push. Run 41576136623 at `7d28273` (the log): `python` 3 failed and 5 errors, `web` 6 failed in `e2e/scrub.spec.ts`. None is a scoring problem; each is a test that read live repo state Phase 7 changed:
+
+1. `tests/rehearsal_support.py` copied `models/heartbeat-v1/`, now holding Din's `freeze.json`, into the rehearsal repo, so `write_freeze` refused to plant the rehearsal's own record. Fixed in `7e683ba`: the copy leaves the record out. The three rehearsals pass again (29.5 s).
+2. `tests/data/test_demo_real.py` built the DS1 demo against `results/test_runs.jsonl`, which now holds a sealed entry, so the build refused DS1 (R32, as designed). Fixed in `bf33914`: the fixture reads an empty log in its temporary folder, as before the seal. Every assertion is unchanged, including the DS1 parity-fixture check. **For Din's review:** this keeps the DS1 build path tested after the seal; the alternative is to retire the file.
+3. `web/e2e/scrub.spec.ts` dragged back from the default view, which on DS2 starts at 0 s (record 200), so there was no earlier paper. Reproduced locally (the same 6 failures on the DS2 build). Fixed in `a7e8af1`: each test moves the Position slider to 600 s first, and the drag scrolls the trace into view (on iPhone 15 under reduced motion the slider move had scrolled the trace partly off screen and the drag missed; found on the first try of the fix, fixed, then 36 of 36 over three repeats). Every assertion is unchanged.
+
+**B2: DS2 demo data (verified, locally).** `uv run heartbeat build-demo-data`: "21 DS2 records into web/public/data; default record 200 from 0 s; largest beats file 213 at 98611 bytes" (4.8 s wall). The exact check against `results/test_runs/1-sealed.json` ran before writing and passed. The manifest names `sealed_run` id 1. New real-data file `tests/data/test_demo_ds2_real.py`: R32 (split DS2, the 21 records in order, `sealed_run` equal to the log's last sealed entry), R31 (manifest matches its files), R43 (default 200, start equal to the 10-second page of the first kept S or V beat, worked out from the shipped beats file, not by the build's helper) and the beats size gate; 4 passed in 3.5 s. `pnpm -C web run build`: size gates passed, largest beats file `213.6631f012.beats.json` at 98611 bytes. `pnpm -C web run e2e` on the DS2 build: 217 passed (1.3 min), then the R38 pass 4 passed (2.1 min), 3 min 22 s in all. Parity survey, every kept beat of the 21 DS2 records (47534 beats, the 47527 scored plus the 7 Q), per project: label mismatches 0, over 1e-5 0, largest probability difference 8.889e-7 in chromium, webkit, pixel-7 and iphone-15 alike (the stored probabilities are millionths, so this includes up to 5e-7 of rounding). R29 on the 50 DS1 fixtures: largest 3.815e-6 in each project, as in Phase 6.
+
+**B3: the reproduction (verified, locally).** First `uv run heartbeat rebuild` under `caffeinate -ims` (1 min 12 s): `export` reran (Goal A's export code changes, as the Goal A entry expected) and rewrote `results/export.json` with a new `commit` and `run` only (both in `VOLATILE_KEYS`; every model file, size and SHA-256 unchanged; `models/` and `fixtures/` clean), then `reproduce-test` refused: "the tree is dirty: ['results/export.json']". Nothing was read from DS2 and nothing was logged (the gate runs first). Committed that output as `52e9877` and ran `rebuild` again (13.1 s): `check-folds`, `reproduce-test`, `cards` (both cards unchanged) and `build-demo-data` ran, the rest skipped. Log entry 2, type `reproduction`, commit `52e9877`, report `results/test_runs/2-reproduction.json`, SHA-256 `d31ebed17374ab6a0241fed664e21c10c79f02dcda6066d69037bc29ba81f07a`. `run_sealed` raised no `ReproductionMismatchError`, and `jq -S` of both reports with `run`, `commit`, `dirty`, `entry_type` and `freeze_sha256` deleted gives no `diff`; of those keys only `run`, `commit` and `entry_type` differ. `uv run heartbeat verify`: 6 of 6 (the log check included). So the DS2 numbers in B1 reproduce exactly on this Mac, CPU, from the frozen files.
+
+**B4: checks (verified, locally, at `ef68dfb` plus the doc edits in this commit):** `scripts/check.sh` exit 0; `CI=1 uv run pytest` 1154 passed in 116.8 s (real-data layer included); `uv run heartbeat verify` 6 of 6; `uv run heartbeat check-folds` ok, 22 subjects in 5 folds; `uv run python -m heartbeat.checks.rule_coverage` exit 0; wording lint exit 0 on the repo and on `web/dist`. TASKS 7.1 to 7.7, PLAN's Phase 7 exit and `AGENTS.md` Commands updated.
+
+**Review focus, items 3 to 5, on the DS2 build:**
+
+3. A stale sealed report: the build reads the log's last sealed entry through `check_log`, which hashes the report. After the reproduction was logged (entry 2), `rebuild` ran `build-demo-data` again and the manifest still names `sealed_run` id 1, `results/test_runs/1-sealed.json`; the R32 real-data test asserts that equality against the live log.
+4. A Playwright spec passing on DS2 through a DS1 assumption: the one spec with such an assumption (scrub) failed loudly in CI and locally, not quietly. A search of `web/e2e/` for hard-coded record numbers finds none (the one `200` in `parity.spec.ts` is a sample offset, not a record). `demoManifest` asserted split DS2 with 21 records in every spec that reads it, and the survey compared its 21 records with the manifest.
+5. The notes on the wrong split: `notes.spec.ts` branches on the manifest's split; on the DS2 build it checked the chosen-patient note for record 200 present and the training-patient note absent, full page and embed, in all four projects (8 runs).
+
+**A gap for Din, not fixed (it is under `src/`, a frozen path):** the reproduction gate needs a clean tree, but `rebuild` runs it after stages that rewrite `results/` files whenever their fingerprint changes. So any rebuild that reruns an earlier writing stage stops at `reproduce-test`, and a clean clone, whose stage state starts empty and which rewrites the volatile keys of every `results/` file, would always stop there (reasoned from the code, not run). Settling 1.3's "a clean clone logs its own" does not hold as built; the two-pass workaround above (commit the output, run again) works in this checkout. Din's call whether to change it (a `src/` change means a reproduction refuses until it is decided, settling 1's cost).
+
+**Other findings, unrelated, for Phase 8:** every test block's source line in `docs/MODEL_CARD.md` repeats the label: "(DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json))". Cosmetic, rendered by `src/heartbeat/cards/`, so a frozen path too.
+
+**Not verified here:** CI on this branch and the preview URL (after Din's push), anything in a clean clone, `rebuild --exact` (settling 7). Not sent to Goal B and so not recorded: the runbook's printed lines and step 3's wall time.
+
+**States:** implemented and verified locally as listed; accepted is Din's.
+
+## 2026-11-02: Phase 7 Goal B in CI; the DS2 preview
+
+Din pushed `phase-7-sealed` at `542ee44` and opened pull request 9. Read with `gh run list --branch phase-7-sealed` and `gh run view`: push run 41579047844 succeeded (`python`, `web`), and pull-request run 41579065508 succeeded (`python`, `web`, `preview / preview`; `preview / production` skipped, as designed). The fixes in `7e683ba`, `bf33914` and `a7e8af1` hold in CI: the real-data layer and the DS2 Playwright suite are green.
+
+Worker Preview: alias `https://pr-9-heartbeat.dineshddawo.workers.dev`, version `https://87f97dff-heartbeat.dineshddawo.workers.dev` (from the run's log). Both answer 200, and `curl` of `/data/manifest.json` on each gives split DS2, 21 records, default record 200 from 0 s and `sealed_run` id 1. Not checked here: the page by hand in a browser (Din's review, Phase 8 task 8.5).

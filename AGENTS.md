@@ -16,7 +16,7 @@ Locked decisions stay locked. Changing one needs Din's go and a dated ledger ent
 
 ## Commands
 
-Working today (Phase 6):
+Working today (Phase 7, after the sealed run):
 
 | What | Command |
 | --- | --- |
@@ -33,7 +33,7 @@ Working today (Phase 6):
 | Download and checksum the 132 pinned MIT-BIH files (about 82 MB, about 70 s the first time; skips matching files after) | `uv run heartbeat download` |
 | Prepare DS1 into `data/prepared/` with the floor-hit report (about 1.5 s) | `uv run heartbeat prepare` |
 | Check `config/folds.json` against its pin and the manifests | `uv run heartbeat check-folds` |
-| Rebuild every built stage (download, prepare, check-folds, cross-validate, cross-validate-cnn, select, exhibit, train-final, describe-data, export, reproduce-test, cards, build-demo-data), skipping unchanged ones, into `results/`, `models/heartbeat-v1/`, `fixtures/parity/`, the card blocks and `web/public/data/`; with no freeze record nothing touches DS2 (R28) and the demo data is DS1. Run it in the background. Measured 104.5 minutes on 2026-10-30 when every training stage reran (cross-validate 5 s, cross-validate-cnn 70 min on MPS, select under 1 s, exhibit 19 min, train-final 14 min on CPU, export 77 s on CPU); about 65 s when only `export` reruns; a fresh clone about 104 to 114 minutes with the download | `uv run heartbeat rebuild` |
+| Rebuild every built stage (download, prepare, check-folds, cross-validate, cross-validate-cnn, select, exhibit, train-final, describe-data, export, reproduce-test, cards, build-demo-data), skipping unchanged ones, into `results/`, `models/heartbeat-v1/`, `fixtures/parity/`, the card blocks and `web/public/data/`; with no freeze record nothing touches DS2 (R28) and the demo data is DS1. Since the sealed run, `reproduce-test` evaluates DS2 again once per frozen state and appends a reproduction entry (it needs a clean tree: if an earlier stage rewrites a `results/` file, the rebuild stops there; commit that output and run it again), and the demo data is DS2. Run it in the background under `caffeinate -ims`. Measured 104.5 minutes on 2026-10-30 when every training stage reran (cross-validate 5 s, cross-validate-cnn 70 min on MPS, select under 1 s, exhibit 19 min, train-final 14 min on CPU, export 77 s on CPU); about 65 s when only `export` reruns (72 s on 2026-11-02, with `check-folds`, before `reproduce-test` refused the dirty tree); 13 s when only `reproduce-test`, `cards` and `build-demo-data` run (2026-11-02); a fresh clone about 104 to 114 minutes with the download | `uv run heartbeat rebuild` |
 | Rerun from one stage | `uv run heartbeat rebuild --from <stage>` |
 | Baseline cross-validation into a new run folder under `runs/`, never `results/` (about 5 s) | `uv run heartbeat cross-validate --model baseline` |
 | CNN cross-validation of one width and seed into a run folder (all five folds on MPS: about 5 min at width 0.5, 7 min at width 1, 13 min at width 2); `--fold N` trains one fold (width 1 measured 69 to 78 s on MPS, 19 min with `--device cpu`) | `uv run heartbeat cross-validate --model cnn --width 1 --seed 0 [--fold 0] [--device cpu]` |
@@ -46,15 +46,15 @@ Working today (Phase 6):
 | Compare two checkouts' outputs (settling 4): `results/*.json` apart from `VOLATILE_KEYS`, model files, fixtures and cards byte for byte | `uv run python -m heartbeat.checks.reproduction --other DIR` |
 | Real-data tests only (layer L2, needs the download) | `uv run pytest -m realdata` |
 | Make the folds: done once by Din on 2026-10-29 and never run again (C1; F5 denies it to Claude) | `uv run heartbeat make-folds` |
-| Write the freeze record: Din only, in Phase 7 (F5 denies it to Claude) | `uv run heartbeat export --freeze` |
-| The sealed run on DS2: Din only, in Phase 7, once the freeze record's commit is on `origin/main` (F5 denies it to Claude) | `uv run heartbeat evaluate-test` |
+| Write the freeze record: Din only, done once on 2026-11-02 (`382f1c6`; F5 denies it to Claude) | `uv run heartbeat export --freeze` |
+| The sealed run on DS2: Din only, done once on 2026-11-02 (log entry 1, `results/test_runs/1-sealed.json`); a rerun only under A3 (F5 denies it to Claude) | `uv run heartbeat evaluate-test` |
 | Rebuild with CNN cross-validation and the exhibit on CPU: built, never run (about 15 hours, a guess; F5 denies it to Claude) | `uv run heartbeat rebuild --exact` |
-| The DS1 demo data into `web/public/data/` (22 records, hashed files, `manifest.json`; about 4 s; needs `prepare` and the committed model; the web build and Playwright need it) | `uv run heartbeat build-demo-data` |
+| The demo data into `web/public/data/`: DS2 since the sealed run (21 records, scored in memory from the raw cache and checked exactly against the last sealed report before writing; about 5 s), DS1 before it (22 records, needs `prepare`); hashed files, `manifest.json`; the web build and Playwright need it | `uv run heartbeat build-demo-data` |
 | Brand drift against the dins.dev checkout (local only, not in CI); `--update` copies the files again | `uv run python -m heartbeat.checks.brand --source ~/Develop/dins.dev` |
 | Web lint, format (web files and every Markdown file), types, unit tests | `pnpm -C web run lint`, `pnpm -C web run format:check`, `pnpm -C web run check`, `pnpm -C web run test` |
 | One Vitest file | `pnpm -C web exec vitest run <file>` |
 | Web build, then the size gates on `dist/` (R39; needs the demo data) | `pnpm -C web run build` |
-| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; 213 tests, about 3.3 minutes; the build runs first; R38 runs last on its own, one worker, as its own pass) | `pnpm -C web run e2e` |
+| Browser tests on the built page (Desktop Chrome and Safari, Pixel 7, iPhone 15; needs the demo data; 217 tests, then 4, about 3.4 minutes (2026-11-02, DS2 data); the build runs first; R38 runs last on its own, one worker, as its own pass) | `pnpm -C web run e2e` |
 | Reported timings, not a gate (D5; Chromium only, 4x CPU slowdown on the main thread, the phone on fast 4G; writes `web/test-results/timings.json`; about 1 minute) | `pnpm -C web exec playwright test e2e/timings.spec.ts` |
 | Serve `web/dist` through the Worker runtime locally, to check `_headers` (after a build; stop it when done) | `pnpm -C web exec wrangler dev --port 8799` |
 | One Playwright file | `pnpm -C web exec playwright test <file>` |
@@ -67,7 +67,7 @@ Deploys (Din only; F5 denies wrangler's deploy and versions commands to Claude):
 | Worker Preview on every pull request from this repo, after CI's python and web jobs pass; the URLs land in the job summary (needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets) | `.github/workflows/deploy.yml`, called by `ci.yml` |
 | Production deploy from `main`, started by hand (Phase 8, TASKS 8.5) | `gh workflow run deploy.yml --ref main` |
 
-Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first), a `web` job (which builds the DS1 demo data from the same cache, then the gated build, the wording lint on `web/dist` and Playwright), and on pull requests from this repo a `preview` job that calls `deploy.yml` once both pass; `scripts/check.sh` skips the real-data tests, the build and Playwright.
+Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first), a `web` job (which builds the demo data from the same cache, DS2 since the sealed run, then the gated build, the wording lint on `web/dist` and Playwright), and on pull requests from this repo a `preview` job that calls `deploy.yml` once both pass; `scripts/check.sh` skips the real-data tests, the build and Playwright.
 
 Long jobs: CNN cross-validation takes about 70 to 76 minutes on MPS, the exhibit about 20 minutes, `train-final` about 15 minutes on CPU at the selected width 1 and 10 epochs, a full `rebuild` about 104 minutes and a clean-clone rebuild about 104 to 114 minutes (all measured 2026-10-30), `rebuild --exact` about 15 hours (a guess). Run long jobs in the background under `caffeinate -ims` and say how long they should take.
 

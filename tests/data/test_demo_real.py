@@ -3,7 +3,9 @@
 Builds every DS1 record into a temporary folder from the committed model and
 checks the stored seed-0 values against the parity fixtures, which the Python
 pipeline computed through PyTorch (Phase 5): labels exact, probabilities
-within 1e-5.
+within 1e-5. The build reads an empty log in the temporary folder, as before
+the sealed run: once `results/test_runs.jsonl` holds a sealed entry the real
+log builds DS2 only (R32), which `test_demo_ds2_real.py` checks.
 """
 
 import json
@@ -19,7 +21,7 @@ from heartbeat.data.prepare import PrepareReport
 from heartbeat.demo.build import BEATS_SIZE_LIMIT_BYTES, build_demo_data, decode_beats
 from heartbeat.demo.manifest import check_manifest
 from heartbeat.export.fixtures import FIXTURES_NAME
-from heartbeat.paths import FIXTURES_DIR, MODELS_DIR, RESULTS_DIR, TEST_LOG
+from heartbeat.paths import FIXTURES_DIR, MODELS_DIR, RESULTS_DIR
 
 
 @pytest.fixture(scope="module")
@@ -30,9 +32,10 @@ def demo(
 ) -> tuple[Path, dict[str, Any]]:
     folder, _ = prepared_ds1
     out = tmp_path_factory.mktemp("demo") / "data"
+    no_sealed_run = tmp_path_factory.mktemp("log") / "test_runs.jsonl"
     export_record = json.loads((RESULTS_DIR / "export.json").read_text("utf-8"))
     manifest = build_demo_data(
-        splits.ds1, folder, MODELS_DIR, export_record, TEST_LOG, out, splits
+        splits.ds1, folder, MODELS_DIR, export_record, no_sealed_run, out, splits
     )
     return out, manifest
 

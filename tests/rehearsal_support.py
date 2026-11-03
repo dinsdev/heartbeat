@@ -15,7 +15,7 @@ from run_support import git
 
 from heartbeat.config import Settings
 from heartbeat.data.manifests import Splits
-from heartbeat.export.bundle import bundle_files
+from heartbeat.export.bundle import FREEZE_NAME, bundle_files
 from heartbeat.export.freeze import FROZEN_INPUTS, write_freeze
 from heartbeat.paths import MODELS_DIR, REPO_ROOT
 from heartbeat.sealed.run import run_sealed
@@ -25,7 +25,12 @@ LABEL = "DS1 rehearsal, in-sample (never quoted)"
 
 def frozen_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
-    shutil.copytree(MODELS_DIR, repo / "models" / "heartbeat-v1")
+    # The committed record (Phase 7) stays out: the rehearsal plants its own.
+    shutil.copytree(
+        MODELS_DIR,
+        repo / "models" / "heartbeat-v1",
+        ignore=shutil.ignore_patterns(FREEZE_NAME),
+    )
     for name in FROZEN_INPUTS:
         (repo / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO_ROOT / name, repo / name)
