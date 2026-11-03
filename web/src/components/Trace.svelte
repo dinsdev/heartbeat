@@ -243,6 +243,10 @@
   .trace {
     position: relative;
     width: 100%;
+    /* The hairline frame as a border, so the paper never covers it and
+       nothing is drawn over the canvas as it repaints each frame (ledger,
+       2026-11-03). */
+    border: 1px solid var(--color-hairline);
     border-radius: var(--trace-radius, var(--radius-md));
     overflow: hidden;
     /* Settling 7: horizontal drags scrub, vertical page scrolling stays native. */
@@ -267,16 +271,6 @@
   canvas {
     display: block;
     width: 100%;
-  }
-
-  /* The hairline frame sits above the canvas so the paper never covers it. */
-  .trace::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 0 0 1px var(--color-hairline);
-    pointer-events: none;
   }
 
   /* Paper scrolling in from the right: the oldest moment fades into the

@@ -514,17 +514,20 @@
     box-shadow: var(--hb-card-edge);
   }
 
-  /* The lift on a layer of its own. Painted on the card, WebKit painting in
-     software (Linux) redrew its wide blur with every repaint inside the card,
-     every frame of playback (ledger, 2026-11-03). */
+  /* The lift, cast by a strip along the card's bottom edge. WebKit painting in
+     software (Linux) redraws whatever lies under a repaint, and the trace
+     repaints every frame of playback: the lift on the whole card redrew its
+     blur each frame, and on a layer of its own it made the card a layer that
+     was recomposited each frame (ledger, 2026-11-03). The strip's shadow ends
+     well below the trace, and the card hides its top edge. */
   .card::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: auto 0 0;
     z-index: -1;
+    block-size: 4rem;
     border-radius: inherit;
     box-shadow: var(--hb-card-lift);
-    will-change: transform;
     pointer-events: none;
   }
 
