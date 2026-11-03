@@ -4,7 +4,7 @@
     "path": "models/heartbeat-v1/baseline.json",
     "temperature": 1.1743687510024545
   },
-  "commit": "dfb0300ffae3a393c7e6f01162ad4f8863f2df80",
+  "commit": "a75c5ec95a20ee22b3c5b966fe66419077266a05",
   "dirty": false,
   "epochs": 10,
   "files": [
@@ -104,7 +104,7 @@
     "survey": "every DS1 kept beat: labels exact (gated), largest difference and beats over the tolerance recorded",
     "tolerance": 1e-05
   },
-  "run": "20261031T005238Z-dfb0300-export",
+  "run": "20261103T042650Z-a75c5ec-export",
   "shipped_seed": 0,
   "size_limit_bytes": 1000000,
   "versions": {
