@@ -21,8 +21,8 @@
     />
   </a>
   <div class="hero">
-    <h1 class="t-display title rise rise-1">Heartbeat</h1>
-    <p class="t-lead lead rise rise-1">
+    <h1 class="t-display title rise rise-text rise-1">Heartbeat</h1>
+    <p class="t-lead lead rise rise-text rise-1">
       I trained a small neural network to label heartbeats in ECG recordings.
       Here it labels a real recording live, in your browser.
     </p>

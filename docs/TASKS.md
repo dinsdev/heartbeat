@@ -175,7 +175,7 @@ From `docs/PLAN.md` (F2, locked 2026-10-27). Each phase gets a task-level plan a
 
 | ID | Task | Status |
 | --- | --- | --- |
-| 8.0 | Frontend upgrade before the content work (Din, 2026-11-03): the demo as one player card, editorial about text, motion (pen tip, labels landing, beat pulse, play and pause morph, staged load); copy, controls, test hooks and DOM order unchanged | Implemented and verified locally (2026-11-03): `scripts/check.sh`, build size gates, e2e 217 then 4 passed, wording lint on `web/dist`; not yet in CI; accepted is Din's |
+| 8.0 | Frontend upgrade before the content work (Din, 2026-11-03): the demo as one player card, editorial about text, motion (pen tip, labels landing, beat pulse, play and pause morph, staged load); copy, controls, test hooks and DOM order unchanged | Implemented and verified locally (2026-11-03): `scripts/check.sh`, build size gates, e2e 217 then 4 passed, wording lint on `web/dist`. CI failed on WebKit and iPhone 15 (runs 41589208270, 41589195303): software paint of the card lift, the icon blur and an axe read mid-fade; fixed and verified locally and in Playwright's Linux image (ledger, 2026-11-03); CI rerun pending; accepted is Din's |
 | 8.1 | Model card and data card: blocks rendered from results, prose finished | Planned |
 | 8.2 | Case study draft with real numbers, crediting de Chazal's Table VI as the exhibit's precedent (PUB-03) | Planned |
 | 8.3 | G2 stage video; G3 Ask Ottie sources | Planned |

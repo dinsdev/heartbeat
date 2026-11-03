@@ -503,13 +503,29 @@
   /* The instrument: the strip with its readout above and its controls below,
      on one raised surface. */
   .card {
+    position: relative;
+    isolation: isolate;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
     padding: var(--space-4);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
-    box-shadow: var(--hb-card-edge), var(--hb-card-lift);
+    box-shadow: var(--hb-card-edge);
+  }
+
+  /* The lift on a layer of its own. Painted on the card, WebKit painting in
+     software (Linux) redrew its wide blur with every repaint inside the card,
+     every frame of playback (ledger, 2026-11-03). */
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    box-shadow: var(--hb-card-lift);
+    will-change: transform;
+    pointer-events: none;
   }
 
   .head {
@@ -652,8 +668,9 @@
     }
   }
 
-  /* Play and pause share a box and trade places: a short scale and blur
-     makes the swap read as one shape turning into the other. */
+  /* Play and pause share a box and trade places with a short scale and fade.
+     No blur: WebKit painting in software (Linux) spent up to 1.7 s on one
+     frame of a blur transition (ledger, 2026-11-03). */
   .icons {
     display: grid;
     width: 14px;
@@ -667,21 +684,18 @@
     fill: currentColor;
     transition:
       opacity 160ms var(--hb-ease-out),
-      transform 160ms var(--hb-ease-out),
-      filter 160ms var(--hb-ease-out);
+      transform 160ms var(--hb-ease-out);
   }
 
   .icon-pause,
   .playing .icon-play {
     opacity: 0;
     transform: scale(0.6);
-    filter: blur(2px);
   }
 
   .playing .icon-pause {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 
   .field {
@@ -1065,6 +1079,10 @@
     padding: 0;
     background: none;
     box-shadow: none;
+  }
+
+  .embed .card::before {
+    display: none;
   }
 
   .embed .strip {
