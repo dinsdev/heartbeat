@@ -2667,3 +2667,9 @@ Goal B's work is on `phase-7-sealed`, cut from `7d28273`, ready for a preview pu
 **Not verified here:** CI on this branch and the preview URL (after Din's push), anything in a clean clone, `rebuild --exact` (settling 7). Not sent to Goal B and so not recorded: the runbook's printed lines and step 3's wall time.
 
 **States:** implemented and verified locally as listed; accepted is Din's.
+
+## 2026-11-02: Phase 7 Goal B in CI; the DS2 preview
+
+Din pushed `phase-7-sealed` at `542ee44` and opened pull request 9. Read with `gh run list --branch phase-7-sealed` and `gh run view`: push run 41579047844 succeeded (`python`, `web`), and pull-request run 41579065508 succeeded (`python`, `web`, `preview / preview`; `preview / production` skipped, as designed). The fixes in `7e683ba`, `bf33914` and `a7e8af1` hold in CI: the real-data layer and the DS2 Playwright suite are green.
+
+Worker Preview: alias `https://pr-9-heartbeat.dineshddawo.workers.dev`, version `https://87f97dff-heartbeat.dineshddawo.workers.dev` (from the run's log). Both answer 200, and `curl` of `/data/manifest.json` on each gives split DS2, 21 records, default record 200 from 0 s and `sealed_run` id 1. Not checked here: the page by hand in a browser (Din's review, Phase 8 task 8.5).
