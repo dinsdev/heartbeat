@@ -123,7 +123,20 @@ Seed 0 for the CNN; the baseline beside it; intervals from the paired patient bo
 
 <!-- card:begin test_headline -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+Freeze commit `c1d21eeef72fa955ba8a3a7cc6f141ec98e5baf3`, dated 2026-11-03.
+
+| Metric | CNN seed 0 | Baseline |
+| --- | --- | --- |
+| S recall | 0.4475 (0.2412 to 0.8062) | 0.4829 (0.1187 to 0.5530) |
+| S precision | 0.2328 (0.0179 to 0.5823) | 0.3874 (0.0181 to 0.7440) |
+| V recall | 0.9641 (0.9084 to 0.9873) | 0.8403 (0.7051 to 0.9202) |
+| V precision | 0.5604 (0.2711 to 0.8087) | 0.5805 (0.2936 to 0.8146) |
+| Macro F1 over N, S and V | 0.6325 (0.5177 to 0.6984) | 0.6632 (0.5035 to 0.7423) |
+| Four-class macro F1 | 0.4763 (0.3898 to 0.5264) | 0.5200 (0.4002 to 0.5730) |
+
+Bootstrap draws skipped as undefined: none.
 
 <!-- card:end test_headline -->
 
@@ -131,7 +144,18 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_comparison -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+CNN seed 0 minus baseline on the same patient draws, Macro F1 over N, S and V: -0.0307 (-0.1313 to 0.1202). No clear difference between the CNN and the baseline: the interval of the paired difference includes zero.
+
+| Metric | Difference | By the EVAL-10 rule |
+| --- | --- | --- |
+| S precision | -0.1546 (-0.3624 to 0.1100) | no clear difference |
+| S recall | -0.0354 (-0.1719 to 0.6492) | no clear difference |
+| V precision | -0.0201 (-0.2184 to 0.1917) | no clear difference |
+| V recall | 0.1238 (0.0579 to 0.2097) | CNN better than baseline |
+| Four-class macro F1 | -0.0437 (-0.1158 to 0.0748) | no clear difference |
+| Macro F1 over N, S and V | -0.0307 (-0.1313 to 0.1202) | no clear difference |
 
 <!-- card:end test_comparison -->
 
@@ -139,7 +163,23 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_fpr -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+| Metric | CNN seed 0 | Baseline |
+| --- | --- | --- |
+| S false positive rate | 0.0574 (0.0163 to 0.1140) | 0.0297 (0.0122 to 0.0521) |
+| V false positive rate | 0.0546 (0.0198 to 0.1020) | 0.0438 (0.0167 to 0.0769) |
+
+Beside de Chazal's numbers: AAMI EC57 definitions as printed in de Chazal's Table V: a V false positive is an N or S beat labeled V, an S false positive an N, V or F beat labeled S. The 7 Q beats are not scored here.
+
+| Metric | CNN seed 0 | Baseline |
+| --- | --- | --- |
+| S sensitivity (EC57) | 0.4475 (0.2412 to 0.8062) | 0.4829 (0.1187 to 0.5530) |
+| S positive predictivity (EC57) | 0.2328 (0.0179 to 0.5823) | 0.3874 (0.0181 to 0.7440) |
+| S false positive rate (EC57) | 0.0574 (0.0163 to 0.1140) | 0.0297 (0.0122 to 0.0521) |
+| V sensitivity (EC57) | 0.9641 (0.9084 to 0.9873) | 0.8403 (0.7051 to 0.9202) |
+| V positive predictivity (EC57) | 0.5636 (0.2717 to 0.8146) | 0.5812 (0.2938 to 0.8155) |
+| V false positive rate (EC57) | 0.0539 (0.0193 to 0.1015) | 0.0437 (0.0166 to 0.0768) |
 
 <!-- card:end test_fpr -->
 
@@ -147,7 +187,14 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_s_without_232 -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+Record 232 left out; the bootstrap resamples the other 20 patients.
+
+| Metric      | CNN seed 0                | Baseline                  |
+| ----------- | ------------------------- | ------------------------- |
+| S recall    | 0.6400 (0.1683 to 0.8395) | 0.1925 (0.0748 to 0.3243) |
+| S precision | 0.0888 (0.0121 to 0.1974) | 0.0536 (0.0098 to 0.1123) |
 
 <!-- card:end test_s_without_232 -->
 
@@ -155,7 +202,31 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_per_patient -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+| Patient | CNN S recall | CNN S precision | Baseline S recall | Baseline S precision | CNN V recall | CNN V precision | Baseline V recall | Baseline V precision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| s100 | 32 of 33, 97.0% | 32 of 35, 91.4% | 0 of 33, 0.0% | 0 of 1 | 1 of 1 | 1 of 1 | 1 of 1 | 1 of 35, 2.9% |
+| s103 | 1 of 2 | 1 of 13, 7.7% | 0 of 2 | 0 of 12, 0.0% | none present | none flagged | none present | 0 of 1 |
+| s105 | none present | 0 of 4 | none present | 0 of 4 | 39 of 41, 95.1% | 39 of 164, 23.8% | 41 of 41, 100.0% | 41 of 49, 83.7% |
+| s111 | none present | 0 of 52, 0.0% | none present | none flagged | 1 of 1 | 1 of 580, 0.2% | 1 of 1 | 1 of 4 |
+| s113 | 6 of 6 | 6 of 981, 0.6% | 1 of 6 | 1 of 38, 2.6% | none present | 0 of 90, 0.0% | none present | 0 of 43, 0.0% |
+| s117 | 1 of 1 | 1 of 3 | 1 of 1 | 1 of 2 | none present | 0 of 90, 0.0% | none present | none flagged |
+| s121 | 1 of 1 | 1 of 1 | 0 of 1 | none flagged | 1 of 1 | 1 of 11, 9.1% | 1 of 1 | 1 of 2 |
+| s123 | none present | 0 of 154, 0.0% | none present | 0 of 8 | 3 of 3 | 3 of 3 | 0 of 3 | 0 of 2 |
+| s200 | 19 of 30, 63.3% | 19 of 130, 14.6% | 2 of 30, 6.7% | 2 of 124, 1.6% | 810 of 825, 98.2% | 810 of 899, 90.1% | 683 of 825, 82.8% | 683 of 734, 93.1% |
+| s210 | 2 of 22, 9.1% | 2 of 8 | 6 of 22, 27.3% | 6 of 142, 4.2% | 174 of 195, 89.2% | 174 of 227, 76.7% | 134 of 195, 68.7% | 134 of 408, 32.8% |
+| s212 | none present | 0 of 49, 0.0% | none present | 0 of 7 | none present | 0 of 94, 0.0% | none present | 0 of 3 |
+| s213 | 0 of 28, 0.0% | 0 of 1 | 4 of 28, 14.3% | 4 of 15, 26.7% | 170 of 220, 77.3% | 170 of 265, 64.2% | 71 of 220, 32.3% | 71 of 103, 68.9% |
+| s214 | none present | 0 of 10, 0.0% | none present | 0 of 32, 0.0% | 245 of 256, 95.7% | 245 of 474, 51.7% | 240 of 256, 93.8% | 240 of 248, 96.8% |
+| s219 | 3 of 7 | 3 of 411, 0.7% | 0 of 7 | 0 of 236, 0.0% | 62 of 64, 96.9% | 62 of 74, 83.8% | 41 of 64, 64.1% | 41 of 404, 10.1% |
+| s221 | none present | 0 of 100, 0.0% | none present | 0 of 163, 0.0% | 395 of 396, 99.7% | 395 of 403, 98.0% | 376 of 396, 94.9% | 376 of 619, 60.7% |
+| s222 | 185 of 209, 88.5% | 185 of 798, 23.2% | 37 of 209, 17.7% | 37 of 442, 8.4% | none present | 0 of 28, 0.0% | none present | 0 of 313, 0.0% |
+| s228 | 1 of 3 | 1 of 7 | 0 of 3 | 0 of 5 | 355 of 362, 98.1% | 355 of 399, 89.0% | 357 of 362, 98.6% | 357 of 376, 94.9% |
+| s231 | 0 of 1 | 0 of 120, 0.0% | 0 of 1 | 0 of 149, 0.0% | 1 of 2 | 1 of 10, 10.0% | 1 of 2 | 1 of 21, 4.8% |
+| s232 | 541 of 1381, 39.2% | 541 of 541, 100.0% | 783 of 1381, 56.7% | 783 of 783, 100.0% | none present | 0 of 828, 0.0% | none present | 0 of 517, 0.0% |
+| s233 | 2 of 7 | 2 of 2 | 1 of 7 | 1 of 32, 3.1% | 825 of 830, 99.4% | 825 of 861, 95.8% | 739 of 830, 89.0% | 739 of 745, 99.2% |
+| s234 | 3 of 50, 6.0% | 3 of 3 | 25 of 50, 50.0% | 25 of 25, 100.0% | 3 of 3 | 3 of 4 | 3 of 3 | 3 of 5 |
 
 <!-- card:end test_per_patient -->
 
@@ -163,7 +234,27 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_confusion -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+Q beats are not scored (DATA-10); they are left out and counted: 7 Q beats.
+
+CNN seed 0:
+
+| True class | Labeled N | Labeled S | Labeled V | Labeled F |
+| ---------- | --------- | --------- | --------- | --------- |
+| N          | 33652     | 2600      | 1515      | 4392      |
+| S          | 86        | 797       | 874       | 24        |
+| V          | 45        | 24        | 3085      | 46        |
+| F          | 335       | 2         | 31        | 19        |
+
+Baseline:
+
+| True class | Labeled N | Labeled S | Labeled V | Labeled F |
+| ---------- | --------- | --------- | --------- | --------- |
+| N          | 32806     | 1156      | 1141      | 7056      |
+| S          | 97        | 860       | 797       | 27        |
+| V          | 86        | 203       | 2689      | 222       |
+| F          | 16        | 1         | 5         | 365       |
 
 <!-- card:end test_confusion -->
 
@@ -171,7 +262,16 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_n_f -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+| Metric      | CNN seed 0                | Baseline                  |
+| ----------- | ------------------------- | ------------------------- |
+| N recall    | 0.7982 (0.7074 to 0.8797) | 0.7781 (0.6441 to 0.8938) |
+| N precision | 0.9863 (0.9651 to 0.9984) | 0.9940 (0.9867 to 0.9984) |
+| F recall    | 0.0491 (0.0331 to 0.3636) | 0.9432 (0.0870 to 0.9798) |
+| F precision | 0.0042 (0.0003 to 0.0186) | 0.0476 (0.0003 to 0.0905) |
+
+F caveat: F beats come almost entirely from one patient on each side, so the F numbers describe two people, not a class.
 
 <!-- card:end test_n_f -->
 
@@ -179,7 +279,18 @@ _Pending: rendered from the sealed run (Phase 7)._
 
 <!-- card:begin test_seed_range -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+| Metric                   | Seed 0 | Seeds 1 and 2    |
+| ------------------------ | ------ | ---------------- |
+| S recall                 | 0.4475 | 0.2201 to 0.6075 |
+| S precision              | 0.2328 | 0.1084 to 0.4019 |
+| V recall                 | 0.9641 | 0.8825 to 0.8994 |
+| V precision              | 0.5604 | 0.5858 to 0.7970 |
+| Macro F1 over N, S and V | 0.6325 | 0.5491 to 0.7378 |
+| Four-class macro F1      | 0.4763 | 0.4138 to 0.5562 |
+| S false positive rate    | 0.0574 | 0.0352 to 0.0705 |
+| V false positive rate    | 0.0546 | 0.0165 to 0.0451 |
 
 <!-- card:end test_seed_range -->
 
@@ -210,7 +321,44 @@ CNN temperatures by seed: seed 0 1.7040, seed 1 1.6413, seed 2 1.6622.
 
 <!-- card:begin test_calibration -->
 
-_Pending: rendered from the sealed run (Phase 7)._
+Source: `results/test_runs/1-sealed.json` (DS2 test, CPU; DS2 test, CPU (committed ONNX models and baseline.json)).
+
+| Model | Temperature | S calibration error | V calibration error | Log loss | Brier |
+| --- | --- | --- | --- | --- | --- |
+| CNN seed 0 | 1.7040 | 0.0054 | 0.0525 | 0.2450 | 0.1087 |
+| CNN seed 1 | 1.6413 | 0.0201 | 0.0382 | 0.2818 | 0.1273 |
+| CNN seed 2 | 1.6622 | 0.0131 | 0.0137 | 0.2276 | 0.1100 |
+| Baseline | 1.1744 | 0.0235 | 0.0220 | 0.2541 | 0.1156 |
+
+Reliability, CNN seed 0, class S (equal-mass bins):
+
+| Bin | Beats | Mean probability | Observed rate |
+| --- | ----- | ---------------- | ------------- |
+| 1   | 4753  | 0.0007           | 0.0006        |
+| 2   | 4753  | 0.0016           | 0.0002        |
+| 3   | 4753  | 0.0024           | 0.0000        |
+| 4   | 4753  | 0.0035           | 0.0017        |
+| 5   | 4753  | 0.0049           | 0.0015        |
+| 6   | 4753  | 0.0070           | 0.0032        |
+| 7   | 4753  | 0.0109           | 0.0116        |
+| 8   | 4752  | 0.0193           | 0.0219        |
+| 9   | 4752  | 0.0415           | 0.0564        |
+| 10  | 4752  | 0.2549           | 0.2778        |
+
+Reliability, CNN seed 0, class V (equal-mass bins):
+
+| Bin | Beats | Mean probability | Observed rate |
+| --- | ----- | ---------------- | ------------- |
+| 1   | 4753  | 0.0007           | 0.0002        |
+| 2   | 4753  | 0.0013           | 0.0000        |
+| 3   | 4753  | 0.0024           | 0.0000        |
+| 4   | 4753  | 0.0053           | 0.0004        |
+| 5   | 4753  | 0.0131           | 0.0004        |
+| 6   | 4753  | 0.0261           | 0.0019        |
+| 7   | 4753  | 0.0439           | 0.0025        |
+| 8   | 4752  | 0.0754           | 0.0036        |
+| 9   | 4752  | 0.1875           | 0.0152        |
+| 10  | 4752  | 0.8429           | 0.6492        |
 
 <!-- card:end test_calibration -->
 
