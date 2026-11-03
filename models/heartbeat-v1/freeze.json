@@ -1,0 +1,21 @@
+{
+  "commit": "c1d21eeef72fa955ba8a3a7cc6f141ec98e5baf3",
+  "date": "2026-11-03",
+  "inputs": {
+    "config/default.toml": "a03df2852153d9ebf424d8a61ae8ffc4f40ea0e59b58e0c0d35ccadb4b0fcfea",
+    "manifests/folds.sha256": "851d0f170022ccc93b00e2da96975546732ef2690873957f20f0a28062e86a7d",
+    "uv.lock": "79c03d8b777315cc74e9605b50cc22ec991650fd6ec4f90e167051f1620c2d31"
+  },
+  "label": "freeze record: written by `heartbeat export --freeze` before the sealed run; evaluate-test refuses unless the tree matches it (EVAL-05)",
+  "models": {
+    "models/heartbeat-v1/NOTICE": "c95b0b52f290d975d59ab4c55bf0663c72bc9655ad1755e86dc6a82372c8bae4",
+    "models/heartbeat-v1/baseline.json": "782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3",
+    "models/heartbeat-v1/calibration.json": "f090c4f02372bddf153ee19e6a49fd6415f6f93edbc66063162219830c7efa46",
+    "models/heartbeat-v1/model.onnx": "6e5237989d00aab52b4106bd11c458a3fa722e0e757161b96a7533535a26eba0",
+    "models/heartbeat-v1/scaler.json": "88eaaabba777683e606452d2c3afc40c034232f06a29845e89feb220eb1a92d8",
+    "models/heartbeat-v1/seeds/seed-1/calibration.json": "e2765419ac4a5ed4680b2ee1f6dc54034e1696c241c1549de5d65f0db2dde115",
+    "models/heartbeat-v1/seeds/seed-1/model.onnx": "d3d02134e7f5a4c408382bddfb0da24c9d33bba0b4f9e73a0bc781ceb06f0e89",
+    "models/heartbeat-v1/seeds/seed-2/calibration.json": "ac31fd6393356bf7364e59fb0c93b1c36a92c2d6a2853a0da2bff9d315c91567",
+    "models/heartbeat-v1/seeds/seed-2/model.onnx": "d03d6fa69d610ce5e9c26838a2758fd1dc8c3838ee635584bea859f63f912e16"
+  }
+}
