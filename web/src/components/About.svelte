@@ -58,18 +58,44 @@
 
 <style>
   .about {
-    padding-block: var(--space-8) var(--space-7);
+    max-width: none;
+    padding-block: var(--space-9) var(--space-8);
   }
 
   .about :global(h2) {
-    margin: 0 0 var(--space-4);
+    margin: 0 0 var(--space-5);
   }
 
   .about :global(h3) {
-    margin: var(--space-6) 0 var(--space-2);
+    margin: var(--space-7) 0 var(--space-3);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-hairline);
   }
 
   p {
+    max-width: var(--measure);
     margin: 0 0 var(--space-4);
+  }
+
+  /* Wide screens: the section title holds its place on the left while the
+     text runs on the right. The markup stays one flat column. */
+  @media (min-width: 960px) {
+    .about {
+      display: grid;
+      grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+      column-gap: var(--space-8);
+      align-items: start;
+    }
+
+    .about > :global(*) {
+      grid-column: 2;
+    }
+
+    .about > :global(h2) {
+      position: sticky;
+      top: var(--space-6);
+      grid-row: 1 / span 20;
+      grid-column: 1;
+    }
   }
 </style>

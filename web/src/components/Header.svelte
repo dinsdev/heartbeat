@@ -4,7 +4,7 @@
 </script>
 
 <header class="header">
-  <a class="home" href="https://dins.dev">
+  <a class="home rise" href="https://dins.dev">
     <img
       class="lockup light"
       src={lockupLight}
@@ -20,16 +20,18 @@
       height="32"
     />
   </a>
-  <h1 class="t-h1 title">Heartbeat</h1>
-  <p class="t-lead lead">
-    I trained a small neural network to label heartbeats in ECG recordings. Here
-    it labels a real recording live, in your browser.
-  </p>
+  <div class="hero">
+    <h1 class="t-display title rise rise-1">Heartbeat</h1>
+    <p class="t-lead lead rise rise-1">
+      I trained a small neural network to label heartbeats in ECG recordings.
+      Here it labels a real recording live, in your browser.
+    </p>
+  </div>
 </header>
 
 <style>
   .header {
-    padding-block: var(--space-5) var(--space-5);
+    padding-block: var(--space-5) var(--space-6);
   }
 
   .home {
@@ -64,12 +66,28 @@
     display: block;
   }
 
+  /* Title and lead share a baseline row on wide screens, stacked on phones. */
+  .hero {
+    display: grid;
+    gap: var(--space-3) var(--space-7);
+    margin-top: clamp(var(--space-6), 6vw, var(--space-8));
+  }
+
+  @media (min-width: 860px) {
+    .hero {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: end;
+    }
+  }
+
   .title {
-    margin: var(--space-6) 0 var(--space-2);
+    margin: 0;
   }
 
   .lead {
     margin: 0;
     max-width: 46ch;
+    padding-bottom: 0.35em;
+    text-wrap: pretty;
   }
 </style>

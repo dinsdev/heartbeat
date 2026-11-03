@@ -49,3 +49,54 @@ a:hover {
   white-space: nowrap;
   border: 0;
 }
+
+/* The browser's own surfaces, in the brand's colors. */
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+html {
+  scrollbar-color: var(--color-hairline) transparent;
+  accent-color: var(--color-accent);
+  caret-color: var(--color-accent);
+}
+
+/* The page arrives once, top to bottom: each part rises a few pixels as it
+   fades in, a beat after the one above (`.rise-1` and `.rise-2` order them;
+   classes, since the CSP blocks inline styles). Only what is drawn before the
+   data arrives rises; text that comes with the data never fades in, so it is
+   never on screen at low contrast (R35). */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 520ms var(--hb-ease-out) both;
+  }
+
+  .rise-1 {
+    animation-delay: 70ms;
+  }
+
+  .rise-2 {
+    animation-delay: 140ms;
+  }
+}
+
+/* The trace fades in where the placeholder stood (a canvas: no text). */
+@media (prefers-reduced-motion: no-preference) {
+  .appear {
+    animation: appear 320ms var(--hb-ease-out) both;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0.01;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0.01;
+    transform: translateY(10px);
+  }
+}

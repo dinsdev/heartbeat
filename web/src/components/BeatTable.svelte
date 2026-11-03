@@ -16,6 +16,12 @@
     F: "--hb-class-f",
     Q: "--hb-class-q",
   };
+
+  /** The probability as a 0 to 1 fill for its bar ("under 1%" draws a sliver). */
+  function fill(probability: string): number {
+    if (probability.startsWith("under")) return 0.005;
+    return (Number.parseFloat(probability) || 0) / 100;
+  }
 </script>
 
 <!-- DEMO-12: the beats in view as a table, not live-announced (D6). -->
@@ -40,7 +46,17 @@
             style:color={`var(${TOKENS[row.model] ?? "--color-muted"})`}
             >{row.model}</td
           >
-          <td class="mono">{row.probability}</td>
+          <td class="mono">
+            <span class="probability">
+              <span class="value">{row.probability}</span>
+              {#if row.probability}
+                <span class="bar" aria-hidden="true"
+                  ><span class="bar-fill" style:--p={fill(row.probability)}
+                  ></span></span
+                >
+              {/if}
+            </span>
+          </td>
           <td class="mono letter" style:color={`var(${TOKENS[row.expert]})`}
             >{row.expert}</td
           >
@@ -60,32 +76,35 @@
 <style>
   .wrap {
     display: grid;
-    gap: var(--space-2);
+    gap: var(--space-3);
   }
 
   table {
     width: 100%;
-    max-width: 40rem;
     border-collapse: collapse;
   }
 
   caption {
-    margin-bottom: var(--space-2);
-    color: var(--color-muted);
+    margin-bottom: var(--space-3);
+    color: var(--color-ink);
+    font-weight: 600;
     text-align: start;
   }
 
   th {
-    padding: var(--space-1) var(--space-3) var(--space-1) 0;
-    border-bottom: 1px solid var(--color-hairline);
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+    border-bottom: 1px solid var(--color-line);
     color: var(--color-muted);
-    font-weight: 600;
+    font: var(--text-label-weight) var(--text-label) / var(--text-label-lh)
+      var(--font-mono);
+    letter-spacing: var(--text-label-tracking);
     text-align: start;
+    text-transform: uppercase;
     vertical-align: bottom;
   }
 
   td {
-    padding: var(--space-1) var(--space-3) var(--space-1) 0;
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
     border-bottom: 1px solid var(--color-hairline);
     color: var(--color-ink);
   }
@@ -99,7 +118,38 @@
     font-weight: 600;
   }
 
+  .probability {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .value {
+    min-width: 4.5ch;
+  }
+
+  /* The estimated probability as a short bar, read beside the number. */
+  .bar {
+    position: relative;
+    width: clamp(3.5rem, 12vw, 8rem);
+    height: 4px;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background: var(--color-hairline);
+  }
+
+  .bar-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--color-muted);
+    transform: scaleX(var(--p, 0));
+    transform-origin: left;
+  }
+
+  /* No tint on the row: the S color would drop under 4.5:1 on it. */
   .differ td:last-child {
+    color: var(--hb-class-v);
     font-weight: 600;
   }
 
@@ -107,5 +157,17 @@
     max-width: 66ch;
     margin: 0;
     color: var(--color-muted);
+  }
+
+  /* Phones: the bar gives way so the five columns fit. */
+  @media (max-width: 520px) {
+    .bar {
+      display: none;
+    }
+
+    th,
+    td {
+      padding-inline: var(--space-1) var(--space-2);
+    }
   }
 </style>

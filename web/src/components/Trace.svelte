@@ -6,6 +6,7 @@
   import type { PlaybackClock } from "../lib/playback/clock";
   import { FrameLoop } from "../lib/playback/loop";
   import { pageEnd } from "../lib/playback/pages";
+  import { LabelArrivals } from "../lib/trace/arrivals";
   import { SPAN_S } from "../lib/trace/geometry";
   import { markersInView } from "../lib/trace/markers";
   import { readColors, TraceRenderer } from "../lib/trace/renderer";
@@ -120,6 +121,8 @@
     }
     let paper = "";
     let reduced = reducedMotion;
+    const arrivals = new LabelArrivals();
+    arrivals.enabled = !reduced;
     scroller = makeScroller(reduced, wrapper.clientWidth);
     const theme = () => {
       renderer.setColors(readColors(canvas));
@@ -139,11 +142,13 @@
     const frame = (): boolean => {
       if (reduced !== reducedMotion) {
         reduced = reducedMotion;
+        arrivals.enabled = !reduced;
         scroller = makeScroller(reduced, wrapper.clientWidth);
       }
+      const now = performance.now();
       let position = clock.position();
       if (scroller?.active) {
-        position = scroller.step(performance.now());
+        position = scroller.step(now);
         clock.seek(position);
         if (!scroller.active) settled();
       } else {
@@ -154,18 +159,25 @@
         : position;
       const playhead = Math.round(viewEnd * fs);
       const start = playhead - SPAN_S * fs;
+      const markers = markersInView(beats, store, start, playhead, playhead);
+      arrivals.observe(markers, now);
       renderer.draw(
         {
           trace,
           fs,
           startSample: start,
-          markers: markersInView(beats, store, start, playhead, playhead),
+          markers,
+          cursorSample: Math.round(position * fs),
+          landed: (row) => arrivals.progress(row, now),
         },
         paper,
       );
       onframe(position, viewEnd);
-      // Design call 6: frames run only while something moves.
-      return clock.playing || Boolean(scroller?.active);
+      // Design call 6: frames run only while something moves (a label
+      // landing counts).
+      return (
+        clock.playing || Boolean(scroller?.active) || arrivals.animating(now)
+      );
     };
     const loop = new FrameLoop(
       {
@@ -215,6 +227,7 @@
   class:fill
   class:scrub
   class:grabbing
+  class:moving={!reducedMotion}
   bind:this={wrapper}
   role="img"
   aria-label={label}
@@ -230,9 +243,8 @@
   .trace {
     position: relative;
     width: 100%;
-    border-radius: var(--radius-md);
+    border-radius: var(--trace-radius, var(--radius-md));
     overflow: hidden;
-    box-shadow: inset 0 0 0 1px var(--color-hairline);
     /* Settling 7: horizontal drags scrub, vertical page scrolling stays native. */
     touch-action: pan-y;
     user-select: none;
@@ -255,5 +267,28 @@
   canvas {
     display: block;
     width: 100%;
+  }
+
+  /* The hairline frame sits above the canvas so the paper never covers it. */
+  .trace::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--color-hairline);
+    pointer-events: none;
+  }
+
+  /* Paper scrolling in from the right: the oldest moment fades into the
+     paper on the left, so the strip reads as moving. The paged view
+     (reduced motion) keeps a crisp edge. */
+  .moving::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 1;
+    width: clamp(16px, 4%, 40px);
+    background: linear-gradient(to right, var(--color-paper), transparent);
+    pointer-events: none;
   }
 </style>

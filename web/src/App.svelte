@@ -209,7 +209,7 @@
         />
       {/key}
     {:else}
-      <div class="placeholder" aria-hidden="true"></div>
+      <div class="placeholder rise rise-2" aria-hidden="true"></div>
       <p class="message t-small" role="status">Loading the recording</p>
     {/if}
     {#if !embed}
@@ -239,14 +239,19 @@
     height: 100%;
   }
 
+  /* The card's footprint while the recording loads, so nothing jumps. */
   .placeholder {
-    height: 180px;
-    border-radius: var(--radius-md);
-    box-shadow: inset 0 0 0 1px var(--color-hairline);
+    /* About the card's height: the strip is a fifth of its width. */
+    height: calc(min(100vw - 2 * var(--gutter), var(--page-max)) * 0.2 + 190px);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--hb-card-edge), var(--hb-card-lift);
   }
 
   .embed .placeholder {
     height: calc(100% - 3rem);
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--color-hairline);
   }
 
   .message {

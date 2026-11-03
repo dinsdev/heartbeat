@@ -8,11 +8,12 @@
 
 <style>
   .footer {
-    padding-block: var(--space-5) var(--space-7);
+    padding-block: var(--space-6) var(--space-8);
     border-top: 1px solid var(--color-hairline);
   }
 
   p {
+    max-width: 66ch;
     margin: 0;
   }
 </style>

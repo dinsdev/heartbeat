@@ -2683,3 +2683,36 @@ Worker Preview: alias `https://pr-9-heartbeat.dineshddawo.workers.dev`, version 
 **Cleanup:** the merged local branches `phase-7-sealed` and `phase-7-freeze` deleted with `git branch -d`. `git ls-remote --heads origin` lists `main` only. No stashes remain. The session scratchpad files are deleted.
 
 **Carried into Phase 8, report only:** `tests/data/test_demo_real.py` builds the DS1 demo from an empty log now that the real log builds DS2 only; keeping or retiring it is Din's call. A fresh-clone `rebuild` likely stops at `reproduce-test` once `export` rewrites `results/export.json` (read from the code, not run). The card source line repeats "DS2 test, CPU", a fix under `src/` that would make the next reproduction refuse (settling 1's cost). Card prose and the case study, which may now quote the DS2 test numbers from `results/test_runs/1-sealed.json`, are Phase 8. The Phase 6 items carried above still stand.
+
+## 2026-11-03: Frontend upgrade before Phase 8 (TASKS 8.0)
+
+**Decision (Din):** before the Phase 8 content work, upgrade the demo's look and motion while keeping the dins.dev brand. Din picked the "instrument and editorial" direction: the demo as one player card (a header strip with record, state and time; the trace; the controls), the status and legend as tidy readouts, a proper data table, "How it works" as an editorial layout with a sticky heading, and motion where it explains something. Copy, controls, test hooks, accessibility and the rigor wording stay as they were. Branch `frontend-upgrade`, off `main` at `00aefdb`. Only `web/` changed, which is outside the frozen paths, so the reproduction gate is unaffected.
+
+**What changed:**
+
+- Player card (`DemoPanel.svelte`): card surface with a hairline edge and, in light mode only, a soft lift; a header strip with the record, a scale note and the playhead; play and pause icons that cross-fade with a slight scale and blur (160 ms); a custom Position slider with a teal fill; the readout (counter, summary, legend) in two columns from 760 px; the training note marked with an amber dot. Embed mode stays flat.
+- Trace (`renderer.ts`, `Trace.svelte`): a teal pen tip (a faint rule and a dot on the trace) at the playhead, and labels that land on their beat (scale 0.6 to 1, fade and a short drop over 260 ms) when the model's answer arrives. Only a beat first seen pending lands; a seek or record change draws labels settled, and Q dashes never move (`lib/trace/arrivals.ts`, 5 unit tests). A soft fade on the left edge while the paper moves.
+- Beat dot pulse: the dot by the playhead pulses once as each annotated beat passes (`lib/playback/pulse.ts`, 2 unit tests; WAAPI, playing only).
+- Staged load: the lockup, title and lead rise in (520 ms, 70 ms steps); the trace strip fades in.
+- Table (`BeatTable.svelte`): uppercase mono headers, full width, a small probability bar next to each value (hidden at 520 px and under), and "No" in bold V color for a disagreement.
+- About: at 960 px and up a two-column layout with the heading sticky on the left; hairline rules above each subheading. No copy change.
+- Legend as a grid of aligned rows; footer spacing; `::selection`, scrollbar, accent and caret colors; `theme-color` meta tags matching the brand paper in each scheme.
+
+**Why these limits:**
+
+- No glow in dark mode (brand rule): the card lift is `0 0 #0000` in dark, and the R34 test checks the dark media block and the `data-theme` block agree.
+- No tinted backgrounds behind class-colored letters: a 7 % V tint on a disagreement row computed S at 4.33:1 (4.18 on hover), under R35's 4.5:1. So no row tints, no row hover, no tinted badges.
+- DOM order unchanged for the R36 keyboard walk; the new layout is CSS only.
+- Text that arrives with the data never fades in (R35): axe reads contrast mid-animation. Only the header text, the placeholder and the trace canvas animate on load.
+- The stagger uses classes, not an inline `--rise` property, because the CSP has `style-src 'self'` (Svelte's `style:` and WAAPI go through the CSSOM and are fine).
+- Every motion respects reduced motion: no rise, no pen fade, no landing, no pulse.
+
+**For Din's review:** the card header shows "25 mm/s, 10 mm/mV", taken from the trace geometry constants already in `web/src/lib/trace/`. It is new visible text (not a metric), so it is Din's call to keep it.
+
+**Verification (local, 2026-11-03):**
+
+- First full `pnpm -C web run e2e`: 15 failures, all "R35: axe finds no violations" under motion no-preference (`color-contrast` on the counter, summary, legend, `.d7` and `.chosen` mid-fade). Fixed by removing the fade from text that arrives with the data, as above. No test changed.
+- Then: `scripts/check.sh` exit 0 (ruff, wording, pytest, ESLint, Prettier, svelte-check 0 errors, Vitest 130 tests in 21 files). `pnpm -C web run build`: size gates passed, index JS 81,935 bytes (30,918 gzip) on the last build. `pnpm -C web run e2e`: 217 passed, then 4 passed. `uv run python -m heartbeat.checks.wording --root web/dist` exit 0. Browser console clean. Looked at by hand in the dev server: desktop light and dark, phone at 375 px (no horizontal scroll: `scrollWidth` equals `clientWidth`), embed at 800 by 500 light and 360 by 450 dark.
+- The impeccable detector flagged only the font choice (Fraunces, Instrument Sans), which is the locked brand; no change. The web interface guidelines pass found one gap, the missing `theme-color`, added after the e2e run; `scripts/check.sh` and the build were run again after it.
+
+**Not verified:** CI on this branch, the preview URL, and Din trying it. States: implemented and verified locally; accepted is Din's.

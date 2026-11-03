@@ -31,9 +31,10 @@
 </ul>
 
 <style>
+  /* The full key is a tidy two-column list; the embed's runs inline. */
   .legend {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
     gap: var(--space-2) var(--space-5);
     margin: 0;
     padding: 0;
@@ -41,6 +42,8 @@
   }
 
   .compact {
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-1) var(--space-4);
   }
 
@@ -54,6 +57,17 @@
   li > span {
     flex: none;
     align-self: center;
+  }
+
+  /* Marks in a fixed column so the names line up. */
+  .legend:not(.compact) li {
+    display: grid;
+    grid-template-columns: 1.5em minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .legend:not(.compact) li > span {
+    justify-self: center;
   }
 
   .letter,
