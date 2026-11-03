@@ -4,9 +4,10 @@ Every block renders from committed files only: `results/*.json`, the bundle in
 `models/heartbeat-v1/` and the sealed-run log. Numbers have four decimals,
 intervals read "a to b", and each block names its source file and whether its
 numbers are DS1 out-of-fold or DS2 test, MPS or CPU. `test_*` blocks stay
-pending until a sealed entry is logged (R50); `model_details` reads the freeze
-record when it exists. Tables are padded the way Prettier pads them, so the
-Markdown check passes on rendered cards.
+pending until a sealed entry is logged (R50). The freeze commit renders in
+`test_headline` from the sealed report's `freeze_commit`, so committing the
+freeze record changes no block (Phase 7 settling 1). Tables are padded the
+way Prettier pads them, so the Markdown check passes on rendered cards.
 """
 
 import json
@@ -187,12 +188,6 @@ def model_details(sources: CardSources) -> str:
         )
     baseline = files["baseline.json"]
     lines.append(f"- Baseline, `baseline.json`: SHA256 `{baseline['sha256']}`.")
-    freeze_path = sources.models_dir / FREEZE_NAME
-    if freeze_path.is_file():
-        freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
-        lines.append(f"- Freeze commit `{freeze['commit']}`, dated {freeze['date']}.")
-    else:
-        lines.append("- Freeze commit and date: Pending (Phase 7).")
     return "\n".join(lines)
 
 
@@ -428,11 +423,30 @@ def _pair_table(
     )
 
 
-def _test_headline(path: str, report: dict[str, Any]) -> str:
+def _freeze_line(sources: CardSources, report: Mapping[str, Any]) -> str:
+    """The report's freeze commit, dated from the record that names it."""
+    commit = str(report["freeze_commit"])
+    record = json.loads((sources.models_dir / FREEZE_NAME).read_text("utf-8"))
+    if record["commit"] != commit:
+        raise ValueError(
+            f"the freeze record names {record['commit'][:12]}, the sealed report "
+            f"{commit[:12]}"
+        )
+    return f"Freeze commit `{commit}`, dated {record['date']}."
+
+
+def headline_block(sources: CardSources) -> str:
+    """The headline table, after the freeze line (Phase 7 settling 1)."""
+    found = sources.sealed_report()
+    if found is None:
+        return TEST_PENDING
+    path, report = found
     intervals = report["headline"]["intervals"]
     return "\n".join(
         [
             _test_source(path, report),
+            "",
+            _freeze_line(sources, report),
             "",
             _pair_table(report, intervals, HEADLINE),
             "",
@@ -811,7 +825,7 @@ def shipped_data(sources: CardSources) -> str:
 
 MODEL_CARD_BLOCKS: Mapping[str, Callable[[CardSources], str]] = {
     "model_details": model_details,
-    "test_headline": _test_block(_test_headline),
+    "test_headline": headline_block,
     "test_comparison": _test_block(_test_comparison),
     "test_fpr": _test_block(_test_fpr),
     "test_s_without_232": _test_block(_test_s_without),

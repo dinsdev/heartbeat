@@ -273,4 +273,9 @@ def _importers_of(name: str) -> list[str]:
 
 def test_only_the_sealed_run_prepares_records_in_memory() -> None:
     # Rule 1: before the sealed run nothing else may read a record this way.
-    assert set(_importers_of("prepare_in_memory")) <= {"sealed/run.py"}
+    # The demo build does so only after a sealed entry is logged (Phase 7
+    # design call 3; `test_demo_build.py` checks it opens nothing before).
+    assert set(_importers_of("prepare_in_memory")) <= {
+        "sealed/run.py",
+        "demo/build.py",
+    }

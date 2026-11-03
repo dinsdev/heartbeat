@@ -984,3 +984,80 @@ Never change a tolerance (1e-5, labels exact), a size gate, a contrast threshold
 5. Brand files edited in place instead of in the dins.dev repo, or drifting from `SOURCE.json`.
 6. Any text that breaks D7's list or the training-patient note going missing while `split` is DS1.
 7. Long tasks hidden by measuring only at 1x or only in Chromium.
+
+### Phase 7: Freeze and the sealed run (task plan, 2026-11-02)
+
+**Goal:** every line of code that touches DS2 is on `origin/main` before the freeze; Din freezes the model and runs `evaluate-test` once, from a runbook; the sealed log, report and rendered cards are pushed right after; the demo switches to the 21 DS2 patients with labels checked exactly against the sealed report; a reproduction is logged; R43 and R47 pass, R41, R42 and R50 still pass, R49's audit is in the ledger; the G1 outline was on `origin/main` before any result.
+
+**Approach:** two goal runs around Din's steps (settling 2). Goal A writes all code and the G1 outline before the freeze, rehearsing every DS2 path with DS1 records in DS2's place, and ends at a pull request. Din merges it, then follows the runbook on `main` (settling 6). Goal B, in a fresh session after the log is pushed, runs commands and writes docs only. Test first throughout.
+
+**Settled for this phase (ledger, 2026-11-02, "Phase 7 settling" 1 to 8):** the freeze line moves to the test blocks, reproductions get a frozen-paths gate and run once per state; all code before the freeze, two goals; after the sealed log is pushed Claude may run `build-demo-data` and `rebuild` on DS2 (rule 1 amended); DS2 demo labels recomputed from the frozen model and checked exactly against the sealed report; the G1 outline in the freeze commit with every EVAL-10 outcome; direct pushes to `main` from a runbook; no `--exact` in Phase 7; a sealed run counts once any DS2 number exists.
+
+**Design calls for Din's review (made by Claude while planning):**
+
+1. Frozen paths are one constant, `FROZEN_PATHS = ("src/", "config/", "manifests/", "models/heartbeat-v1/", "pyproject.toml", "uv.lock")`, in `src/heartbeat/export/freeze.py`, with the record itself excepted. `check_gate(repo, models_dir, mode: Literal["sealed", "reproduction"], require_remote: bool = True)`; `run_sealed` passes `mode=entry_type`, so the CLI binding of `evaluate-test` stays `sealed` (its existing test still checks that).
+2. `reproduce-test` keeps its three cases (no record: stop before DS2; record without a sealed entry: stop naming `evaluate-test`; both: reproduce). It drops `always_run` and fingerprints `models/heartbeat-v1/freeze.json`, the log's last sealed entry (not the whole log, which its own reproduction entry changes) and the frozen inputs. The stage's state lives in the gitignored state folder, so a clean clone reproduces once on its own.
+3. After a sealed entry is logged, `build-demo-data` builds the DS2 list from `manifests/splits.toml` and refuses DS1 records (the R32 test `test_a_sealed_entry_stops_the_ds1_build` keeps its meaning; its expected error type may change). DS2 records go through `prepare_in_memory` from the raw cache, as the sealed run does, and are never written to `data/prepared/`, so R15's loader stays as it is. The placeholder `DemoSplitError` goes away. The manifest's `split` becomes `"DS2"` and it gains `sealed_run` (the log entry's id and report path).
+4. The exact check (settling 4) is a function `check_against_sealed(labels_by_record, beat_class_by_record, report) -> None` in `src/heartbeat/demo/sealed_check.py`: it recomputes the pooled seed-0 confusion matrix and every per-patient S and V cell and raises `SealedMismatchError` naming the first difference. It runs before any file is written.
+5. The DS2 build's rehearsal is a real-data test in the style of Phase 5 settling 3: `run_sealed` on DS1 records in a temporary git repo with a planted freeze record and all outputs under `tmp_path`, then `build_demo_data` in DS2 mode against that log and report with DS1 records in DS2's place. It asserts structure, the exact check passing, and a planted change to one per-patient cell raising `SealedMismatchError`. No value it computes is asserted or quoted (rule 2). The rehearsal's wall time is recorded in the ledger as the runbook's estimate for `evaluate-test` (DS2 is about the same size, a guess until measured).
+6. R43 has two tests. Goal A: a unit test that `choose_default_record` on DS2's counts from `manifests/mitdb-beat-counts.toml` (published expert counts, which D4 already used to fix 200) returns `"200"`. Goal B: a real-data test on the built DS2 `manifest.json`: default record 200, start at the first 10-second span with an S or V beat.
+7. Web: tests that assume a DS1 record (223, or a DS1 record list) read the record from `manifest.json` instead, so the same suite runs on either split. When `split` is `"DS2"`, both modes show DEMO-09's line that the patient was chosen before testing because it has many irregular beats; the training-patient note keeps rendering only for DS1. Claude drafts the line in Din's voice; Din reviews it in the pull request. A Vitest test covers both splits with a planted manifest.
+8. The G1 outline is `docs/CASE_STUDY_OUTLINE.md`: one section per field of the dins.dev `projects` schema (read from `~/Develop/dins.dev/docs/site/plans/M1-pages.md`, never edited), then the page's sections in order, the three EVAL-10 headline sentences, and every number as a slot naming its key in the sealed report or another committed `results/` file. Added to the wording lint's published-text list.
+9. The runbook is `docs/RUNBOOK_PHASE7.md`: settling 6's five steps with exact commands and expected output, the timing estimate from design call 5, settling 8's two failure cases, and what to send Goal B.
+
+**Preconditions:** Phase 6 merged and accepted (`9dd637a`, ledger 2026-11-02); settlings 1 to 8 committed on `phase-7-freeze`; the MIT-BIH cache downloaded and DS1 prepared; `~/Develop/dins.dev` checked out (read only).
+
+**Global constraints:** section 2 and the earlier phases' constraints. Before the sealed entry is logged, no DS2 signal, label or prediction is read except by Din's `evaluate-test`; every DS2 code path is rehearsed on DS1. No new dependency, pin change or edit to `manifests/`, `config/folds.json`, `models/heartbeat-v1/` or `.claude/`. Tolerances, size gates and seeds stay as written. No push, deploy, secret, `export --freeze`, `evaluate-test` or `rebuild --exact` by Claude. Every number in the ledger names its source and label (DS1 out-of-fold, DS2 test, MPS or CPU).
+
+**The current-phase bump:** the first code commit on `phase-7-freeze` sets `current-phase = 7`. The coverage check then needs R43, R47 and R49 (R49 is MAN: its ledger entry). R47's test exists from Phase 5.
+
+#### Goal A: everything before the freeze (TASKS 7.1, 7.4 code, 7.5 to 7.7)
+
+**Task A1: Phase bump and the freeze line (TASKS 7.6, settling 1.1; R50).** Tests first in `test_cards.py`: with a freeze record and no sealed entry, `model_details` renders exactly as with no record; with a sealed entry, a test block names the freeze commit and date read from the report's `freeze_commit` and the record's date. Implement. Commit `fix(cards): the freeze line renders from the sealed report (Phase 7 settling 1)`.
+
+**Task A2: The reproduction gate (TASKS 7.6, settling 1.2; R41, R47).** Tests first in `test_freeze.py`, in temporary git repos: after the freeze, commit a log, a report and a doc change; a reproduction passes, a sealed run refuses naming the changed files; a change under each frozen path refuses a reproduction; a dirty tree refuses both; the existing R41 and R47 tests unchanged. Implement design call 1. Commit `fix(export): a frozen-paths gate for reproductions (Phase 7 settling 1)`.
+
+**Task A3: One reproduction per state (TASKS 7.6, settling 1.3; OPS-03).** Tests first in `test_stages.py`: `reproduce-test` is no longer `always_run`; its fingerprint changes with the record, a new sealed entry and each frozen input, and not with an appended reproduction entry, so a second `rebuild` right after a reproduction skips it; its three cases unchanged. Implement design call 2. Commit `fix(stages): reproduce-test runs once per frozen state (Phase 7 settling 1)`.
+
+**Task A4: The DS2 demo build (TASKS 7.4, settling 4; DEMO-07, DEMO-08, DEMO-17, R32, R43).** Tests first: `test_demo_build.py` for design call 3 (DS2 list after a sealed entry, DS1 refused, no file under `data/prepared/` opened for DS2, manifest `split` and `sealed_run`); `test_sealed_check.py` for design call 4 on synthetic labels (equal passes; a pooled cell or one per-patient S or V cell off by one raises, naming it); the R43 unit test (design call 6); the real-data rehearsal (design call 5). Implement. Commit `feat(demo): DS2 demo data from the frozen model, checked against the sealed report`.
+
+**Task A5: The web on either split (DEMO-09).** Tests first: Vitest for the DEMO-09 line and the training-patient note on planted DS1 and DS2 manifests; Playwright specs read the default and other records from `manifest.json` (design call 7). The full suite passes on the DS1 build (`pnpm -C web run e2e`). Commit `feat(web): the demo reads its split from the manifest (DEMO-09)`.
+
+**Task A6: G1 outline (TASKS 7.5, settling 5).** Write design call 8; wording lint clean. Commit `docs: G1 case study outline, before the sealed run`.
+
+**Task A7: Gate checklist and R49 (TASKS 7.1).** A ledger entry walks PLAN.md's Phase 7 gate: (1) the latest CI run on `main` green (named by run id) and the coverage check passing at phase 7; (2) R49: `git diff` of the pre-registered sections (A3, C4, C5, C8 in the ledger; PRD section 8.2) between the Phase 0 push commit and HEAD, each change matched to a dated entry made before today, or listed as a stop; (3) and (4) are Din's, in the runbook. Commit `docs: Phase 7 gate checklist and the R49 audit`.
+
+**Task A8: Runbook and hand-off (TASKS 7.7).** Write design call 9. `scripts/check.sh`, `CI=1 uv run pytest` (real-data layer included), `uv run heartbeat verify`, `uv run heartbeat check-folds`, `pnpm -C web run build` and `pnpm -C web run e2e` all pass. TASKS 7.1 to 7.4 statuses and the ledger entry (what was built, commits, the rehearsal time, deviations). Give Din the push and pull request commands. After Din's push, read CI with `gh run list` and `gh run view` and fix anything red in a new commit. Commit `docs: Phase 7 Goal A verification and runbook`.
+
+#### Din: the freeze and the sealed run (TASKS 7.2, 7.3; settlings 6 and 8)
+
+Merge Goal A's pull request once CI is green, then follow `docs/RUNBOOK_PHASE7.md` on `main`.
+
+#### Goal B: after the sealed log is pushed (TASKS 7.3, 7.4)
+
+**Task B1: The sealed-run ledger entry (EVAL-06).** Read the report named in the log. A ledger entry gives every EVAL-08 item for the CNN (seed 0, with the seed 1 and 2 range) and the baseline, each with its interval and labeled "DS2 test, CPU", the EVAL-10 verdict as the report supports it, the freeze commit, the log entry id and the push. Commit `docs: the sealed run, logged`.
+
+**Task B2: DS2 demo data and R43.** `uv run heartbeat build-demo-data`; the exact check passes. Write the R43 real-data test (design call 6), then run it. Run `pnpm -C web run build` and `pnpm -C web run e2e` on the DS2 data, plus the all-records parity survey (any mismatch is a stop). Record the largest difference per browser, the largest beats file and the default start. Commit any test or web fix on its own.
+
+**Task B3: The reproduction (OPS-03).** `uv run heartbeat rebuild` in the background (about 65 s if only the late stages run, otherwise up to about 104 minutes, measured 2026-10-30); the reproduction entry equals the sealed report apart from the run keys; `uv run heartbeat verify` passes. Commit the log and report.
+
+**Task B4: Hand-off.** All of A8's checks. TASKS 7.1 to 7.5 with commands, PLAN Phase 7 exit, `AGENTS.md` Commands (Phase 7 now), the ledger entry. Give Din the push command for the preview pull request; after it, read CI and record the preview URL. Commit `docs: Phase 7 verification and hand-off`.
+
+#### Stop and ask Din
+
+Never change a tolerance, a size gate, a test's expected value, a seed or a gate rule to get past one of these:
+
+1. Any DS2 signal, label or prediction seen before the sealed entry is logged, or a code path that would open a DS2 file outside `evaluate-test` and the post-seal commands.
+2. R49 finds a change to the pre-registered plan without a dated entry made before the gate.
+3. The rehearsal fails in a way that needs a change to the sealed path's numbers (scoring, report, bootstrap), rather than plumbing.
+4. After the seal: the exact check (settling 4) fails, the reproduction differs from the sealed report, browser parity misses on any DS2 beat, or anything suggests a scoring bug (settling 3 and A3).
+5. A step would need a push, a deploy, a secret, `export --freeze`, `evaluate-test`, `rebuild --exact`, a dependency or an edit to `manifests/`, `config/folds.json`, `models/heartbeat-v1/` or `.claude/`.
+6. A web test cannot run unchanged on both splits without loosening what it checks.
+
+#### Review focus
+
+1. A code change merged to `main` after the freeze commit and before the sealed run, which the sealed gate must refuse.
+2. The reproduction gate letting a change under `src/` through, for example a path compared without its folder prefix.
+3. The DS2 demo build reading a cached or stale sealed report instead of the one the log's last sealed entry names.
+4. A Playwright spec quietly passing on DS2 because it found no record matching a hard-coded DS1 assumption.
+5. The DEMO-09 line or the training-patient note shown for the wrong split, in either mode.

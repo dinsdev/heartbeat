@@ -40,7 +40,6 @@ Source: `results/selection.json` and `results/export.json` (width and epochs cho
   - Seed 1, `seeds/seed-1/model.onnx`: 210503 bytes, SHA256 `d3d02134e7f5a4c408382bddfb0da24c9d33bba0b4f9e73a0bc781ceb06f0e89`.
   - Seed 2, `seeds/seed-2/model.onnx`: 210503 bytes, SHA256 `d03d6fa69d610ce5e9c26838a2758fd1dc8c3838ee635584bea859f63f912e16`.
 - Baseline, `baseline.json`: SHA256 `782d65c5e4df60bf2ee9e5b2dd9abb818f5e7a2fc61f9dd131f044490025e2a3`.
-- Freeze commit and date: Pending (Phase 7).
 
 <!-- card:end model_details -->
 

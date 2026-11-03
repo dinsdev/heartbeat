@@ -5,6 +5,7 @@
   import type { Manifest, RecordEntry } from "../lib/data/manifest";
   import { clockTenths, clockTime, count } from "../lib/format";
   import type { LabelingSession } from "../lib/labeling";
+  import { splitNotes } from "../lib/notes";
   import type { ParityCounts } from "../lib/parity";
   import { PlaybackClock, SPEEDS } from "../lib/playback/clock";
   import {
@@ -58,8 +59,8 @@
     "Showing precomputed labels; in-browser model unavailable";
   const D7_LINE =
     "Research demo, not medical advice. Recordings come from a public research database.";
-  const TRAINING_NOTE =
-    "Development build: these are training patients the model has already seen, so its labels here look better than they would on new patients.";
+  // Design call 7: DS1 shows the training-patient note, DS2 DEMO-09's line.
+  const notes = $derived(splitNotes(manifest));
   const NO_IRREGULAR = "No irregular beats in this recording";
   const NO_DISAGREEMENT =
     "No disagreements in this recording: the model agrees with the experts on every scored beat";
@@ -382,9 +383,9 @@
 
   <div class="notes t-small">
     <p class="d7">{D7_LINE}</p>
-    {#if manifest.split === "DS1"}
-      <p class="training">{TRAINING_NOTE}</p>
-    {/if}
+    {#each notes as note (note.kind)}
+      <p class={note.kind} data-testid="{note.kind}-note">{note.text}</p>
+    {/each}
     {#if embed}
       <p>
         <a class="full" href={fullHref} target="_blank" rel="noopener"
@@ -543,6 +544,10 @@
 
   .notes p {
     margin: 0;
+  }
+
+  .chosen {
+    max-width: 66ch;
   }
 
   .training {

@@ -1,5 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import {
+  defaultEntry,
+  demoManifest,
+  optionText,
+  otherRecord,
+  quietRecord,
+} from "./manifest";
+
 // DEMO-10 to DEMO-12, D6: every control works, the table lists the beats in
 // view, the status line summarizes every 10 seconds of playback, and the
 // canvas label changes on pause and seek, not per frame.
@@ -68,18 +76,26 @@ test("the scrub slider moves in 5-second steps with the time as text", async ({
   await expect.poll(() => seconds(page)).toBe(605);
 });
 
-test("the patient picker lists the 22 records with class counts and switches", async ({
+test("the patient picker lists every record with class counts and switches", async ({
   page,
+  request,
 }) => {
+  const manifest = await demoManifest(request);
+  const other = otherRecord(manifest);
   await ready(page);
   const picker = page.getByLabel("Recording");
-  await expect(picker.locator("option")).toHaveCount(22);
-  await expect(picker.locator("option:checked")).toHaveText(
-    "Record 223: 2,043 N, 73 S, 473 V, 14 F",
+  await expect(picker.locator("option")).toHaveText(
+    manifest.records.map(optionText),
   );
-  await picker.selectOption("115");
-  await expect(trace(page)).toHaveAccessibleName(/record 115/);
+  await expect(picker.locator("option:checked")).toHaveText(
+    optionText(defaultEntry(manifest)),
+  );
+  await picker.selectOption(other);
+  await expect(trace(page)).toHaveAccessibleName(
+    new RegExp(`record ${other},`),
+  );
   await expect.poll(() => seconds(page)).toBeGreaterThanOrEqual(10);
+  // Every MIT-BIH record is 650,000 samples at 360 Hz.
   await expect(page.getByTestId("playhead")).toHaveText(/ of 30:05$/);
 });
 
@@ -120,12 +136,13 @@ test("Next disagreement brings a beat where model and experts differ into view",
   ).not.toHaveCount(0);
 });
 
-test("a record with no irregular beats says so (DS1 record 115)", async ({
-  page,
-}) => {
+test("a record with no irregular beats says so", async ({ page, request }) => {
+  const quiet = quietRecord(await demoManifest(request));
   await ready(page);
-  await page.getByLabel("Recording").selectOption("115");
-  await expect(trace(page)).toHaveAccessibleName(/record 115/);
+  await page.getByLabel("Recording").selectOption(quiet);
+  await expect(trace(page)).toHaveAccessibleName(
+    new RegExp(`record ${quiet},`),
+  );
   await page.getByRole("button", { name: "Next irregular beat" }).click();
   await expect(page.getByTestId("jump-note")).toHaveText(
     "No irregular beats in this recording",
@@ -184,7 +201,9 @@ test("the status line summarizes every 10 seconds of playback", async ({
 
 test("the canvas label changes on pause and seek, never while playing", async ({
   page,
+  request,
 }) => {
+  const { default: start } = await demoManifest(request);
   await ready(page);
   await page.getByLabel("Speed").selectOption("4");
   await page.evaluate(() => {
@@ -202,7 +221,9 @@ test("the canvas label changes on pause and seek, never while playing", async ({
   expect(whilePlaying).toBe(0);
   await pause(page);
   await expect(trace(page)).toHaveAccessibleName(
-    /^ECG trace of record 223, \d+:\d\d to \d+:\d\d: \d+ beats/,
+    new RegExp(
+      `^ECG trace of record ${start.record}, \\d+:\\d\\d to \\d+:\\d\\d: \\d+ beats`,
+    ),
   );
   const atPause = await trace(page).getAttribute("aria-label");
   await page.getByRole("slider", { name: "Position" }).fill("900");
@@ -227,7 +248,8 @@ test("the legend explains every mark in one line each (DEMO-11)", async ({
   }
 });
 
-test("using every control raises no page error", async ({ page }) => {
+test("using every control raises no page error", async ({ page, request }) => {
+  const other = otherRecord(await demoManifest(request));
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await ready(page);
@@ -236,8 +258,10 @@ test("using every control raises no page error", async ({ page }) => {
   await page.getByRole("button", { name: "Next disagreement" }).click();
   await pause(page);
   await page.getByRole("slider", { name: "Position" }).fill("300");
-  await page.getByLabel("Recording").selectOption("201");
-  await expect(trace(page)).toHaveAccessibleName(/record 201/);
+  await page.getByLabel("Recording").selectOption(other);
+  await expect(trace(page)).toHaveAccessibleName(
+    new RegExp(`record ${other},`),
+  );
   await page.waitForTimeout(1000);
   expect(errors).toEqual([]);
 });

@@ -2337,3 +2337,185 @@ Read: contention was most of it. Chromium, Pixel 7 and iPhone 15 drop to the Mac
 **Cleanup:** the merged local branch `phase-6-demo` deleted with `git branch -d`. No stashes remain. Correction (same day): the remote branch was already gone when Din ran `git push origin --delete phase-6-demo` ("remote ref does not exist"), although the repo's `delete_branch_on_merge` is false; the entry had read a stale remote-tracking ref. `git fetch --prune` removed it. Din also deleted the leftover remote branch `phase-1-skeleton`; `main` is the only branch on GitHub.
 
 **Carried into Phase 7 and 8, report only:** desktop WebKit on Linux has the thinnest R38 margin (27 to 39 ms alone in CI, limit 50); the `.wasm` reaches visitors at 3,274,094 bytes with Brotli, against the PRD's estimate of about 2.4 MB (PRD text unchanged); R37 accepts theme messages only from `https://dins.dev`, so the site's previews and its pre-launch production on workers.dev do not sync the theme; `docs/G4_HANDOFF.md` waits for Din to carry it to dins.dev; the Phase 5 items above still stand.
+
+## 2026-11-02: Phase 7 settling 1, the freeze line, the reproduction gate and one reproduction per state (EVAL-05, OPS-03 clarification)
+
+**Found (read from the code while planning Phase 7, not run):**
+
+1. `model_details` in `src/heartbeat/cards/blocks.py` renders the freeze commit as soon as `models/heartbeat-v1/freeze.json` exists. Pushed alone, the freeze commit fails the card check in `heartbeat verify` (R50) in CI; re-rendering the card in the same commit fails `check_gate`, which allows only the record in the diff since the freeze commit.
+2. `reproduce-test` calls `run_sealed`, which runs the same strict `check_gate`. Right after `evaluate-test` the tree is dirty (the log); once the log, report, cards and ledger are committed, the diff holds more than the record. OPS-03's reproduction cannot pass as built. The unit tests spy `run_sealed`, and the DS1 rehearsal writes its log outside the repo, so no test reached this.
+3. `reproduce-test` is `always_run`: once 2 is fixed, every later `rebuild` would append another reproduction entry to the append-only log.
+
+**Decision (Din):**
+
+1. The freeze commit and date leave `model_details` and render in the test blocks from the sealed report's `freeze_commit`, so committing the freeze record changes no rendered block.
+2. `check_gate` gets two modes. A sealed run keeps today's rule: a clean tree and nothing changed since the freeze commit except the record. A reproduction needs a clean tree and no change since the freeze commit under the frozen paths: `src/`, `config/`, `manifests/`, `models/heartbeat-v1/` (the record aside), `pyproject.toml` and `uv.lock`. Docs, `results/` and `web/` may change. A test in a temporary git repo commits a sealed log, report and doc change after the freeze and checks that a reproduction passes and a sealed run still refuses; a change under any frozen path refuses a reproduction.
+3. `reproduce-test` becomes a fingerprinted stage (the freeze record, the log's sealed entry and the frozen inputs), so a checkout logs one reproduction per state. A clean clone logs its own, which is a real reproduction.
+
+**Reason:** the sealed run's gate stays as strict as before; the reproduction checks what it claims to (the frozen code, model and inputs) without forbidding the commits that must follow the sealed run.
+
+**Cost, accepted:** a later change under `src/` (for example Phase 9) makes a reproduction refuse loudly; that gets decided if it happens.
+
+**Rejected:** running the reproduction from a temporary git worktree at the freeze commit (survives later code changes, but needs its own environment and writes the log back across checkouts, for a case that arises only if Phase 9 happens).
+
+**Applied:** Phase 7 task plan (PLAN.md section 8, to come). All of it is code that lands before the freeze. Made before any DS2 result and before the Phase 7 gate; not part of the pre-registered plan (A3, C4, C5, C8).
+
+## 2026-11-02: Phase 7 settling 2, every line of code before the freeze; two goals around Din's steps
+
+**Decided (Din):** Phase 7 runs as Goal A, then Din's steps, then Goal B.
+
+- **Goal A (agent, branch `phase-7-freeze`, before the freeze):** the `current-phase = 7` bump; settling 1's fixes; the DS2 path of `build-demo-data` (DS2 prepared in memory as the sealed run does, never written to `data/prepared/`), rehearsed with DS1 records in DS2's place as in Phase 5 settling 3; R43's rule tested on synthetic counts; web tests that read the default record from the manifest instead of assuming 223, and DEMO-09's line that the patient was chosen before testing, shown when the split is DS2; the 7.1 gate checklist with the R49 audit as a ledger entry; Din's runbook with the exact freeze and sealed-run commands in order. It ends with the push command for Din.
+- **Din:** pushes, opens and merges the pull request once CI is green, then follows the runbook on `main`: the freeze record, its push, `evaluate-test`, the log push.
+- **Goal B (agent, fresh session, after the log is pushed):** runs commands and writes docs only: the ledger entry with every headline number from the sealed report, DS2 demo data and R43 on the built manifest, Playwright on DS2, the logged reproduction, TASKS and PLAN updates, then the push command for a preview pull request.
+
+**Why:** `check_gate` refuses any code change between the freeze commit and the sealed run, and CI's `build-demo-data` step fails once a sealed run is logged unless the DS2 path exists. Writing the code before the freeze also means none of it is written after seeing a test number. A goal run continues until its end condition, so Din's steps sit at a goal boundary, as in Phase 6.
+
+**Not chosen:** the post-seal work done in a supervised session instead of Goal B; DS2 demo code written after the sealed run (CI on `main` red from the log push until it lands, and code written after seeing results).
+
+## 2026-11-02: Phase 7 settling 3, what Claude may run on DS2 after the sealed run (rigor rule 1 amendment)
+
+**Gap:** rigor rule 1 in `AGENTS.md` says only `evaluate-test` evaluates on DS2 and only Din starts it. Goal B (settling 2) needs `build-demo-data` on DS2 (seed-0 predictions for the demo, DEMO-07) and `rebuild`, whose `reproduce-test` stage evaluates DS2 again (OPS-03). Both use only the frozen files and fit nothing.
+
+**Decision (Din):** once the sealed entry is logged and pushed, Claude may run `heartbeat build-demo-data` and `heartbeat rebuild` (its reproduction stage) on DS2, and debug demo and web code on DS2 data. Nothing may ever train, tune, select or calibrate on DS2. A change to any frozen path (settling 1) or a suspected bug in the scoring code is a stop for Din, and a rerun follows A3: fix, rerun, both runs logged.
+
+**Reason:** after the sealed run the model is frozen and the numbers are logged, so these commands cannot feed a test number back into a model choice; CI's web job builds DS2 demo data on every push after the log anyway. `evaluate-test` and the freeze record stay Din's.
+
+**Not chosen:** Claude runs only `build-demo-data` and Din runs the reproduction; rule 1 unchanged, with Din running both.
+
+**Applied:** `AGENTS.md` rigor rule 1. Before the Phase 7 gate and before any DS2 result.
+
+## 2026-11-02: Phase 7 settling 4, the DS2 demo labels are recomputed and checked against the sealed report (DEMO-07 clarification)
+
+**Gap:** DEMO-07 says each `beats.json` carries the sealed run's seed-0 labels and probabilities, but the sealed report holds aggregates only (per-model confusion matrices, the per-patient S and V table, intervals), no per-beat values.
+
+**Decision (Din):** `build-demo-data` scores DS2 with the frozen seed-0 `model.onnx` on CPU through the existing scoring path (the one the DS1 build already uses), then requires its pooled seed-0 confusion matrix and every per-patient S and V cell to equal the latest sealed report exactly. Any difference stops the build and goes to Din. `evaluate-test` is unchanged.
+
+**Reason:** the same frozen file through the same code gives the sealed run's labels, and the exact check against the committed report proves it for every count the report holds; the sealed path stays as rehearsed in Phase 5.
+
+**Not chosen:** `evaluate-test` also writing per-beat seed-0 values into its committed report (literal sealed-run values, but a larger sealed code path and a committed file of a few MB, a guess).
+
+**Applied:** `docs/PRD.md` DEMO-07. Before the Phase 7 gate and before any DS2 result.
+
+## 2026-11-02: Phase 7 settling 5, the G1 outline is written before the freeze, with every EVAL-10 outcome
+
+**Decided (Din):** Goal A writes the G1 case study outline as `docs/CASE_STUDY_OUTLINE.md`, mapped to the dins.dev `projects` collection schema (zod, `~/Develop/dins.dev/docs/site/plans/M1-pages.md`). It pre-writes the headline sentence for each EVAL-10 outcome (CNN clearly better; no clear difference; baseline matches or beats the CNN), and every number appears only as a slot naming its source key in the sealed report. It lands in the freeze commit. The wording lint covers it as published text (R44).
+
+**Why:** the strict sealed gate (settling 1) refuses any doc change between the freeze and the sealed run, so the outline is either in the freeze commit or written after the results. In the freeze commit, it is on `origin/main` before any result exists, so the case study can say its structure and claims were fixed in advance, which is the point of the project.
+
+**Not chosen:** writing G1 after the sealed run and before the prose (PLAN.md's wording; less work, but the outline would be written knowing the outcome).
+
+**Applied:** Phase 7 task plan (PLAN.md section 8, to come); PLAN.md's Phase 7 line on G1 is read as "before the sealed run".
+
+## 2026-11-02: Phase 7 settling 6, the freeze and the sealed log land on `main` by direct pushes, from a runbook
+
+**Checked:** `gh api repos/dinsdev/heartbeat/branches/main` reports `"protected": false`, and the repo has no rulesets, so Din can push to `main` directly.
+
+**Decided (Din):** after Goal A's pull request is merged with CI green, Din runs a runbook on `main` (Goal A writes it with exact commands):
+
+1. `git pull`; `uv run heartbeat verify` and `uv run heartbeat check-folds` pass on a clean tree.
+2. `uv run heartbeat export --freeze`; commit only `models/heartbeat-v1/freeze.json`; `git push`; `git fetch` (R47).
+3. `uv run heartbeat evaluate-test`, once.
+4. `uv run heartbeat cards`, which renders the test blocks (R50).
+5. Commit `results/test_runs.jsonl`, the report under `results/test_runs/` and both cards in one commit, and push it right away (OPS-07).
+
+Nothing else lands on `main` between steps 2 and 5. Goal B starts from step 5's commit.
+
+**Why:** the code is reviewed in Goal A's pull request; these two commits are generated files, and a merge commit between the freeze and the sealed run is one more thing the strict gate would have to accept.
+
+**Known risk, accepted:** CI on step 5's commit is the first CI run on DS2 demo data; if a web test trips on something Goal A could not rehearse, `main` stays red until Goal B fixes it.
+
+**Not chosen:** a short pull request for each of the two commits.
+
+## 2026-11-02: Phase 7 settling 7, `rebuild --exact` is not part of Phase 7
+
+**Decided (Din):** Phase 7 logs the default-mode reproduction only (OPS-03, settling 1). `rebuild --exact` stays optional for later, run in a scratch clone and never in the working repo, with Din's go, and its outcome goes in the ledger whichever way it comes out.
+
+**Why:** it is not in Phase 7's exit criteria. It retrains cross-validation on CPU, so it rewrites `results/` with numbers that differ from the committed MPS ones in whatever checkout it runs in, and whether CPU cross-validation selects the same width and epoch count has not been measured; a different selection would fail its bit-for-bit claim and need a decision.
+
+**Not chosen:** an overnight `--exact` run in a scratch clone at the end of Phase 7.
+
+## 2026-11-02: Phase 7 settling 8, what counts as a sealed run if `evaluate-test` fails partway (A3, EVAL-06 clarification)
+
+**Gap:** `run_sealed` gates, prepares DS2 in memory, scores, builds the report, writes the report file, then appends the log line, and prints nothing before the end. A crash before the report file leaves no DS2 number anywhere, yet fixing the code changes the tree, so the freeze record no longer matches, and `write_freeze` refuses a second record.
+
+**Decision (Din):**
+
+1. A sealed run counts once any DS2 number has been written to disk or shown. From then on A3 applies: the run gets a ledger entry (and its log entry if it got that far), the fix lands, the rerun is logged, and both stay on record.
+2. A crash before any DS2 number exists is not a run. Din records the traceback in the ledger, with no numbers. The fix goes through a pull request; a commit with its own ledger entry removes `models/heartbeat-v1/freeze.json`; Din freezes again from the runbook. Only code may change; the model files may not.
+3. Goal A writes both cases into Din's runbook.
+
+**Reason:** the rule protects what matters, that no test number informs a change, without turning a crash nobody saw a number from into a "rerun" in the case study. Deciding it now means nobody improvises it after a failure.
+
+**Not chosen:** every start that passes the gate counts as a run, crash or not.
+
+## 2026-11-02: Phase 7 task plan drafted, for Din's review
+
+Written from settlings 1 to 8 into PLAN.md section 8 ("Phase 7: Freeze and the sealed run (task plan, 2026-11-02)"), with nine design calls, Goal A tasks A1 to A8, Din's runbook step, Goal B tasks B1 to B4, six stop conditions and five review-focus items. TASKS 7.1 to 7.5 reworded and 7.6 and 7.7 added. Two `/goal` prompts drafted in the planning session, for Din's review. Nothing built; no DS2 file read.
+
+## 2026-11-02: Phase 7 task plan and goal prompts approved
+
+**Approved (Din, 2026-11-02):** the Phase 7 task plan as committed in `2c4dde5` (PLAN.md section 8), with its nine design calls, and two `/goal` prompts from the planning session: Goal A (everything before the freeze, 3,988 characters) and Goal B (after the sealed log is pushed, 3,902 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort. Goal A runs on `phase-7-freeze` and ends at a pull request; Goal B starts only once a sealed entry is on `origin/main`, on a new branch `phase-7-sealed`.
+
+## 2026-11-02: Phase 7 gate checklist and the R49 audit (TASKS 7.1, Task A7)
+
+Walked PLAN.md's Phase 7 gate on `phase-7-freeze` at `77eab4f`. Claude checks, Din confirms.
+
+**1. Rule-to-test rows pass in CI on `main`.** The latest CI run on `main` is run 41535302057 (push of `e799a4a`, 2026-11-02 22:12 UTC, which is `origin/main` today): `python` and `web` succeeded, `preview` skipped (it runs on pull requests only). Read with `gh run list --branch main` and `gh run view 41535302057`. On this branch, `uv run python -m heartbeat.checks.rule_coverage` exits 0 at `current-phase = 7`: R43 and R47 have tests, and R49 is MAN, met by this entry. This item holds for today's `main`; after Goal A's pull request merges, CI on the merge commit must be green again before the freeze (runbook step 0).
+
+**2. R49, the pre-registered plan.** Diffed each pre-registered section between the Phase 0 push commit `77daee4` (pushed 2026-10-29T05:29:47Z, an ancestor of HEAD) and HEAD, with a scratchpad script that cuts each section at its heading and diffs the two versions:
+
+| Section | Result |
+| --- | --- |
+| Ledger "2026-10-22: A3 decided" | unchanged |
+| Ledger "2026-10-26: B4 decided" (holds the A3 addendum) | unchanged |
+| Ledger "2026-10-26: C4 decided" | unchanged |
+| Ledger "2026-10-26: C5 decided" | unchanged |
+| Ledger "2026-10-27: C8 decided" | unchanged |
+| PRD section 8.2 | three lines changed, each a clarification with its own dated entry |
+
+The three PRD 8.2 changes, each matched to an entry made before this gate (dates from `git blame` and `git log`):
+
+1. EVAL-08 item 4 (each per-patient cell gated on its own denominator; "none flagged"): commit `4fe5e26`, 2026-10-29 21:58 -0400, entry "2026-10-29: Phase 3 settling, 3: the per-patient percentage gate (C4 clarification)".
+2. EVAL-09 (95% percentile intervals; undefined metrics skipped per metric with counts; paired differences skip a draw where either side is undefined): commit `22b9039`, 2026-10-29 22:02 -0400, entries "2026-10-29: Phase 3 settling, 5: 95% bootstrap intervals (C4 clarification)" and "2026-10-29: Phase 3 settling, 2: undefined metrics in bootstrap draws (C4 clarification)".
+3. EVAL-11 (each final model's temperature fitted on its own seed's out-of-fold predictions; the shipped model's is seed 0's): commit `5e697e0`, 2026-10-30 01:27 -0400, entry "2026-10-30: Phase 4 settling, 3: which seed is reported on DS1, and which temperature ships (C4, C6 clarification)".
+
+No change lacks an entry, so R49 raises no stop. No DS2 result existed at any of these dates.
+
+**3. The freeze record is committed and pushed** and **4. the working tree is clean**: Din's, in `docs/RUNBOOK_PHASE7.md` steps 1 and 2 (`export --freeze` refuses a dirty tree, and `evaluate-test` refuses unless the freeze commit is on `origin/main`, R47).
+
+## 2026-11-02: Phase 7 Goal A verification and runbook (TASKS 7.4 to 7.7, Task A8)
+
+Goal A's code and documents are on `phase-7-freeze`, ready for a pull request. Commits: `b08796c` (A1, the freeze line), `e7e733a` (A2, the frozen-paths gate), `065caa3` (A3, one reproduction per state), `f2c37c2` (the R28 follow-up below), `a5d5b88` (A4, the DS2 demo build), `3622cf8` (A5, the web reads its split), `77eab4f` (A6, the G1 outline), `29fb92b` (A7, the gate checklist and R49 audit) and this entry's commit (A8, the runbook, a merge test and these notes). No DS2 signal, label or prediction was read: every DS2 path ran on DS1 stand-ins.
+
+**Verified (Claude, 2026-11-02), on this branch:**
+
+- `CI=1 uv run pytest`: 1148 passed in 88 s (real-data layer included), before the merge test below was added; that test then passed alone in both modes.
+- `scripts/check.sh`: exit 0 (after the merge test).
+- `uv run heartbeat verify`: 6 of 6 checks passed. `uv run heartbeat check-folds`: ok, 22 subjects in 5 folds.
+- `uv run python -m heartbeat.checks.rule_coverage`: exit 0 at `current-phase = 7` (R43, R47 covered; R49 MAN, met by the A7 entry).
+- `pnpm -C web run build` and `pnpm -C web run e2e` at `3622cf8`: 217 passed (1.2 min), then the R38 pass 4 passed (2.1 min). No web file changed after `3622cf8`.
+- The DS1 rehearsal of the DS2 demo build, `tests/data/test_demo_ds2_rehearsal_real.py`: passed in 12.9 s (16.0 s wall). It runs `run_sealed` on DS1 as a stand-in, builds the demo in DS2 mode with no prepared file readable, checks the manifest, then plants a one-count change in a per-patient cell of a second sealed report and confirms the build refuses, naming the cell, and writes nothing.
+- A DS2-shaped dry run of the web: the DS1 manifest rewritten in place to `split: DS2`, 21 records and a planted `sealed_run`, then `notes`, `embed`, `controls`, `reduced-motion` and `survey` specs on Chromium: 23 passed. The DS1 demo data was rebuilt afterwards and its manifest hash matched the one before.
+- The DS1 demo manifest is byte-identical before and after A4 (`build-demo-data`, same SHA-256).
+
+**Rulings (Claude's, for Din to review in the pull request):**
+
+1. `check_against_sealed` takes the subjects manifest as a fourth argument, because the report's per-patient rows are keyed by patient and the demo by record. Cost if wrong: one signature.
+2. The rule that only `sealed/run.py` imports `prepare_in_memory` widens to `demo/build.py` too, as design call 3 asks for the DS2 demo. The test names both files.
+3. The R28 real-data test expected `reproduce-test: ran (always runs)`; A3 removed `always_run`, so it now expects `ran (no earlier run)`, equally exact. A3's miss: `check.sh` skips the real-data layer, and the test fails the same way at A3's commit. Fixed in its own commit, `f2c37c2`. No assertion was loosened.
+4. The rehearsal helpers move from `tests/data/test_sealed_rehearsal_real.py` into `tests/rehearsal_support.py`, so both rehearsals share one frozen-repo setup.
+5. A DS2 demo build also checks the freeze record against the report's `freeze_commit` and the four model hashes, so a build after a refreeze cannot pair new models with an old report.
+6. The runbook's settling 8 case 1 says a rerun needs a fresh freeze like case 2, because the sealed gate refuses any change since the freeze commit. Settling 8 does not spell that out; Din to confirm.
+7. Added `test_a_branch_merged_after_the_freeze_refuses_naming_its_code` (R41, both gate modes) for review focus 1: a branch cut before the freeze, merged with `--no-ff` after it. It passed on its first run, since the gate diffs trees, so it guards the behavior rather than fixing a bug.
+
+**Known side effect.** A2 and A3 changed code under `export/` and `sealed/`, so the next real `rebuild` reruns `export` (about 65 s, measured 2026-10-30) and `build-demo-data`.
+
+**Final review: self-review** (Din did not ask for a subagent, so no fresh reviewer ran), against the five focus items:
+
+1. A change merged to `main` after the freeze: the merge test above, plus the existing sealed-gate tests on direct commits.
+2. The reproduction gate passing a `src/` change: `is_frozen` matches folder prefixes, the `AFTER_THE_SEAL` cases include a `docs/` change allowed beside a `src/` change refused, and a test shows a move out of `src/` is missed without `--no-renames`.
+3. A stale sealed report in the DS2 demo build: it reads the last sealed entry through `check_log`, a test rewrites a report and expects the hash refusal, and `results/test_runs.jsonl` is an input of the stage.
+4. A Playwright spec passing on DS2 through a DS1 assumption: the record helpers throw when nothing fits, `demoManifest` asserts the split's full record count, the survey compares its list to the manifest, and the DS2-shaped dry run above.
+5. The notes on the wrong split: `splitNotes` with Vitest on both splits, `notes.spec.ts` in full and embed modes, and the DS2-shaped dry run.
+
+Not verified here: anything on real DS2 data (Goal B), CI on this branch (after Din pushes), and Din's review of the DEMO-09 line and the outline drafts.

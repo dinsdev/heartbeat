@@ -4,7 +4,13 @@ import json
 from pathlib import Path
 
 import pytest
-from card_support import log_sealed_run, sources
+from card_support import (
+    FREEZE_COMMIT,
+    FREEZE_DATE,
+    log_sealed_run,
+    plant_freeze_record,
+    sources,
+)
 
 from heartbeat.cards.blocks import (
     DATA_CARD_BLOCKS,
@@ -51,7 +57,7 @@ def test_each_ds1_block_names_its_source_and_label(card_sources: CardSources) ->
     assert f"{point:.4f}" in blocks["dev_selection"]
     assert "`results/selection.json`" in blocks["dev_selection"]
     assert f"Width multiplier {selection['width']:g}" in blocks["model_details"]
-    assert "Pending (Phase 7)" in blocks["model_details"]
+    assert "Freeze" not in blocks["model_details"]
     assert "`results/export.json`" in blocks["model_details"]
     assert "`results/exhibit.json`" in blocks["exhibit"]
     assert "Accuracy" in blocks["exhibit"]
@@ -105,6 +111,43 @@ def test_test_blocks_stay_pending_until_a_sealed_run_is_logged(
     assert sorted(stale_blocks(pending, after)) == sorted(tests)
     rendered = render_card(pending, after)
     assert pending_after_sealed(rendered, TEST_PENDING) == []
+
+
+@pytest.mark.rule("R50")
+def test_committing_the_freeze_record_changes_no_block(
+    card_sources: CardSources,
+) -> None:
+    """Phase 7 settling 1.1: the freeze commit alone keeps `verify` green."""
+    before = [
+        render_blocks(renderers, card_sources)
+        for _, renderers in card_specs(MODEL_CARD, DATA_CARD)
+    ]
+    plant_freeze_record(card_sources)
+    after = [
+        render_blocks(renderers, card_sources)
+        for _, renderers in card_specs(MODEL_CARD, DATA_CARD)
+    ]
+    assert after == before
+
+
+@pytest.mark.rule("R50")
+def test_the_freeze_line_renders_from_the_sealed_report(
+    card_sources: CardSources,
+) -> None:
+    log_sealed_run(card_sources)
+    blocks = render_blocks(MODEL_CARD_BLOCKS, card_sources)
+    line = f"Freeze commit `{FREEZE_COMMIT}`, dated {FREEZE_DATE}."
+    assert line in blocks["test_headline"]
+    assert "Freeze" not in blocks["model_details"]
+
+
+def test_a_freeze_record_for_another_commit_stops_the_render(
+    card_sources: CardSources,
+) -> None:
+    log_sealed_run(card_sources)
+    plant_freeze_record(card_sources, commit="d" * 40)
+    with pytest.raises(ValueError, match="freeze record"):
+        render_blocks(MODEL_CARD_BLOCKS, card_sources)
 
 
 def test_the_comparison_sentence_comes_from_the_rule(card_sources: CardSources) -> None:

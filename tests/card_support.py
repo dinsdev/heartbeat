@@ -91,11 +91,24 @@ def sources(root: Path) -> CardSources:
     return CardSources(folder, models, folder / "test_runs.jsonl", root)
 
 
+FREEZE_COMMIT = "e" * 40
+FREEZE_DATE = "2027-01-15"
+
+
+def plant_freeze_record(sources: CardSources, commit: str = FREEZE_COMMIT) -> None:
+    """A freeze record as `export --freeze` writes it (fields the cards read)."""
+    record = {"commit": commit, "date": FREEZE_DATE, "inputs": {}, "models": {}}
+    (sources.models_dir / "freeze.json").write_text(json.dumps(record), "utf-8")
+
+
 def log_sealed_run(sources: CardSources) -> None:
+    """A freeze record, then a sealed entry whose report names its commit."""
+    plant_freeze_record(sources)
     y, record, scores = synthetic_scores()
     report = sealed_report(
         y, record, record, scores, data_label="synthetic", n_draws=50
     )
+    report = {**report, "freeze_commit": FREEZE_COMMIT}
     append_entry(
         sources.log_path,
         sources.results_dir / "test_runs",

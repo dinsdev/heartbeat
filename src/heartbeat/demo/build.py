@@ -12,7 +12,12 @@ model's `NOTICE` and an attribution note ship beside them with hashed names,
 and `manifest.json` lists everything (DEMO-08).
 
 Until a sealed run is logged the build is DS1 only (DEMO-17, R32): a record
-outside DS1 stops it before any file is opened. DS2 demo data is Phase 7 work.
+outside DS1 stops it before any file is opened. Once the log holds a sealed
+entry it is DS2 only (Phase 7 design call 3): each record is prepared in
+memory from the raw cache as the sealed run does, never written to
+`data/prepared/`; the model files must match the freeze record the report
+names; and the seed-0 counts must equal the report the last sealed entry
+names, checked before any file is written (settling 4, design call 4).
 """
 
 import json
@@ -29,14 +34,17 @@ from heartbeat.constants import ADU_PER_MV, FS_HZ, SCORED_CLASSES, SHIPPED_SEED
 from heartbeat.data.loader import require_ds1
 from heartbeat.data.manifests import Splits
 from heartbeat.data.npz import PreparedRecord, load_prepared
+from heartbeat.data.prepare import prepare_in_memory
 from heartbeat.demo.manifest import MANIFEST_NAME, file_entry, hashed_name
+from heartbeat.demo.sealed_check import check_against_sealed
 from heartbeat.evaluate.calibration import calibrated_probs, predict_labels
-from heartbeat.export.bundle import ATTRIBUTION_NOTICE
+from heartbeat.export.bundle import ATTRIBUTION_NOTICE, FREEZE_NAME
+from heartbeat.export.freeze import FreezeError
 from heartbeat.models.augment import model_windows
 from heartbeat.models.inputs import apply_rr_scaler, rr_model_inputs
 from heartbeat.paths import REPO_ROOT
 from heartbeat.runs import canonical_json
-from heartbeat.sealed.log import read_log
+from heartbeat.sealed.log import check_log, read_log
 from heartbeat.sealed.score import (
     Calibration,
     load_calibration,
@@ -70,6 +78,7 @@ SPAN_S = 10
 DEMO_DATA_DIR = REPO_ROOT / "web" / "public" / "data"
 
 SPLIT_DS1 = "DS1"
+SPLIT_DS2 = "DS2"
 MODEL_VERSION = "heartbeat-v1"
 
 ATTRIBUTION_TEXT = f"""Heartbeat demo data
@@ -88,30 +97,81 @@ https://doi.org/10.13026/C2F305
 """
 
 
-class DemoSplitError(RuntimeError):
-    """A sealed run is logged, and DS2 demo data is not built yet (Phase 7)."""
+class DemoRecordError(PermissionError):
+    """A sealed run is logged and a record outside DS2 was asked for (DEMO-17)."""
 
 
 Reader = Callable[[Path], PreparedRecord]
+Preparer = Callable[[Path, str, str, str], PreparedRecord]
+
+
+def _sealed_entries(log_path: Path) -> list[dict[str, Any]]:
+    return [entry for entry in read_log(log_path) if entry["type"] == "sealed"]
+
+
+def demo_records(splits: Splits, log_path: Path) -> tuple[str, ...]:
+    """Every record of the split the demo uses: DS1 until a sealed run, then DS2."""
+    return splits.ds2 if _sealed_entries(log_path) else splits.ds1
 
 
 def require_demo_split(records: Sequence[str], splits: Splits, log_path: Path) -> str:
     """The split the demo data may use, checked before any file is opened (R32).
 
     Returns:
-        "DS1" while no sealed run is logged.
+        "DS1" while no sealed run is logged, "DS2" once one is.
 
     Raises:
-        SealedRecordError: If a record is outside DS1.
-        DemoSplitError: If a sealed run is logged.
+        SealedRecordError: If no sealed run is logged and a record is outside DS1.
+        DemoRecordError: If a sealed run is logged and a record is outside DS2.
     """
-    if any(entry["type"] == "sealed" for entry in read_log(log_path)):
-        raise DemoSplitError(
-            "a sealed run is logged: the demo moves to DS2 with the frozen model, "
-            "which `build-demo-data` builds from Phase 7 on"
+    if not _sealed_entries(log_path):
+        require_ds1(records, splits)
+        return SPLIT_DS1
+    for record in records:
+        if record not in splits.ds2:
+            raise DemoRecordError(
+                f"a sealed run is logged, so the demo data is DS2 only (Phase 7, "
+                f"DEMO-17): record {record} is not in DS2"
+            )
+    return SPLIT_DS2
+
+
+def last_sealed_report(
+    log_path: Path, log_root: Path
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The log's last sealed entry and the report it names, checked (R42).
+
+    Raises:
+        LogError: If the log or any report differs from what it records.
+    """
+    check_log(log_path, log_root)
+    entry = _sealed_entries(log_path)[-1]
+    report: dict[str, Any] = json.loads(
+        (log_root / entry["report"]).read_text(encoding="utf-8")
+    )
+    return entry, report
+
+
+def _require_frozen(models_dir: Path, report: Mapping[str, Any]) -> None:
+    """The model files to ship are the ones the sealed report's freeze recorded.
+
+    Raises:
+        FreezeError: On a missing record, another freeze commit, or a file whose
+            SHA256 differs from the record.
+    """
+    path = models_dir / FREEZE_NAME
+    if not path.is_file():
+        raise FreezeError(f"no freeze record at {path}, yet a sealed run is logged")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if record["commit"] != report["freeze_commit"]:
+        raise FreezeError(
+            f"the freeze record names {record['commit'][:12]}, the sealed report "
+            f"{str(report['freeze_commit'])[:12]}"
         )
-    require_ds1(records, splits)
-    return SPLIT_DS1
+    for name in ("model.onnx", "scaler.json", "calibration.json", "NOTICE"):
+        expected = record["models"].get(f"models/{MODEL_VERSION}/{name}")
+        if file_entry(name, (models_dir / name).read_bytes())["sha256"] != expected:
+            raise FreezeError(f"{models_dir / name} differs from the freeze record")
 
 
 def kept_counts(record: PreparedRecord) -> dict[str, int]:
@@ -279,26 +339,47 @@ def build_demo_data(
     out_dir: Path,
     splits: Splits,
     read: Reader = load_prepared,
+    *,
+    raw_dir: Path | None = None,
+    subjects: Mapping[str, str] | None = None,
+    log_root: Path = REPO_ROOT,
+    prepare: Preparer = prepare_in_memory,
 ) -> dict[str, Any]:
     """Write the demo data folder and return its manifest.
 
     Args:
         records: Records to ship, in picker order.
-        prepared_dir: Folder written by `heartbeat prepare`.
+        prepared_dir: Folder written by `heartbeat prepare` (DS1 only).
         models_dir: `models/heartbeat-v1/`.
         export_record: `results/export.json`, whose SHA256 the copied model
             files must match.
         log_path: The sealed-run log, read for the split rule (R32).
         out_dir: The folder to replace, `web/public/data/`.
         splits: The split manifest.
-        read: Reads one prepared file; tests spy on it.
+        read: Reads one prepared DS1 file; tests spy on it.
+        raw_dir: The download cache, read for DS2 after a sealed run.
+        subjects: Record to patient, needed for DS2.
+        log_root: The folder the log's report paths are relative to.
+        prepare: Prepares one DS2 record in memory; tests spy on it.
 
     Raises:
-        SealedRecordError: If a record is outside DS1, before anything is read.
-        DemoSplitError: If a sealed run is logged.
+        SealedRecordError: If no sealed run is logged and a record is outside
+            DS1, before anything is read.
+        DemoRecordError: If a sealed run is logged and a record is outside DS2,
+            before anything is read.
+        LogError: If the log or a report differs from what it records.
+        FreezeError: If a model file differs from the freeze record.
+        SealedMismatchError: If the seed-0 counts differ from the sealed report,
+            before any file is written.
         ValueError: If a model file differs from `results/export.json`.
     """
     split = require_demo_split(records, splits, log_path)
+    sealed: tuple[dict[str, Any], dict[str, Any]] | None = None
+    if split == SPLIT_DS2:
+        if raw_dir is None or subjects is None:
+            raise ValueError("a DS2 build needs the raw cache and the subjects")
+        sealed = last_sealed_report(log_path, log_root)
+        _require_frozen(models_dir, sealed[1])
     model_files = _model_files(models_dir, export_record)
     session = onnx_session(models_dir / "model.onnx")
     scaler = load_scaler(models_dir / "scaler.json")
@@ -310,10 +391,20 @@ def build_demo_data(
     files[attribution_name] = attribution
     entries: list[dict[str, Any]] = []
     starts: dict[str, int] = {}
+    labels_by_record: dict[str, NDArray[np.str_]] = {}
+    classes_by_record: dict[str, NDArray[np.str_]] = {}
     for record_id in records:
-        record = read(prepared_dir / f"{record_id}.npz")
-        require_ds1([record.record_id], splits)
+        if sealed is None:
+            record = read(prepared_dir / f"{record_id}.npz")
+            require_ds1([record.record_id], splits)
+        else:
+            assert raw_dir is not None
+            assert subjects is not None
+            # Design call 3: in memory, as the sealed run reads DS2.
+            record = prepare(raw_dir, record_id, splits.lead, subjects[record_id])
         labels, probs = label_kept_beats(record, session, scaler, calibration)
+        labels_by_record[record_id] = labels
+        classes_by_record[record_id] = record.beat_class[record.kept]
         trace = record.trace_adu.astype("<i2").tobytes()
         beats = encode_beats(
             record_id,
@@ -339,6 +430,13 @@ def build_demo_data(
                 "beats": file_entry(beats_name, beats),
             }
         )
+    sealed_run: dict[str, Any] = {}
+    if sealed is not None:
+        assert subjects is not None
+        entry, report = sealed
+        # Settling 4: before any file is written.
+        check_against_sealed(labels_by_record, classes_by_record, report, subjects)
+        sealed_run = {"sealed_run": {"id": entry["id"], "report": entry["report"]}}
     default = choose_default_record({e["record"]: e["counts"] for e in entries})
     manifest = {
         "label": (
@@ -362,6 +460,7 @@ def build_demo_data(
             },
         },
         "records": entries,
+        **sealed_run,
     }
     files[MANIFEST_NAME] = canonical_json(manifest).encode("utf-8")
 

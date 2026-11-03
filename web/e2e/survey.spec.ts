@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-// Phase 6 design call 9: label every kept beat of every shipped DS1 record in
-// the browser and compare with the stored Python labels and probabilities.
+import { demoManifest } from "./manifest";
+
+// Phase 6 design call 9: label every kept beat of every shipped record (DS1,
+// or DS2 once the sealed run is logged; Phase 7 design call 7) in the browser
+// and compare with the stored Python labels and probabilities.
 // Any mismatch is a stop for Din. The stored probabilities are millionths, so
 // the largest difference includes up to 5e-7 of rounding.
 const TOLERANCE = 1e-5;
@@ -16,10 +19,12 @@ interface RecordResult {
   inferenceMs: number;
 }
 
-test("every kept beat of every DS1 record matches the Python labels", async ({
+test("every kept beat of every shipped record matches the Python labels", async ({
   page,
+  request,
 }) => {
   test.setTimeout(240_000);
+  const manifest = await demoManifest(request);
   const started = page.waitForEvent("worker");
   await page.goto("/");
   const workerUrl = (await started).url();
@@ -133,14 +138,17 @@ test("every kept beat of every DS1 record matches the Python labels", async ({
     { workerUrl, BATCH },
   );
 
-  expect(results.split).toBe("DS1");
+  expect(results.split).toBe(manifest.split);
   const records: RecordResult[] = results.records;
-  expect(records).toHaveLength(22);
+  expect(records.map((r) => r.record)).toEqual(
+    manifest.records.map((r) => r.record),
+  );
   const total = records.reduce((n, r) => n + r.beats, 0);
   const largest = Math.max(...records.map((r) => r.largest));
   const ms = records.reduce((n, r) => n + r.inferenceMs, 0);
   const summary =
-    `survey ${test.info().project.name}: ${total} beats in 22 DS1 records, ` +
+    `survey ${test.info().project.name}: ${total} beats in ` +
+    `${records.length} ${manifest.split} records, ` +
     `label mismatches ${records.reduce((n, r) => n + r.labelMismatches, 0)}, ` +
     `over 1e-5 ${records.reduce((n, r) => n + r.overTolerance, 0)}, ` +
     `largest probability difference ${largest.toExponential(3)}, ` +
