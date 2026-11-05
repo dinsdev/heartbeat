@@ -2924,6 +2924,10 @@ iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow`
 
 **Verified locally (Mac):** `scripts/check.sh` passes. `pnpm -C web run e2e`: 217 then 4 passed, with R38 worst gaps 10.6 ms Chromium, 18.0 ms WebKit, 11.0 ms Pixel 7, 18.0 ms iPhone 15; the Mac composites on the GPU, so this says nothing about CI's paint cost. Wording lint on `web/dist` passes. Screenshots against the previous build, WebKit, light and dark at 1280 px wide and iPhone 15: card size unchanged, no horizontal overflow, computed card shadow `none` in light and the same hairline in dark.
 
-**Not verified:** CI. Done means both CI runs for the push green, as agreed in round 5. Din has not yet judged the look.
+**CI (Din pushed `30b7036`):** both runs green, every job that ran passed. Push run 42124010204 and pull request run 42124018880, 217 then 4 passed in each; the pull request run's Worker Preview job also passed. R38 worst gap against the 50 ms limit, push run then pull request run: Chromium 19.1 and 12.8 ms, WebKit 36.0 and 37.0 ms, Pixel 7 12.6 and 17.3 ms, iPhone 15 24.0 and 25.0 ms. No long tasks over 50 ms. This meets the bar agreed in round 5.
 
-**If CI still fails:** the fallback left is starting R38's window after the page settles, a test change under rule 3 that is Din's call. Main's panel code is no longer a safe fallback (round 7).
+**Limits:** two runs of a failure that was intermittent on some commits (`f50fe39` passed one run and failed the other). These runs are a pass, not a proof it cannot return. Desktop WebKit has the least room, at 37 ms. Which shadow, or the outline and fade, carried the cost was not settled: the rounds stopped before that split.
+
+**If it comes back:** the fallback left is starting R38's window after the page settles, a test change under rule 3 that is Din's call. Main's panel code is no longer a safe fallback (round 7).
+
+**State:** verified in CI. Din has not yet accepted the look; accepted is Din's. `diag/r38` is no longer needed.
