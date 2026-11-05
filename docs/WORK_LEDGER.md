@@ -2825,3 +2825,33 @@ iPhone 15, runs with a gap over 50 ms and counted by R38: branch 1 and 0, `main`
 **Not known:** which of the four shadows carries it. `no-shadow` removes all of them at once: the card edge, the card lift, the button shadow and the slider thumb shadow. `main`'s panel has none of the four. The probe saw 5 s per run, not R38's 30 s, so it is not a stand-in for R38 passing. Round 5 is one run on one kind of runner.
 
 **State:** no fix applied. App code on `frontend-upgrade` is unchanged.
+
+## 2026-11-05: R38 diagnosis round 6, no single shadow, and the shadows are not all of it
+
+**Run:** 42105299864 on `diag/r38` at `e59ab29`, CI's runner, 12 repetitions per project per variant, one worker. Rep 0 (cold) is left out, so n is 11 per cell. Same probe and window as round 5. New patches: `no-edge` (card ring), `no-lift` (lift under the card), `no-controls` (button and two slider thumb shadows). `no-shadow` removes all of them.
+
+Desktop WebKit, with the median model-ready time of each job as a sign of how fast its runner was:
+
+| Variant | Runs over 50 ms | Counted by R38 | Median worst | Worst | Median render in worst gap | Ready (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| branch | 11 | 6 | 69 | 86 | 53 | 813 |
+| `main` | 0 | 0 | 28 | 43 | 13 | 542 |
+| `no-shadow` | 2 | 2 | 45 | 67 | 28 | 889 |
+| `no-edge` | 4 | 2 | 49 | 91 | 35 | 921 |
+| `no-lift` | 4 | 0 | 49 | 89 | 32 | 985 |
+| `no-controls` | 6 | 4 | 51 | 62 | 34 | 563 |
+
+iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow` 0/0, `no-edge` 0/0, `no-lift` 0/0, `no-controls` 1/0.
+
+**Read:**
+
+- No single shadow is the cause. This is the "each helps partly" outcome set out before the run, with one change: the smallest set that reaches `main`'s numbers does not exist among the shadows, because removing all four does not reach them.
+- This corrects the round 5 heading. The shadows carry a large part of the cost, not all of it. `no-shadow` spiked in both rounds (1 of 11, then 2 of 11), so it does not meet the agreed score of no spikes.
+- Runner speed varies per job and is a confound in every table in this diagnosis. Ready time moved between rounds with no change to the variant: `main` 897 then 542, branch 654 then 813, `no-shadow` 557 then 889. Taking ready time as the sign of runner speed (an inference), the two rounds give rough pairs. On fast runners (ready 540 to 660) median worst is `main` 28, `no-shadow` 35, `no-controls` 51, branch 54. On slow runners (ready 810 to 990) it is `main` 37, `swap-panel` 34, `no-shadow` 45, `no-edge` 49, `no-lift` 49, branch 69.
+- On those pairs: `no-edge` and `no-lift` each take most of the gain, and `no-controls` takes little. My guess before the run that the slider thumb carried it was wrong. `no-shadow` stays about 7 to 8 ms over `main`, and `swap-panel` does not, so some cost in the panel is not a shadow. What it is, is not known.
+- `main` stayed under the limit on both a fast and a slow runner, and the branch stayed over it on both, so the gap between them is not runner luck.
+- Remaining spikes in the knockouts come in three kinds: the table filling at the start (74 to 79 mutations; `main` has this too, up to 36 ms in this run), a paint after one text change, and paints with no DOM mutation at all.
+
+**Limits:** one run per variant, each on its own runner; the pairs cross two runs; a 5 s probe, not R38's 30 s; "paint" is still an inference from the render bucket.
+
+**State:** no fix applied. App code on `frontend-upgrade` is unchanged.
