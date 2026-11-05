@@ -2877,3 +2877,37 @@ iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow`
 **Not verified:** the candidate's paint cost on CI's runner, which is what round 7 measures. Din has not seen the look on a real screen.
 
 **State:** `diag/r38` commit waits on Din's push. App code on `frontend-upgrade` is unchanged.
+
+## 2026-11-05: R38 diagnosis round 7, the candidate does not clear and the motion is not the cost
+
+**Run:** 42109021416 on `diag/r38` at `dfdadfe`, jobs 127531356660 (runner a) and 127531356027 (runner b), both passed as jobs since the probe does not assert. Every variant in turn on each runner, 4 cycles of 4 reps per project. Rep 0 of each invocation is left out, so n is 12 per cell per runner and 24 pooled. Same probe and window as rounds 5 and 6. The regular CI run on the same commit (42109021296) does not test the patches and was not read.
+
+| Variant | Desktop WebKit: runs over 50 ms, a + b | Counted by R38 | Worst (ms) | iPhone 15: runs over 50 ms, a + b | Counted by R38 | Worst (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| branch | 11 + 12 | 14 | 106 | 3 + 2 | 1 | 61 |
+| `main` | 1 + 0 | 0 | 52 | 1 + 0 | 0 | 69 |
+| `swap-panel` | 2 + 6 | 0 | 126 | 0 + 1 | 0 | 65 |
+| `no-shadow` | 0 + 0 | 0 | 48 | 0 + 0 | 0 | 47 |
+| `fix` | 8 + 12 | 2 | 109 | 1 + 3 | 0 | 80 |
+| `fix` + `fix-a` | 7 + 8 | 1 | 91 | 4 + 2 | 0 | 75 |
+| `fix` + `no-check` | 9 + 10 | 2 | 111 | 1 + 7 | 0 | 91 |
+| `fix` + `no-arrivals` | 9 + 12 | 4 | 136 | 1 + 5 | 1 | 89 |
+| `fix` + `no-bars` | 9 + 12 | 2 | 90 | 1 + 2 | 0 | 84 |
+| `fix` + all four | 9 + 11 | 2 | 99 | 6 + 1 | 1 | 75 |
+
+**Read against the reading set before the run:**
+
+- `fix` does not clear: 20 of 24 desktop runs went over 50 ms. It stays off `frontend-upgrade`.
+- `fix` is clearly above `no-shadow`, on both runners. The reading named the outline or the fade, but `fix` differs from `no-shadow` in a third way I left out of that line: `fix` keeps the button and two slider thumb shadows, and `no-shadow` removes them. So there are three suspects, not two. Round 6's "`no-controls` takes little" came from pairing runs across runners and was never measured on one runner, so it does not clear them.
+- `swap-panel` also spikes on the same runner: 8 of 24 desktop runs against 1 of 24 for `main`, worst 126 ms. The new layout and styles with main's panel code are not clean on this score, so fallback (a) is not a safe fallback. None of its gaps were counted by R38 in this round; round 5 had one.
+- The motion is not the cost. No knockout clears `fix`, and `no-shadow` has all the motion and no run over 50 ms. Din's approved motion stays.
+
+**What else the run shows:**
+
+- `fix` did remove something. On desktop WebKit every `fix` gap over 50 ms ended within 157 ms of ready, where the branch also had gaps at 213, 352, 353, 391, 488, 774 and 1208 ms. What is left is a cluster 70 to 160 ms after ready, close to where the probe starts (median about 130 ms), which is why R38 counted 2 of 24 for `fix` against 14 of 24 for the branch. A lower count is not a clear: it depends on that race, and the agreed bar is no spikes.
+- `no-shadow` was clean here but was not in earlier rounds, on other runners: 1 of 11 desktop runs in round 5 (worst 55) and 2 of 11 in round 6 (both counted, worst 67). On a single runner it is close to `main`: median worst 43 against 39 on runner a, 30 against 30 on runner b. That is smaller than the 7 to 8 ms gap in round 6, so the "some cost is not a shadow" reading is weaker than I wrote it.
+- `main` itself does not meet "no run over 50 ms" on this score: 1 of 24 on each project, worst 69 on iPhone 15, none counted. A strict zero on the probe is stricter than what main does while R38 passes on it. R38's own limit is unchanged; this concerns only how I read the probe.
+
+**Limits:** 5 second probe, not R38's 30 seconds; two runners. "Paint" remains an inference from the render bucket (77 percent of `fix`'s gaps over 50 ms). R38 itself was not run on any variant.
+
+**State:** app code on `frontend-upgrade` is unchanged, and Din is still holding its push. Next step is Din's call: split the three suspects on one runner, or decide on the look.
