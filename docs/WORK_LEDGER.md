@@ -2855,3 +2855,25 @@ iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow`
 **Limits:** one run per variant, each on its own runner; the pairs cross two runs; a 5 s probe, not R38's 30 s; "paint" is still an inference from the render bucket.
 
 **State:** no fix applied. App code on `frontend-upgrade` is unchanged.
+
+## 2026-11-05: R38 diagnosis round 7 prepared, the candidate fix on one runner
+
+**Decided (Din, 2026-11-05, "Yes, prepare the test"):** test the candidate on `diag/r38` before it touches `frontend-upgrade`. Every variant now runs in turn on the same runner (`.github/r38-diag/round7.sh`), so runner speed no longer separates them. Two jobs each run 4 cycles of 4 reps per project, with the order rotated each cycle. Rep 0 of each invocation is left out, so each cell has 12 scored reps per runner.
+
+**Candidate (`fix.patch`):** the card edge as a 1 px `outline` in place of the ring shadow, and the lift as a linear gradient strip below the card with a horizontal mask in place of the strip's shadow. Stops come from the Gaussian profile of the old shadows. Dark mode has no lift, as now.
+
+**Variants:** branch, `main`, `swap-panel`, `no-shadow`, `fix`, and `fix` plus each of: no load-in (`fix-a`), `no-check`, `no-arrivals`, `no-bars`, and all four together.
+
+**Reading, set before the run:**
+
+- Clears: `fix` has no run over 50 ms on either runner, on desktop WebKit and iPhone 15. It then goes on `frontend-upgrade` for two green CI runs.
+- `fix` matches `no-shadow` but still spikes, and a knockout on top clears it: that motion is the remaining cost. Removing it takes away something Din approved, so it is Din's call.
+- `fix` plus all four still spikes while `swap-panel` does not: the rest is elsewhere in the panel. Stop and bring Din the fallbacks.
+- `swap-panel` also spikes on the same runner: main's panel code is not a safe fallback either.
+- `fix` clearly above `no-shadow`: the outline or the fade costs paint too.
+
+**Verified locally:** all 10 variants apply, pass the build's size gates and run the probe (one rep each, desktop WebKit, Mac; this says nothing about paint cost on CI). Screenshots of the built page against the branch, WebKit and Chromium at 1280 px wide, iPhone 15: card size unchanged, no horizontal overflow. Dark mode differs by at most 1 of 255 per channel. Light mode's top corner differs by at most 2 in WebKit and 5 in Chromium. Light mode's bottom edge differs by at most 11 in WebKit and 16 in Chromium, mostly at the bottom corners, and the faint glow up the card's sides is gone. A first version put the fade behind the card and painted over its surface, since the card's background sits below its own negative z-index children. The screenshots caught it and the fade now starts below the card.
+
+**Not verified:** the candidate's paint cost on CI's runner, which is what round 7 measures. Din has not seen the look on a real screen.
+
+**State:** `diag/r38` commit waits on Din's push. App code on `frontend-upgrade` is unchanged.
