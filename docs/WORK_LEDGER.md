@@ -2803,3 +2803,25 @@ Worker Preview: alias `https://pr-9-heartbeat.dineshddawo.workers.dev`, version 
 **Decided (Din, 2026-11-05, "Yes, prepare it"):** one measuring round in place of more knockouts, then one fix attempt. Round 5 (`diag/r38` at `d8c5b72`, not pushed yet) scores any gap over 50 ms ending in the 1.5 s after ready, whatever time the probe starts, and splits each gap into worker handler, frame callbacks, style and layout, and the rest of the rendering update. Jobs: branch, `main`, `swap-panel`, and two knockouts not tried before, `contain` and `no-shadow`. A fix counts only with no spikes on that score and two green CI runs. Falling back to main's panel code or moving R38's window stays Din's call (rule 3).
 
 **Verified:** the round 5 probe ran on local WebKit and iPhone 15 with injected costs: an 80 ms busy frame read raf 80 to 82, and 30,000 added nodes read layout 138 to 144. A first version dropped its own frame sentinel and read layout 0, caught by this check and fixed before the commit. The patches apply on `diag/r38`, and the page builds with `contain` and `no-shadow` applied. **Not verified:** the paint bucket, since this Mac paints on the GPU and the check only exercises it lightly; round 5's results.
+
+## 2026-11-05: R38 diagnosis round 5, the cost is paint and the shadows carry it
+
+**Run:** 42102849706 on `diag/r38` at `d8c5b72`, CI's runner, 12 repetitions per project per variant, one worker. Rep 0 (cold) is left out, so n is 11 per cell. The window is the 1.5 s after the model is ready, in a 5 s run.
+
+Desktop WebKit:
+
+| Variant | Runs with a gap over 50 ms | Counted by R38's probe | Median worst gap | Worst gap | Median split of each run's worst gap (frame callbacks, layout, rest of the rendering update) |
+| --- | --- | --- | --- | --- | --- |
+| branch | 9 of 11 | 6 | 54 ms | 73 ms | 9, 1, 43 ms |
+| `main` | 0 of 11 | 0 | 37 ms | 47 ms | 6, 0, 22 ms |
+| `swap-panel` | 3 of 11 | 1 | 34 ms | 111 ms | 2, 0, 27 ms |
+| `contain` | 11 of 11 | 6 | 61 ms | 119 ms | 11, 1, 47 ms |
+| `no-shadow` | 1 of 11 | 0 | 35 ms | 55 ms | 7, 1, 22 ms |
+
+iPhone 15, runs with a gap over 50 ms and counted by R38: branch 1 and 0, `main` 1 and 0, `swap-panel` 0 and 0, `contain` 4 and 1, `no-shadow` 1 and 0.
+
+**Read:** on the branch, 73% of the time in gaps over 50 ms is in the rendering update after forced style and layout, which is paint as far as this probe can say. Worker handlers read 0 ms and layout about 1 ms. The early spike is a paint cost, not a script or layout cost. `no-shadow` brings the desktop numbers to `main`'s. `contain` makes them worse, so it is out. The `swap-panel` worst of 111 ms read 108 ms in `other`, unattributed time, not paint.
+
+**Not known:** which of the four shadows carries it. `no-shadow` removes all of them at once: the card edge, the card lift, the button shadow and the slider thumb shadow. `main`'s panel has none of the four. The probe saw 5 s per run, not R38's 30 s, so it is not a stand-in for R38 passing. Round 5 is one run on one kind of runner.
+
+**State:** no fix applied. App code on `frontend-upgrade` is unchanged.
