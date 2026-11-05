@@ -2763,3 +2763,43 @@ Worker Preview: alias `https://pr-9-heartbeat.dineshddawo.workers.dev`, version 
 **Not verified:** R38 in CI, which this fix rests on; the image cannot stand in for it (the previous entry). `main` and the branch before the fix were built from a detached scratch worktree, then removed; the probes lived in the session scratchpad and were deleted.
 
 **Supersedes:** the previous entry's lift on `.card::before` with `will-change: transform`, and the first 8.0 entry's frame drawn above the canvas. States: implemented and verified locally and in the Linux image; CI and Din's acceptance pending.
+
+## 2026-11-05: R38 diagnosis rounds 1 to 4 on CI's runner, and a correction
+
+**State:** `2939107` did not fix R38. Its pull request and push runs (41719572163, 41719563265) both failed on desktop WebKit, 65 and 52 ms early in the probe. The same app code went green in 2 of 6 CI runs (41897508856 and 41910233189 green; 41719572163, 41719563265, 41894101355 and 41901824589 red; the `diag/r38` commits add only `.github` files). No test, tolerance or gate changed, and nothing below is on `frontend-upgrade` except this entry.
+
+**How it was measured:** the throwaway branch `diag/r38` (never merged) ran R38 unchanged on CI's runner, 8 times per WebKit project per variant, in runs 41894101461 (round 1), 41897508649 (round 2), 41901824272 (round 3) and 41910233177 (round 4; cancelled when `all-three` hit the 40 minute job limit, so that variant has 4 runs and the others finished). The first run of each job is cold, so the numbers below are runs 2 to 8 on desktop WebKit unless a line says otherwise. An early spike is a gap over 50 ms in the first second of the probe.
+
+| Round | Variant | Passed | Early spikes |
+| --- | --- | --- | --- |
+| All four | `main` | 28 of 28 | 0 |
+| All four | branch | 13 of 28 | 14 |
+| 1 | no check mark animation (`no-check`) | 2 of 7 | 5 |
+| 1 | no arrivals (`no-arrivals`) | 5 of 7 | 2 |
+| 1 | no drawn lists (`no-base-select`) | 4 of 7 | 3 |
+| 1 | all three of the above (`all-off`) | 2 of 7 | 5 |
+| 2 | main's panel (`swap-panel`) | 6 of 7 | 0 |
+| 2 | main's table (`swap-table`) | 4 of 7 | 3 |
+| 2 | main's trace (`swap-trace`) | 4 of 7 | 3 |
+| 2 | main's page chrome (`swap-chrome`) | 5 of 7 | 2 |
+| 2 | main's CSS (`swap-css`) | 5 of 7 | 2 |
+| 3 | no load-in (`fix-a`) | 4 of 7 | 3 |
+| 3 | movement without fades (`fix-b`) | 4 of 7 | 3 |
+| 3 | no load-in, icon or beat dot transitions (`fix-c`) | 2 of 7 | 5 |
+| 4 | no beat pulse (`no-pulse`) | 5 of 7 | 2 |
+| 4 | static slider fill (`static-fill`) | 4 of 7 | 3 |
+| 4 | no table bars (`no-bars`) | 0 of 7 | 7 |
+| 4 | the last three together (`all-three`) | 2 of 3 | 1 |
+
+**The instrumented probe shows the pass counts mislead.** In the logs of `probe-branch` (rounds 2 and 4), `probe-fix-a` (round 3) and `probe-all-three` (round 4), 27 of 28 desktop WebKit reps had a gap over 50 ms ending after the model turned ready, against 0 of 7 on `probe-main` (round 2, worst 47 ms). In 9 of the 27, the gap ended before Playwright started R38's probe (start times +29 to +554 ms after ready), so R38 would not have seen it. Reading (not proof): whether R38 passes is largely a race, which is why single variants look like noise and why `no-bars` scored 0 of 7. The page's frame callbacks took a median 11 to 15 ms of those gaps (median 64 to 69 ms); the rest was not split.
+
+**Also measured:** past the first second, WebKit's steady gaps have a median of 30 to 39 ms on the branch (rounds 2, 3 and 4) against 21 to 33 ms on `main`, under the limit.
+
+**Corrections:**
+
+- The 2026-11-03 entry above (and the `2939107` commit message) says the early spike is an event `main` has too, made worse by the branch's paint cost per frame. On CI's runner `main` has no early spike over 50 ms in 28 runs, and the steady gaps do not explain it. That reading came from the Linux image, which does not stand in for CI.
+- The proposed round 5 repeated `no-check` as no-draw and a subset of `fix-c` as no-play-fx, both already at 2 of 7, so it did not run as proposed.
+
+**Decided (Din, 2026-11-05, "Yes, prepare it"):** one measuring round in place of more knockouts, then one fix attempt. Round 5 (`diag/r38` at `d8c5b72`, not pushed yet) scores any gap over 50 ms ending in the 1.5 s after ready, whatever time the probe starts, and splits each gap into worker handler, frame callbacks, style and layout, and the rest of the rendering update. Jobs: branch, `main`, `swap-panel`, and two knockouts not tried before, `contain` and `no-shadow`. A fix counts only with no spikes on that score and two green CI runs. Falling back to main's panel code or moving R38's window stays Din's call (rule 3).
+
+**Verified:** the round 5 probe ran on local WebKit and iPhone 15 with injected costs: an 80 ms busy frame read raf 80 to 82, and 30,000 added nodes read layout 138 to 144. A first version dropped its own frame sentinel and read layout 0, caught by this check and fixed before the commit. The patches apply on `diag/r38`, and the page builds with `contain` and `no-shadow` applied. **Not verified:** the paint bucket, since this Mac paints on the GPU and the check only exercises it lightly; round 5's results.
