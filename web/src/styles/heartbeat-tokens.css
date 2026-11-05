@@ -9,8 +9,9 @@
  * brand's line color.
  *
  * Motion and depth: one strong ease-out for things arriving, one ease-in-out
- * for things moving on screen. The player card lifts on a soft shadow in
- * light; dark mode stays flat (BRAND.md: no glow), a hairline instead.
+ * for things moving on screen. The player card is flat: white on the paper in
+ * light, a hairline in dark (BRAND.md: no glow). No shadow in light, since
+ * WebKit's software paint of them failed R38 (ledger, 2026-11-05).
  */
 
 :root {
@@ -24,9 +25,7 @@
   --hb-trace: var(--color-ink);
   --hb-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --hb-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --hb-card-edge: 0 0 0 1px rgb(18 24 28 / 0.06);
-  --hb-card-lift:
-    0 1px 2px rgb(18 24 28 / 0.04), 0 12px 32px -14px rgb(18 24 28 / 0.14);
+  --hb-card-edge: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -40,7 +39,6 @@
     --hb-grid-major: rgb(125 143 139 / 0.22);
     --hb-trace: var(--color-ink);
     --hb-card-edge: 0 0 0 1px var(--color-hairline);
-    --hb-card-lift: 0 0 #0000;
   }
 }
 
@@ -54,5 +52,4 @@
   --hb-grid-major: rgb(125 143 139 / 0.22);
   --hb-trace: var(--color-ink);
   --hb-card-edge: 0 0 0 1px var(--color-hairline);
-  --hb-card-lift: 0 0 #0000;
 }

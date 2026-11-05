@@ -245,7 +245,7 @@
     height: calc(min(100vw - 2 * var(--gutter), var(--page-max)) * 0.2 + 190px);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
-    box-shadow: var(--hb-card-edge), var(--hb-card-lift);
+    box-shadow: var(--hb-card-edge);
   }
 
   .embed .placeholder {

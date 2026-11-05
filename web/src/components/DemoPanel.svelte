@@ -504,31 +504,15 @@
      on one raised surface. */
   .card {
     position: relative;
-    isolation: isolate;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
     padding: var(--space-4);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
+    /* No shadow in light, here or on the controls: WebKit painting in software
+       (Linux) spent long enough on them to fail R38 (ledger, 2026-11-05). */
     box-shadow: var(--hb-card-edge);
-  }
-
-  /* The lift, cast by a strip along the card's bottom edge. WebKit painting in
-     software (Linux) redraws whatever lies under a repaint, and the trace
-     repaints every frame of playback: the lift on the whole card redrew its
-     blur each frame, and on a layer of its own it made the card a layer that
-     was recomposited each frame (ledger, 2026-11-03). The strip's shadow ends
-     well below the trace, and the card hides its top edge. */
-  .card::before {
-    content: "";
-    position: absolute;
-    inset: auto 0 0;
-    z-index: -1;
-    block-size: 4rem;
-    border-radius: inherit;
-    box-shadow: var(--hb-card-lift);
-    pointer-events: none;
   }
 
   .head {
@@ -635,8 +619,7 @@
     transition:
       transform 120ms var(--hb-ease-out),
       background-color var(--motion-fast) ease,
-      border-color var(--motion-fast) ease,
-      box-shadow var(--motion-fast) ease;
+      border-color var(--motion-fast) ease;
   }
 
   button:active {
@@ -650,7 +633,6 @@
     border: 0;
     background: var(--color-accent);
     color: var(--color-paper);
-    box-shadow: 0 1px 2px rgb(18 24 28 / 0.12);
   }
 
   .quiet {
@@ -786,7 +768,6 @@
       border: 1px solid var(--color-hairline);
       border-radius: var(--radius-md);
       background: var(--color-surface);
-      box-shadow: var(--hb-card-lift);
       color: var(--color-ink);
       transform-origin: top center;
     }
@@ -901,7 +882,6 @@
     border: 2px solid var(--color-surface);
     border-radius: 50%;
     background: var(--color-accent);
-    box-shadow: 0 1px 3px rgb(18 24 28 / 0.25);
     appearance: none;
     transition: transform 120ms var(--hb-ease-out);
   }
@@ -912,7 +892,6 @@
     border: 2px solid var(--color-surface);
     border-radius: 50%;
     background: var(--color-accent);
-    box-shadow: 0 1px 3px rgb(18 24 28 / 0.25);
     transition: transform 120ms var(--hb-ease-out);
   }
 
@@ -1082,10 +1061,6 @@
     padding: 0;
     background: none;
     box-shadow: none;
-  }
-
-  .embed .card::before {
-    display: none;
   }
 
   .embed .strip {

@@ -2911,3 +2911,19 @@ iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow`
 **Limits:** 5 second probe, not R38's 30 seconds; two runners. "Paint" remains an inference from the render bucket (77 percent of `fix`'s gaps over 50 ms). R38 itself was not run on any variant.
 
 **State:** app code on `frontend-upgrade` is unchanged, and Din is still holding its push. Next step is Din's call: split the three suspects on one runner, or decide on the look.
+
+## 2026-11-05: R38 fix applied, the light theme's shadows are gone
+
+**Decided (Din, 2026-11-05, "we should just fix the CI"):** stop the diagnosis rounds and apply what measured clean. R38, its limit and its window are unchanged. This drops the lift that Din approved in the frontend upgrade, so Din sees the look before it ships.
+
+**Changed:** in light, no shadows in the demo. The card's ring and lift, the play button's shadow, both slider thumb shadows and the speed and recording picker's lift are gone, and the loading placeholder matches the card. The card still reads as white on the paper. Dark mode looks the same: it keeps its hairline ring, and its lift was already invisible.
+
+**Evidence:** `no-shadow` in round 7 (run 42109021416, ledger entry above): no run over 50 ms in 24 on desktop WebKit (worst 48 ms) and 24 on iPhone 15 (worst 47 ms). It was not always clean in earlier rounds: 3 of 22 desktop runs over 50 ms across rounds 5 and 6 (worst 67 ms).
+
+**Differs from the measured variant:** the code is tidied, not patched. The `.card::before` strip that only carried the lift, its `isolation: isolate`, the `--hb-card-lift` token and the button's `box-shadow` transition are removed. Each one takes something away from the paint, but this exact code has not run on CI's runner.
+
+**Verified locally (Mac):** `scripts/check.sh` passes. `pnpm -C web run e2e`: 217 then 4 passed, with R38 worst gaps 10.6 ms Chromium, 18.0 ms WebKit, 11.0 ms Pixel 7, 18.0 ms iPhone 15; the Mac composites on the GPU, so this says nothing about CI's paint cost. Wording lint on `web/dist` passes. Screenshots against the previous build, WebKit, light and dark at 1280 px wide and iPhone 15: card size unchanged, no horizontal overflow, computed card shadow `none` in light and the same hairline in dark.
+
+**Not verified:** CI. Done means both CI runs for the push green, as agreed in round 5. Din has not yet judged the look.
+
+**If CI still fails:** the fallback left is starting R38's window after the page settles, a test change under rule 3 that is Din's call. Main's panel code is no longer a safe fallback (round 7).
