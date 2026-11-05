@@ -2931,3 +2931,17 @@ iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow`
 **If it comes back:** the fallback left is starting R38's window after the page settles, a test change under rule 3 that is Din's call. Main's panel code is no longer a safe fallback (round 7).
 
 **State:** verified in CI. Din has not yet accepted the look; accepted is Din's. `diag/r38` is no longer needed.
+
+## 2026-11-05: Frontend upgrade accepted (TASKS 8.0)
+
+**Decided (Din, 2026-11-05, "CI is green! Good to merge? Let's mark this phase as accepted"):** TASKS 8.0 is accepted, the flatter light theme included. This covers 8.0 only: 8.1 to 8.5 are still planned, so Phase 8 itself stays open, and Din's preview review before the first production deploy (8.5) is still ahead.
+
+**CI on `36db6e9` (docs only since `30b7036`):** both runs green, 217 then 4 passed in each. Push run 42125889852 and pull request run 42125900264, attempt 2. R38 worst gap against the 50 ms limit, push run then pull request run: Chromium 11.3 and 13.9 ms, WebKit 32.0 and 33.0 ms, Pixel 7 11.7 and 20.0 ms, iPhone 15 23.0 and 25.0 ms. No long tasks over 50 ms. The Worker Preview job passed: version `1c8ef782`, alias `https://pr-10-heartbeat.dineshddawo.workers.dev`.
+
+**R38 on the fixed app code so far:** 4 green runs of 4, worst gap 37.0 ms (WebKit, run 42124018880). The limits in the entry above still hold: this is a pass, not a proof it cannot return.
+
+**Cancelled run, not a test result:** attempt 1 of 42125900264 hit the `web` job's 20-minute limit inside the Playwright install step, with apt at 43 of 181 packages from `azure.archive.ubuntu.com`. That step normally takes 41 to 55 s. No newer push had arrived, so `cancel-in-progress` did not do it. Slow mirror or network on that runner is my reading (a guess: the log cannot prove it). Run 42105301474 on `diag/r38` cancelled at the same step, and a rerun of the failed job cleared this one. No workflow change made. If it keeps happening, the step could get its own timeout and a retry.
+
+**Checked for the merge:** against `main` at `00aefdb`, the branch's base, the diff touches `web/src`, `web/index.html` (theme colour), `.claude/launch.json` (dev server preview) and these docs. Nothing under `web/e2e`, `web/playwright.config.ts`, `.github`, `scripts`, `manifests`, `config`, `results`, `models` or `fixtures` changed, so no test, gate or frozen path moved.
+
+**State:** accepted. Merging dinsdev/heartbeat#10 is Din's.
