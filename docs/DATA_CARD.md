@@ -161,7 +161,7 @@ Run by the `prepare` stage of `heartbeat rebuild` (DATA-04 to DATA-10):
 
 - **Used for:** training and evaluating heartbeat-v1 and its logistic-regression baseline (`docs/MODEL_CARD.md`); the leakage exhibit (DS1 only); the browser demo.
 - **Development folds:** five patient-grouped folds over DS1, written once by `heartbeat make-folds` to `config/folds.json` and only checked afterwards.
-- **Should not be used for:** any health decision; claims about people outside this database; evaluation with beats from one person on both sides of a split (random beat-level splits, which the leakage exhibit shows inflate results); tuning or selecting anything on DS2.
+- **Should not be used for:** any health decision; claims about people outside this database; evaluation with beats from one person on both sides of a split (random beat-level splits, which the leakage exhibit shows inflate results); tuning or selecting anything on DS2; estimating how common arrhythmias are, because 25 of the recordings were chosen to include uncommon ones, so PhysioNet's page warns that pooled results are not prevalence estimates.
 
 ## 6. Distribution
 
@@ -178,13 +178,13 @@ _Pending: shipped file sizes and hashes, rendered from the demo data manifest (P
 
 **Citations:**
 
-- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Engineering in Medicine and Biology 20(3):45-50 (2001).
-- Moody G, Mark R. MIT-BIH Arrhythmia Database (version 1.0.0). PhysioNet (2005). https://doi.org/10.13026/C2F305
-- Pollard T, et al. PhysioNet as a global platform for biomedical research. Nature Health (2026). https://doi.org/10.1038/s44360-026-00096-z
+- Moody, G., & Mark, R. (2005). MIT-BIH Arrhythmia Database (version 1.0.0). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/C2F305
+- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng in Med and Biol 20(3):45-50 (May-June 2001). PMID: 11446209.
+- Pollard, T., Moody, B. E., Lehman, L., Gow, B., Fernandes, C., Xie, C., Johnson, A., Mark, R. G., & Heldt, T. (2026). PhysioNet as a global platform for biomedical research. Nature Health. https://doi.org/10.1038/s44360-026-00096-z. Available from: https://pmc.ncbi.nlm.nih.gov/articles/PMC13641116/
 - de Chazal P, O'Dwyer M, Reilly RB. Automatic classification of heartbeats using ECG morphology and heartbeat interval features. IEEE Transactions on Biomedical Engineering 51(7):1196-1206 (2004).
 - AAMI EC57, testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms.
 
-PhysioNet's requested citation is rechecked before publishing (PUB-07).
+The first three are the citations PhysioNet's MIT-BIH page asks for, rechecked against that page on 2026-11-05 (PUB-07).
 
 ## 7. Maintenance
 
@@ -194,4 +194,4 @@ PhysioNet's requested citation is rechecked before publishing (PUB-07).
 
 ## Change log
 
-Changes after the sealed run are listed here with their date and reason. 2026-11-05: the status line updated, and a note added on why the shipped data block is still pending.
+Changes after the sealed run are listed here with their date and reason. 2026-11-05: the status line updated, a note added on why the shipped data block is still pending, the citations put in the form PhysioNet's page asks for, and a line added on prevalence from that page's usage notes.

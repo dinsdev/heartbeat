@@ -2991,3 +2991,19 @@ Written from settlings 1 to 14 into PLAN.md section 8 ("Phase 8: Content and lau
 ## 2026-11-05: Phase 8 task plan and goal prompts approved
 
 **Approved (Din, 2026-11-05):** the Phase 8 task plan as committed in `327cfc5` (PLAN.md section 8), with its nine design calls, and two `/goal` prompts from the planning session: Goal A (everything before Din's steps, 3,987 characters) and Goal B (after production is live, 3,764 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort. Goal A runs on `phase-8-content` and ends ready for a pull request; Goal B starts only once `https://heartbeat.dins.dev/` answers 200 and Din has given the VoiceOver and phone results, on a new branch `phase-8-launch`.
+
+## 2026-11-05: PhysioNet citation and licenses rechecked (TASKS 8.4, Goal A task A3; PUB-07, launch criterion 6)
+
+**Read on 2026-11-05, in the built-in browser:** `https://physionet.org/content/mitdb/1.0.0/` (its full text), `https://physionet.org/content/mitdb/view-license/1.0.0/` and `https://opendatacommons.org/licenses/by/1-0/` (section 4.3).
+
+**Result, citations:** the page asks for three: the database (Moody and Mark, 2005, with `RRID:SCR_007345` and DOI 10.13026/C2F305), the original publication (2001, PMID 11446209) and PhysioNet's standard citation (Pollard and eight others, 2026, Nature Health). All three were already named here. `README.md`, `DATA_LICENSE.md` and `docs/DATA_CARD.md` now use the page's exact form, with the RRID, the PMID and the whole author list. The "rechecked before publishing" lines now carry the date.
+
+**Result, license:** unchanged, ODC-By 1.0. Section 4.3's example notice reads "Contains information from DATABASE NAME which is made available under the ODC Attribution License." `DATA_LICENSE.md`, `models/heartbeat-v1/NOTICE` and the demo's attribution file all fit it, with the license linked. `LICENSE` (MIT) is unaffected.
+
+**Frozen `NOTICE`, no change needed, so stop condition 5 did not trigger:** its short citation (`Moody G, Mark R. ... PhysioNet (2005)`, and the same text in `src/heartbeat/demo/build.py`) leaves out the RRID. The DOI is the same, and the section 4.3 notice, which is what the license requires, is intact. Nothing about the license's meaning changed.
+
+**Also read, the page's usage notes:** report the records, exclusions, annotation classes and evaluation procedures (the cards do); keep records 201 and 202 in one partition for subject-independent work (202 is excluded everywhere and 201 sits only in DS1, which meets it); pooled results are not prevalence estimates, since 25 recordings were chosen to include uncommon arrhythmias. That last line was not in the cards: added to the data card's "Should not be used for" and to the case study's limits. The page still does not mention consent or de-identification (a text search of the page finds neither), so the model card's line stands.
+
+**Facts in the cards, checked against the page:** 48 recordings from 47 subjects; 25 men aged 32 to 89 and 22 women aged 23 to 89; about 4,000 source recordings, about 60% inpatients and 40% outpatients; 23 excerpts at random and 25 chosen; 360 samples per second, 11-bit, 10 mV; 1975 to 1979. All hold.
+
+**Copy changed, the one the Goal B frontend entry set aside for this recheck:** `web/src/components/About.svelte` said "cardiologists annotated every beat". The page says initial labels were automatic and two cardiologists then reviewed each recording independently, correcting them, with disagreements settled by consensus. It now reads "two cardiologists reviewed each recording's beat labels". Din's call to reword at the preview review. No test pins the sentence.
