@@ -2683,3 +2683,265 @@ Worker Preview: alias `https://pr-9-heartbeat.dineshddawo.workers.dev`, version 
 **Cleanup:** the merged local branches `phase-7-sealed` and `phase-7-freeze` deleted with `git branch -d`. `git ls-remote --heads origin` lists `main` only. No stashes remain. The session scratchpad files are deleted.
 
 **Carried into Phase 8, report only:** `tests/data/test_demo_real.py` builds the DS1 demo from an empty log now that the real log builds DS2 only; keeping or retiring it is Din's call. A fresh-clone `rebuild` likely stops at `reproduce-test` once `export` rewrites `results/export.json` (read from the code, not run). The card source line repeats "DS2 test, CPU", a fix under `src/` that would make the next reproduction refuse (settling 1's cost). Card prose and the case study, which may now quote the DS2 test numbers from `results/test_runs/1-sealed.json`, are Phase 8. The Phase 6 items carried above still stand.
+
+## 2026-11-03: Frontend upgrade before Phase 8 (TASKS 8.0)
+
+**Decision (Din):** before the Phase 8 content work, upgrade the demo's look and motion while keeping the dins.dev brand. Din picked the "instrument and editorial" direction: the demo as one player card (a header strip with record, state and time; the trace; the controls), the status and legend as tidy readouts, a proper data table, "How it works" as an editorial layout with a sticky heading, and motion where it explains something. Copy, controls, test hooks, accessibility and the rigor wording stay as they were. Branch `frontend-upgrade`, off `main` at `00aefdb`. Only `web/` changed, which is outside the frozen paths, so the reproduction gate is unaffected.
+
+**What changed:**
+
+- Player card (`DemoPanel.svelte`): card surface with a hairline edge and, in light mode only, a soft lift; a header strip with the record, a scale note and the playhead; play and pause icons that cross-fade with a slight scale and blur (160 ms); a custom Position slider with a teal fill; the readout (counter, summary, legend) in two columns from 760 px; the training note marked with an amber dot. Embed mode stays flat.
+- Trace (`renderer.ts`, `Trace.svelte`): a teal pen tip (a faint rule and a dot on the trace) at the playhead, and labels that land on their beat (scale 0.6 to 1, fade and a short drop over 260 ms) when the model's answer arrives. Only a beat first seen pending lands; a seek or record change draws labels settled, and Q dashes never move (`lib/trace/arrivals.ts`, 5 unit tests). A soft fade on the left edge while the paper moves.
+- Beat dot pulse: the dot by the playhead pulses once as each annotated beat passes (`lib/playback/pulse.ts`, 2 unit tests; WAAPI, playing only).
+- Staged load: the lockup, title and lead rise in (520 ms, 70 ms steps); the trace strip fades in.
+- Table (`BeatTable.svelte`): uppercase mono headers, full width, a small probability bar next to each value (hidden at 520 px and under), and "No" in bold V color for a disagreement.
+- About: at 960 px and up a two-column layout with the heading sticky on the left; hairline rules above each subheading. No copy change.
+- Legend as a grid of aligned rows; footer spacing; `::selection`, scrollbar, accent and caret colors; `theme-color` meta tags matching the brand paper in each scheme.
+
+**Why these limits:**
+
+- No glow in dark mode (brand rule): the card lift is `0 0 #0000` in dark, and the R34 test checks the dark media block and the `data-theme` block agree.
+- No tinted backgrounds behind class-colored letters: a 7 % V tint on a disagreement row computed S at 4.33:1 (4.18 on hover), under R35's 4.5:1. So no row tints, no row hover, no tinted badges.
+- DOM order unchanged for the R36 keyboard walk; the new layout is CSS only.
+- Text that arrives with the data never fades in (R35): axe reads contrast mid-animation. Only the header text, the placeholder and the trace canvas animate on load.
+- The stagger uses classes, not an inline `--rise` property, because the CSP has `style-src 'self'` (Svelte's `style:` and WAAPI go through the CSSOM and are fine).
+- Every motion respects reduced motion: no rise, no pen fade, no landing, no pulse.
+
+**For Din's review:** the card header shows "25 mm/s, 10 mm/mV", taken from the trace geometry constants already in `web/src/lib/trace/`. It is new visible text (not a metric), so it is Din's call to keep it.
+
+**Verification (local, 2026-11-03):**
+
+- First full `pnpm -C web run e2e`: 15 failures, all "R35: axe finds no violations" under motion no-preference (`color-contrast` on the counter, summary, legend, `.d7` and `.chosen` mid-fade). Fixed by removing the fade from text that arrives with the data, as above. No test changed.
+- Then: `scripts/check.sh` exit 0 (ruff, wording, pytest, ESLint, Prettier, svelte-check 0 errors, Vitest 130 tests in 21 files). `pnpm -C web run build`: size gates passed, index JS 81,935 bytes (30,918 gzip) on the last build. `pnpm -C web run e2e`: 217 passed, then 4 passed. `uv run python -m heartbeat.checks.wording --root web/dist` exit 0. Browser console clean. Looked at by hand in the dev server: desktop light and dark, phone at 375 px (no horizontal scroll: `scrollWidth` equals `clientWidth`), embed at 800 by 500 light and 360 by 450 dark.
+- The impeccable detector flagged only the font choice (Fraunces, Instrument Sans), which is the locked brand; no change. The web interface guidelines pass found one gap, the missing `theme-color`, added after the e2e run; `scripts/check.sh` and the build were run again after it.
+
+**Not verified:** CI on this branch, the preview URL, and Din trying it. States: implemented and verified locally; accepted is Din's.
+
+**Follow-up (Din, 2026-11-03): the Recording drop-down.** Din asked for the open list to match the page; it was the system menu. Both selects now use `appearance: base-select` inside `@supports`, so the list is drawn in the page's materials (surface, hairline, card lift in light only, a teal dot on the chosen record, an accent-soft row on hover and focus, a 160 ms ease-out open that is off under reduced motion). They stay real `<select>` elements, so the keyboard walk (R36), labels and Playwright's `selectOption` are unchanged; a browser without support keeps the system menu. In this mode the select sizes to the chosen text, not the longest option, which made its width jump by up to 55 px between records (measured in the dev server) and moved the slider. So it gets a 20rem floor from 30rem wide and the full row below that; measured one width per viewport over all 21 records, with no horizontal scroll open or closed: Pixel 7 (412 px) 298 px, iPhone 15 (393 px) 279 px, 375 px 261 px with an ellipsis, 500 px 320 px. Screenshots by Playwright in the scratchpad, Chromium light and dark, WebKit light; Playwright's WebKit build reports support, but whether shipping Safari on iOS does is not checked here.
+
+## 2026-11-03: CI failure on the frontend upgrade (PR dinsdev/heartbeat#10)
+
+**What failed:** the `web` job in CI runs 41589208270 (pull request) and 41589195303 (push), WebKit and iPhone 15 only; Chromium and Pixel 7 passed. Three kinds of failure: the Speed and scrub tests timed out on clicks (Playwright's actionability waits for animation frames, and frames were slow); R38 reported main-thread gaps of 83 and 64 ms (WebKit) and 35 and 33 ms (iPhone 15) on the branch, against 31 and 19 ms on `main` in its last CI run; and axe flagged `color-contrast` on `.t-lead` mid-fade.
+
+**Causes, found by bisecting in Playwright's Linux image** (`mcr.microsoft.com/playwright:v1.64.0-noble`, the version CI uses; Din approved the pull, about 3.5 GB). WebKit on Linux paints in software, so paint costs that a Mac never shows land on the main thread:
+
+- The card's light-mode lift (`--hb-card-lift`, a wide blurred shadow) was repainted with every repaint inside the card, so every frame of playback. A frame-gap probe at 4x playback for 5 s: the branch had about 21 frames over 100 ms (worst about 165 ms), `main` none (worst 59 to 77 ms). With the shadow removed, none. Moving the lift to an unlayered `::before` did not help (about 21 again); the same `::before` with `will-change: transform`, so it sits on its own composited layer and is painted once, matched the no-shadow case.
+- The play and pause icons cross-faded with `filter: blur()`. In the same image, one frame of that transition cost 0.4 to 1.7 s: spikes at Play or Pause in 3 of 8 runs with the blur, 0 of 8 without.
+- `.t-lead` (and the title) faded in as they rose. On a slow runner axe can read contrast mid-fade, the same R35 rule the first entry for 8.0 records for the data text.
+
+**Fix (web only, outside the frozen paths):** the lift moves to `.card::before` on its own layer (`will-change: transform`; off in embed mode, still `0 0 #0000` in dark); the icon swap keeps the fade and scale and drops the blur; the header title and lead get `rise-text`, which moves them without fading. No test, tolerance or gate changed.
+
+**Verification:**
+
+- In the Linux image with 4 CPUs and 2 workers (CI's runner has 4 vCPUs): the Speed and scrub tests, 5 repeats each on WebKit and iPhone 15: fixed branch 20 of 20, before the fix (`a986402`) 15 of 20 (Speed 3 and scrub 2 failures), `main` 20 of 20. The full WebKit and iPhone 15 suite without `@alone`: 108 passed; the only 2 failures were `timings.spec.ts`, which needs Chromium's CDP and is outside the e2e run in the repo config (my scratch config did not leave it out).
+- R38 does not separate the builds in this image: run alone with 1 worker it failed on every build, `main` included (`main` WebKit worst 569 ms, 0.7 s into playback). A 10 s version of its probe, 6 runs each on WebKit, gave a worst gap after the first second of 61 to 135 ms on `main`, 64 to 607 ms before the fix and 68 to 644 ms on the fixed branch, with one run per build over 500 ms. So the image is harsher than CI here, and R38's verdict for this fix rests on the next CI run.
+- Local (macOS): `scripts/check.sh` exit 0; `pnpm -C web run e2e` 217 passed, then 4 passed (the build and its size gates ran first).
+
+**How:** the guard hook blocked `git checkout main -- web/src` over the working tree, so `main` and `a986402` were checked out as detached worktrees in the session scratchpad and served from there; removed afterwards. The probes and the scratch Playwright config lived in the scratchpad and were deleted afterwards.
+
+**Supersedes:** the first 8.0 entry's "cross-fade with a slight scale and blur" and the card lift as painted on the card. States: implemented and verified locally and in the Linux image; CI and Din's acceptance pending.
+
+## 2026-11-03: R38 failed again on the frontend upgrade (PR dinsdev/heartbeat#10)
+
+**What failed:** pull request run 41708998807 at `f50fe39`: the main e2e pass was clean (217 passed, so the Speed and scrub fix held), then R38 failed on iPhone 15 alone, worst gap 79 ms at 0.2 s into the probe (the rest of that run peaked at 36 ms). The push run on the same commit, 41708979021, passed R38 (iPhone 15 36 ms, WebKit 46 ms). R38's steady state on the branch in CI: WebKit 46 to 49 ms, iPhone 15 33 to 36 ms, against 30 to 31 and 19 to 23 ms on `main` (runs 41582626467, 41581443532). So the branch left 1 to 4 ms of headroom on WebKit, and a single early spike was enough to fail.
+
+**Causes, measured in Playwright's Linux image** (`mcr.microsoft.com/playwright:v1.64.0-noble`, `--cpus=4`, already pulled). A scratch probe ran R38's zero-delay timer chain for 12 s at 4x after the model was ready and reported, past the first second, the p95 and p99 gap and the count of gaps over 33 ms. Variants were injected CSS over the same build and run interleaved, since the image drifts over a session. iPhone 15 was the readable signal (desktop WebKit in this image is noisier than CI and scored `main` worse than the branch, so it was not used to decide):
+
+- `main` 0 to 3 gaps over 33 ms, p99 13 to 19 ms; the branch 7 to 46, p99 30 to 55 ms.
+- Removing the card lift (`.card::before`) and both overlays on the trace brought the branch to `main`'s level (1 to 6 over 33 ms in its first 9 runs; one later run gave 14, as the image grew noisier). Either alone only went part of the way.
+- The lift cost the same with a small blur, with no blur (a hard shadow), as a plain radial gradient, and without `will-change`. Moved to a strip at the card's bottom edge it still cost while it kept `will-change`; without it, it matched no lift (2, 4 and 8 over 33 ms). Reading: the `::before` on its own layer made the card a composited layer that was recomposited every frame in software, and without the layer, any shadow under the trace was redrawn with each repaint of the trace.
+- The hairline frame (`.trace::after`, an inset shadow over the canvas) cost a little; drawn as an overlay border it cost the same, and a separate layer for the trace (`will-change` on `.trace`) did not help. The left edge fade (40 px wide) measured close to free.
+- The early spike did not reproduce as its own event: a second probe measured the worst gap in the second after the model is ready and in the 400 ms after each of 8 Speed changes, and neither stood out from the gaps between changes, on `main` or the branch (`base-select` and the check mark animation turned off made no difference). In a later batch the first second on iPhone 15 peaked at 53 to 58 ms on `main`, 51 to 62 ms on the branch and 55 to 60 ms with the fix. So the 0.2 s spike is an event `main` has too, made worse by the branch's paint cost per frame; my earlier guess (the check mark drawing at the ready moment) is not supported.
+
+**Fix (web only, outside the frozen paths):** the lift is cast by a 4rem strip along the card's bottom edge, with no layer of its own (`.card::before`, `inset: auto 0 0`, no `will-change`). The canvas ends 137 to 269 px above the card's bottom at 1280 to 360 px wide (measured), and the strip's shadow reaches about 75 px up, so it is never under the trace. The card hides the strip's top edge. The hairline frame is a 1 px border on `.trace` instead of an overlay; `clientWidth` and `clientHeight` exclude the border, so the canvas sizes as before and the card is 2 px taller. The edge fade stays. No test, tolerance or gate changed.
+
+**Verification:**
+
+- Linux image, interleaved, 3 rounds: iPhone 15 gaps over 33 ms with the fix 16, 8 and 5 (p99 29 to 39 ms) against 24, 68 and 47 for the branch before it (p99 38 to 56 ms); `main` in the same rounds 3, 35 and 80 (the image grew noisier in later rounds). Screenshots before and after, WebKit desktop and iPhone 15, light mode: the lift and the frame look the same.
+- Local (macOS): `scripts/check.sh` exit 0; `pnpm -C web run e2e` 217 passed, then 4 passed (R38 worst gaps: Chromium 11.5, WebKit 14.0, Pixel 7 10.6, iPhone 15 15.0 ms); `uv run python -m heartbeat.checks.wording --root web/dist` exit 0.
+
+**Not verified:** R38 in CI, which this fix rests on; the image cannot stand in for it (the previous entry). `main` and the branch before the fix were built from a detached scratch worktree, then removed; the probes lived in the session scratchpad and were deleted.
+
+**Supersedes:** the previous entry's lift on `.card::before` with `will-change: transform`, and the first 8.0 entry's frame drawn above the canvas. States: implemented and verified locally and in the Linux image; CI and Din's acceptance pending.
+
+## 2026-11-05: R38 diagnosis rounds 1 to 4 on CI's runner, and a correction
+
+**State:** `2939107` did not fix R38. Its pull request and push runs (41719572163, 41719563265) both failed on desktop WebKit, 65 and 52 ms early in the probe. The same app code went green in 2 of 6 CI runs (41897508856 and 41910233189 green; 41719572163, 41719563265, 41894101355 and 41901824589 red; the `diag/r38` commits add only `.github` files). No test, tolerance or gate changed, and nothing below is on `frontend-upgrade` except this entry.
+
+**How it was measured:** the throwaway branch `diag/r38` (never merged) ran R38 unchanged on CI's runner, 8 times per WebKit project per variant, in runs 41894101461 (round 1), 41897508649 (round 2), 41901824272 (round 3) and 41910233177 (round 4; cancelled when `all-three` hit the 40 minute job limit, so that variant has 4 runs and the others finished). The first run of each job is cold, so the numbers below are runs 2 to 8 on desktop WebKit unless a line says otherwise. An early spike is a gap over 50 ms in the first second of the probe.
+
+| Round | Variant | Passed | Early spikes |
+| --- | --- | --- | --- |
+| All four | `main` | 28 of 28 | 0 |
+| All four | branch | 13 of 28 | 14 |
+| 1 | no check mark animation (`no-check`) | 2 of 7 | 5 |
+| 1 | no arrivals (`no-arrivals`) | 5 of 7 | 2 |
+| 1 | no drawn lists (`no-base-select`) | 4 of 7 | 3 |
+| 1 | all three of the above (`all-off`) | 2 of 7 | 5 |
+| 2 | main's panel (`swap-panel`) | 6 of 7 | 0 |
+| 2 | main's table (`swap-table`) | 4 of 7 | 3 |
+| 2 | main's trace (`swap-trace`) | 4 of 7 | 3 |
+| 2 | main's page chrome (`swap-chrome`) | 5 of 7 | 2 |
+| 2 | main's CSS (`swap-css`) | 5 of 7 | 2 |
+| 3 | no load-in (`fix-a`) | 4 of 7 | 3 |
+| 3 | movement without fades (`fix-b`) | 4 of 7 | 3 |
+| 3 | no load-in, icon or beat dot transitions (`fix-c`) | 2 of 7 | 5 |
+| 4 | no beat pulse (`no-pulse`) | 5 of 7 | 2 |
+| 4 | static slider fill (`static-fill`) | 4 of 7 | 3 |
+| 4 | no table bars (`no-bars`) | 0 of 7 | 7 |
+| 4 | the last three together (`all-three`) | 2 of 3 | 1 |
+
+**The instrumented probe shows the pass counts mislead.** In the logs of `probe-branch` (rounds 2 and 4), `probe-fix-a` (round 3) and `probe-all-three` (round 4), 27 of 28 desktop WebKit reps had a gap over 50 ms ending after the model turned ready, against 0 of 7 on `probe-main` (round 2, worst 47 ms). In 9 of the 27, the gap ended before Playwright started R38's probe (start times +29 to +554 ms after ready), so R38 would not have seen it. Reading (not proof): whether R38 passes is largely a race, which is why single variants look like noise and why `no-bars` scored 0 of 7. The page's frame callbacks took a median 11 to 15 ms of those gaps (median 64 to 69 ms); the rest was not split.
+
+**Also measured:** past the first second, WebKit's steady gaps have a median of 30 to 39 ms on the branch (rounds 2, 3 and 4) against 21 to 33 ms on `main`, under the limit.
+
+**Corrections:**
+
+- The 2026-11-03 entry above (and the `2939107` commit message) says the early spike is an event `main` has too, made worse by the branch's paint cost per frame. On CI's runner `main` has no early spike over 50 ms in 28 runs, and the steady gaps do not explain it. That reading came from the Linux image, which does not stand in for CI.
+- The proposed round 5 repeated `no-check` as no-draw and a subset of `fix-c` as no-play-fx, both already at 2 of 7, so it did not run as proposed.
+
+**Decided (Din, 2026-11-05, "Yes, prepare it"):** one measuring round in place of more knockouts, then one fix attempt. Round 5 (`diag/r38` at `d8c5b72`, not pushed yet) scores any gap over 50 ms ending in the 1.5 s after ready, whatever time the probe starts, and splits each gap into worker handler, frame callbacks, style and layout, and the rest of the rendering update. Jobs: branch, `main`, `swap-panel`, and two knockouts not tried before, `contain` and `no-shadow`. A fix counts only with no spikes on that score and two green CI runs. Falling back to main's panel code or moving R38's window stays Din's call (rule 3).
+
+**Verified:** the round 5 probe ran on local WebKit and iPhone 15 with injected costs: an 80 ms busy frame read raf 80 to 82, and 30,000 added nodes read layout 138 to 144. A first version dropped its own frame sentinel and read layout 0, caught by this check and fixed before the commit. The patches apply on `diag/r38`, and the page builds with `contain` and `no-shadow` applied. **Not verified:** the paint bucket, since this Mac paints on the GPU and the check only exercises it lightly; round 5's results.
+
+## 2026-11-05: R38 diagnosis round 5, the cost is paint and the shadows carry it
+
+**Run:** 42102849706 on `diag/r38` at `d8c5b72`, CI's runner, 12 repetitions per project per variant, one worker. Rep 0 (cold) is left out, so n is 11 per cell. The window is the 1.5 s after the model is ready, in a 5 s run.
+
+Desktop WebKit:
+
+| Variant | Runs with a gap over 50 ms | Counted by R38's probe | Median worst gap | Worst gap | Median split of each run's worst gap (frame callbacks, layout, rest of the rendering update) |
+| --- | --- | --- | --- | --- | --- |
+| branch | 9 of 11 | 6 | 54 ms | 73 ms | 9, 1, 43 ms |
+| `main` | 0 of 11 | 0 | 37 ms | 47 ms | 6, 0, 22 ms |
+| `swap-panel` | 3 of 11 | 1 | 34 ms | 111 ms | 2, 0, 27 ms |
+| `contain` | 11 of 11 | 6 | 61 ms | 119 ms | 11, 1, 47 ms |
+| `no-shadow` | 1 of 11 | 0 | 35 ms | 55 ms | 7, 1, 22 ms |
+
+iPhone 15, runs with a gap over 50 ms and counted by R38: branch 1 and 0, `main` 1 and 0, `swap-panel` 0 and 0, `contain` 4 and 1, `no-shadow` 1 and 0.
+
+**Read:** on the branch, 73% of the time in gaps over 50 ms is in the rendering update after forced style and layout, which is paint as far as this probe can say. Worker handlers read 0 ms and layout about 1 ms. The early spike is a paint cost, not a script or layout cost. `no-shadow` brings the desktop numbers to `main`'s. `contain` makes them worse, so it is out. The `swap-panel` worst of 111 ms read 108 ms in `other`, unattributed time, not paint.
+
+**Not known:** which of the four shadows carries it. `no-shadow` removes all of them at once: the card edge, the card lift, the button shadow and the slider thumb shadow. `main`'s panel has none of the four. The probe saw 5 s per run, not R38's 30 s, so it is not a stand-in for R38 passing. Round 5 is one run on one kind of runner.
+
+**State:** no fix applied. App code on `frontend-upgrade` is unchanged.
+
+## 2026-11-05: R38 diagnosis round 6, no single shadow, and the shadows are not all of it
+
+**Run:** 42105299864 on `diag/r38` at `e59ab29`, CI's runner, 12 repetitions per project per variant, one worker. Rep 0 (cold) is left out, so n is 11 per cell. Same probe and window as round 5. New patches: `no-edge` (card ring), `no-lift` (lift under the card), `no-controls` (button and two slider thumb shadows). `no-shadow` removes all of them.
+
+Desktop WebKit, with the median model-ready time of each job as a sign of how fast its runner was:
+
+| Variant | Runs over 50 ms | Counted by R38 | Median worst | Worst | Median render in worst gap | Ready (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| branch | 11 | 6 | 69 | 86 | 53 | 813 |
+| `main` | 0 | 0 | 28 | 43 | 13 | 542 |
+| `no-shadow` | 2 | 2 | 45 | 67 | 28 | 889 |
+| `no-edge` | 4 | 2 | 49 | 91 | 35 | 921 |
+| `no-lift` | 4 | 0 | 49 | 89 | 32 | 985 |
+| `no-controls` | 6 | 4 | 51 | 62 | 34 | 563 |
+
+iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow` 0/0, `no-edge` 0/0, `no-lift` 0/0, `no-controls` 1/0.
+
+**Read:**
+
+- No single shadow is the cause. This is the "each helps partly" outcome set out before the run, with one change: the smallest set that reaches `main`'s numbers does not exist among the shadows, because removing all four does not reach them.
+- This corrects the round 5 heading. The shadows carry a large part of the cost, not all of it. `no-shadow` spiked in both rounds (1 of 11, then 2 of 11), so it does not meet the agreed score of no spikes.
+- Runner speed varies per job and is a confound in every table in this diagnosis. Ready time moved between rounds with no change to the variant: `main` 897 then 542, branch 654 then 813, `no-shadow` 557 then 889. Taking ready time as the sign of runner speed (an inference), the two rounds give rough pairs. On fast runners (ready 540 to 660) median worst is `main` 28, `no-shadow` 35, `no-controls` 51, branch 54. On slow runners (ready 810 to 990) it is `main` 37, `swap-panel` 34, `no-shadow` 45, `no-edge` 49, `no-lift` 49, branch 69.
+- On those pairs: `no-edge` and `no-lift` each take most of the gain, and `no-controls` takes little. My guess before the run that the slider thumb carried it was wrong. `no-shadow` stays about 7 to 8 ms over `main`, and `swap-panel` does not, so some cost in the panel is not a shadow. What it is, is not known.
+- `main` stayed under the limit on both a fast and a slow runner, and the branch stayed over it on both, so the gap between them is not runner luck.
+- Remaining spikes in the knockouts come in three kinds: the table filling at the start (74 to 79 mutations; `main` has this too, up to 36 ms in this run), a paint after one text change, and paints with no DOM mutation at all.
+
+**Limits:** one run per variant, each on its own runner; the pairs cross two runs; a 5 s probe, not R38's 30 s; "paint" is still an inference from the render bucket.
+
+**State:** no fix applied. App code on `frontend-upgrade` is unchanged.
+
+## 2026-11-05: R38 diagnosis round 7 prepared, the candidate fix on one runner
+
+**Decided (Din, 2026-11-05, "Yes, prepare the test"):** test the candidate on `diag/r38` before it touches `frontend-upgrade`. Every variant now runs in turn on the same runner (`.github/r38-diag/round7.sh`), so runner speed no longer separates them. Two jobs each run 4 cycles of 4 reps per project, with the order rotated each cycle. Rep 0 of each invocation is left out, so each cell has 12 scored reps per runner.
+
+**Candidate (`fix.patch`):** the card edge as a 1 px `outline` in place of the ring shadow, and the lift as a linear gradient strip below the card with a horizontal mask in place of the strip's shadow. Stops come from the Gaussian profile of the old shadows. Dark mode has no lift, as now.
+
+**Variants:** branch, `main`, `swap-panel`, `no-shadow`, `fix`, and `fix` plus each of: no load-in (`fix-a`), `no-check`, `no-arrivals`, `no-bars`, and all four together.
+
+**Reading, set before the run:**
+
+- Clears: `fix` has no run over 50 ms on either runner, on desktop WebKit and iPhone 15. It then goes on `frontend-upgrade` for two green CI runs.
+- `fix` matches `no-shadow` but still spikes, and a knockout on top clears it: that motion is the remaining cost. Removing it takes away something Din approved, so it is Din's call.
+- `fix` plus all four still spikes while `swap-panel` does not: the rest is elsewhere in the panel. Stop and bring Din the fallbacks.
+- `swap-panel` also spikes on the same runner: main's panel code is not a safe fallback either.
+- `fix` clearly above `no-shadow`: the outline or the fade costs paint too.
+
+**Verified locally:** all 10 variants apply, pass the build's size gates and run the probe (one rep each, desktop WebKit, Mac; this says nothing about paint cost on CI). Screenshots of the built page against the branch, WebKit and Chromium at 1280 px wide, iPhone 15: card size unchanged, no horizontal overflow. Dark mode differs by at most 1 of 255 per channel. Light mode's top corner differs by at most 2 in WebKit and 5 in Chromium. Light mode's bottom edge differs by at most 11 in WebKit and 16 in Chromium, mostly at the bottom corners, and the faint glow up the card's sides is gone. A first version put the fade behind the card and painted over its surface, since the card's background sits below its own negative z-index children. The screenshots caught it and the fade now starts below the card.
+
+**Not verified:** the candidate's paint cost on CI's runner, which is what round 7 measures. Din has not seen the look on a real screen.
+
+**State:** `diag/r38` commit waits on Din's push. App code on `frontend-upgrade` is unchanged.
+
+## 2026-11-05: R38 diagnosis round 7, the candidate does not clear and the motion is not the cost
+
+**Run:** 42109021416 on `diag/r38` at `dfdadfe`, jobs 127531356660 (runner a) and 127531356027 (runner b), both passed as jobs since the probe does not assert. Every variant in turn on each runner, 4 cycles of 4 reps per project. Rep 0 of each invocation is left out, so n is 12 per cell per runner and 24 pooled. Same probe and window as rounds 5 and 6. The regular CI run on the same commit (42109021296) does not test the patches and was not read.
+
+| Variant | Desktop WebKit: runs over 50 ms, a + b | Counted by R38 | Worst (ms) | iPhone 15: runs over 50 ms, a + b | Counted by R38 | Worst (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| branch | 11 + 12 | 14 | 106 | 3 + 2 | 1 | 61 |
+| `main` | 1 + 0 | 0 | 52 | 1 + 0 | 0 | 69 |
+| `swap-panel` | 2 + 6 | 0 | 126 | 0 + 1 | 0 | 65 |
+| `no-shadow` | 0 + 0 | 0 | 48 | 0 + 0 | 0 | 47 |
+| `fix` | 8 + 12 | 2 | 109 | 1 + 3 | 0 | 80 |
+| `fix` + `fix-a` | 7 + 8 | 1 | 91 | 4 + 2 | 0 | 75 |
+| `fix` + `no-check` | 9 + 10 | 2 | 111 | 1 + 7 | 0 | 91 |
+| `fix` + `no-arrivals` | 9 + 12 | 4 | 136 | 1 + 5 | 1 | 89 |
+| `fix` + `no-bars` | 9 + 12 | 2 | 90 | 1 + 2 | 0 | 84 |
+| `fix` + all four | 9 + 11 | 2 | 99 | 6 + 1 | 1 | 75 |
+
+**Read against the reading set before the run:**
+
+- `fix` does not clear: 20 of 24 desktop runs went over 50 ms. It stays off `frontend-upgrade`.
+- `fix` is clearly above `no-shadow`, on both runners. The reading named the outline or the fade, but `fix` differs from `no-shadow` in a third way I left out of that line: `fix` keeps the button and two slider thumb shadows, and `no-shadow` removes them. So there are three suspects, not two. Round 6's "`no-controls` takes little" came from pairing runs across runners and was never measured on one runner, so it does not clear them.
+- `swap-panel` also spikes on the same runner: 8 of 24 desktop runs against 1 of 24 for `main`, worst 126 ms. The new layout and styles with main's panel code are not clean on this score, so fallback (a) is not a safe fallback. None of its gaps were counted by R38 in this round; round 5 had one.
+- The motion is not the cost. No knockout clears `fix`, and `no-shadow` has all the motion and no run over 50 ms. Din's approved motion stays.
+
+**What else the run shows:**
+
+- `fix` did remove something. On desktop WebKit every `fix` gap over 50 ms ended within 157 ms of ready, where the branch also had gaps at 213, 352, 353, 391, 488, 774 and 1208 ms. What is left is a cluster 70 to 160 ms after ready, close to where the probe starts (median about 130 ms), which is why R38 counted 2 of 24 for `fix` against 14 of 24 for the branch. A lower count is not a clear: it depends on that race, and the agreed bar is no spikes.
+- `no-shadow` was clean here but was not in earlier rounds, on other runners: 1 of 11 desktop runs in round 5 (worst 55) and 2 of 11 in round 6 (both counted, worst 67). On a single runner it is close to `main`: median worst 43 against 39 on runner a, 30 against 30 on runner b. That is smaller than the 7 to 8 ms gap in round 6, so the "some cost is not a shadow" reading is weaker than I wrote it.
+- `main` itself does not meet "no run over 50 ms" on this score: 1 of 24 on each project, worst 69 on iPhone 15, none counted. A strict zero on the probe is stricter than what main does while R38 passes on it. R38's own limit is unchanged; this concerns only how I read the probe.
+
+**Limits:** 5 second probe, not R38's 30 seconds; two runners. "Paint" remains an inference from the render bucket (77 percent of `fix`'s gaps over 50 ms). R38 itself was not run on any variant.
+
+**State:** app code on `frontend-upgrade` is unchanged, and Din is still holding its push. Next step is Din's call: split the three suspects on one runner, or decide on the look.
+
+## 2026-11-05: R38 fix applied, the light theme's shadows are gone
+
+**Decided (Din, 2026-11-05, "we should just fix the CI"):** stop the diagnosis rounds and apply what measured clean. R38, its limit and its window are unchanged. This drops the lift that Din approved in the frontend upgrade, so Din sees the look before it ships.
+
+**Changed:** in light, no shadows in the demo. The card's ring and lift, the play button's shadow, both slider thumb shadows and the speed and recording picker's lift are gone, and the loading placeholder matches the card. The card still reads as white on the paper. Dark mode looks the same: it keeps its hairline ring, and its lift was already invisible.
+
+**Evidence:** `no-shadow` in round 7 (run 42109021416, ledger entry above): no run over 50 ms in 24 on desktop WebKit (worst 48 ms) and 24 on iPhone 15 (worst 47 ms). It was not always clean in earlier rounds: 3 of 22 desktop runs over 50 ms across rounds 5 and 6 (worst 67 ms).
+
+**Differs from the measured variant:** the code is tidied, not patched. The `.card::before` strip that only carried the lift, its `isolation: isolate`, the `--hb-card-lift` token and the button's `box-shadow` transition are removed. Each one takes something away from the paint, but this exact code has not run on CI's runner.
+
+**Verified locally (Mac):** `scripts/check.sh` passes. `pnpm -C web run e2e`: 217 then 4 passed, with R38 worst gaps 10.6 ms Chromium, 18.0 ms WebKit, 11.0 ms Pixel 7, 18.0 ms iPhone 15; the Mac composites on the GPU, so this says nothing about CI's paint cost. Wording lint on `web/dist` passes. Screenshots against the previous build, WebKit, light and dark at 1280 px wide and iPhone 15: card size unchanged, no horizontal overflow, computed card shadow `none` in light and the same hairline in dark.
+
+**CI (Din pushed `30b7036`):** both runs green, every job that ran passed. Push run 42124010204 and pull request run 42124018880, 217 then 4 passed in each; the pull request run's Worker Preview job also passed. R38 worst gap against the 50 ms limit, push run then pull request run: Chromium 19.1 and 12.8 ms, WebKit 36.0 and 37.0 ms, Pixel 7 12.6 and 17.3 ms, iPhone 15 24.0 and 25.0 ms. No long tasks over 50 ms. This meets the bar agreed in round 5.
+
+**Limits:** two runs of a failure that was intermittent on some commits (`f50fe39` passed one run and failed the other). These runs are a pass, not a proof it cannot return. Desktop WebKit has the least room, at 37 ms. Which shadow, or the outline and fade, carried the cost was not settled: the rounds stopped before that split.
+
+**If it comes back:** the fallback left is starting R38's window after the page settles, a test change under rule 3 that is Din's call. Main's panel code is no longer a safe fallback (round 7).
+
+**State:** verified in CI. Din has not yet accepted the look; accepted is Din's. `diag/r38` is no longer needed.
+
+## 2026-11-05: Frontend upgrade accepted (TASKS 8.0)
+
+**Decided (Din, 2026-11-05, "CI is green! Good to merge? Let's mark this phase as accepted"):** TASKS 8.0 is accepted, the flatter light theme included. This covers 8.0 only: 8.1 to 8.5 are still planned, so Phase 8 itself stays open, and Din's preview review before the first production deploy (8.5) is still ahead.
+
+**CI on `36db6e9` (docs only since `30b7036`):** both runs green, 217 then 4 passed in each. Push run 42125889852 and pull request run 42125900264, attempt 2. R38 worst gap against the 50 ms limit, push run then pull request run: Chromium 11.3 and 13.9 ms, WebKit 32.0 and 33.0 ms, Pixel 7 11.7 and 20.0 ms, iPhone 15 23.0 and 25.0 ms. No long tasks over 50 ms. The Worker Preview job passed: version `1c8ef782`, alias `https://pr-10-heartbeat.dineshddawo.workers.dev`.
+
+**R38 on the fixed app code so far:** 4 green runs of 4, worst gap 37.0 ms (WebKit, run 42124018880). The limits in the entry above still hold: this is a pass, not a proof it cannot return.
+
+**Cancelled run, not a test result:** attempt 1 of 42125900264 hit the `web` job's 20-minute limit inside the Playwright install step, with apt at 43 of 181 packages from `azure.archive.ubuntu.com`. That step normally takes 41 to 55 s. No newer push had arrived, so `cancel-in-progress` did not do it. Slow mirror or network on that runner is my reading (a guess: the log cannot prove it). Run 42105301474 on `diag/r38` cancelled at the same step, and a rerun of the failed job cleared this one. No workflow change made. If it keeps happening, the step could get its own timeout and a retry.
+
+**Checked for the merge:** against `main` at `00aefdb`, the branch's base, the diff touches `web/src`, `web/index.html` (theme colour), `.claude/launch.json` (dev server preview) and these docs. Nothing under `web/e2e`, `web/playwright.config.ts`, `.github`, `scripts`, `manifests`, `config`, `results`, `models` or `fixtures` changed, so no test, gate or frozen path moved.
+
+**State:** accepted. Merging dinsdev/heartbeat#10 is Din's.

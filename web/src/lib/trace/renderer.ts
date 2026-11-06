@@ -1,6 +1,7 @@
 // The trace on ECG paper (settling 2; design calls 5 and 6): Canvas 2D at the
 // device pixel ratio, the grid rendered once per size and theme, the trace
-// from a min and max per device pixel column, the beat markers on top.
+// from a min and max per device pixel column, the beat markers on top, and
+// the pen tip at the playhead.
 
 import {
   columnExtents,
@@ -18,6 +19,7 @@ export interface TraceColors {
   gridMinor: string;
   gridMajor: string;
   muted: string;
+  accent: string;
   classes: Record<"N" | "S" | "V" | "F" | "Q", string>;
   font: string;
 }
@@ -31,6 +33,7 @@ export function readColors(element: Element): TraceColors {
     gridMinor: get("--hb-grid-minor"),
     gridMajor: get("--hb-grid-major"),
     muted: get("--color-muted"),
+    accent: get("--color-accent"),
     classes: {
       N: get("--hb-class-n"),
       S: get("--hb-class-s"),
@@ -48,6 +51,15 @@ export interface Frame {
   /** The sample at the left edge; the right edge is ten seconds later. */
   startSample: number;
   markers: readonly Marker[];
+  /** Where the pen tip sits; left out, no pen tip. */
+  cursorSample?: number;
+  /** How far each beat's label has landed, 0 to 1 (1 when left out). */
+  landed?: (row: number) => number;
+}
+
+/** A strong ease-out: the letter arrives fast and settles. */
+function easeOut(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 export class TraceRenderer {
@@ -186,7 +198,46 @@ export class TraceRenderer {
     }
     c.stroke();
     this.#drawMarkers(frame, geometry, colors);
+    this.#drawPen(frame, geometry, colors, paper);
     c.restore();
+  }
+
+  /** The pen tip: a teal dot where the trace is being written, on a faint rule. */
+  #drawPen(
+    frame: Frame,
+    geometry: Geometry,
+    colors: TraceColors,
+    paper: string,
+  ): void {
+    const sample = frame.cursorSample;
+    if (sample === undefined) return;
+    const value = frame.trace[Math.min(sample, frame.trace.length - 1)];
+    if (value === undefined) return;
+    const c = this.#context;
+    const radius = 3.5;
+    const x = Math.min(
+      geometry.widthPx - radius - 1.5,
+      Math.max(
+        radius + 1.5,
+        xForSample(sample, frame.startSample, frame.fs, geometry),
+      ),
+    );
+    const y = yForAdu(value, geometry);
+    c.globalAlpha = 0.28;
+    c.strokeStyle = colors.accent;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(Math.round(x) + 0.5, 0);
+    c.lineTo(Math.round(x) + 0.5, geometry.heightPx);
+    c.stroke();
+    c.globalAlpha = 1;
+    c.fillStyle = colors.accent;
+    c.strokeStyle = paper;
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(x, y, radius, 0, 2 * Math.PI);
+    c.stroke();
+    c.fill();
   }
 
   #drawMarkers(frame: Frame, geometry: Geometry, colors: TraceColors): void {
@@ -227,6 +278,15 @@ export class TraceRenderer {
         }
         case "label":
         case "disagree": {
+          // A new label lands: it grows and drops into place as it fades in.
+          const t = easeOut(frame.landed?.(marker.row) ?? 1);
+          c.save();
+          if (t < 1) {
+            c.globalAlpha = t;
+            c.translate(x, y - (1 - t) * size * 0.5);
+            c.scale(0.6 + 0.4 * t, 0.6 + 0.4 * t);
+            c.translate(-x, -y);
+          }
           const label = marker.label as keyof TraceColors["classes"];
           c.font = `600 ${size}px ${colors.font}`;
           c.fillStyle = colors.classes[label] ?? colors.trace;
@@ -244,6 +304,7 @@ export class TraceRenderer {
             c.fillStyle = colors.classes[expert] ?? colors.muted;
             c.fillText(marker.expert ?? "", x, y + size * 0.72 + small * 0.75);
           }
+          c.restore();
           break;
         }
       }
