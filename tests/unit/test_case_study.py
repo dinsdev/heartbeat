@@ -641,6 +641,33 @@ def result_values() -> set[str]:
     return values
 
 
+def capture_problems(folder: Path) -> list[str]:
+    """Design call 5: the clip and its still are there, and the clip can stream."""
+    video = folder / "capture.mp4"
+    still = folder / "capture.jpg"
+    problems = [
+        f"{path.name} is missing or empty"
+        for path in (video, still)
+        if not path.is_file() or path.stat().st_size == 0
+    ]
+    if not problems:
+        data = video.read_bytes()
+        if not 0 <= data.find(b"moov") < data.find(b"mdat"):
+            problems.append("capture.mp4 is not +faststart")
+    return problems
+
+
+def test_the_capture_is_committed() -> None:
+    assert capture_problems(FOLDER) == []
+
+
+def test_the_capture_check_fails_on_bad_files(tmp_path: Path) -> None:
+    assert len(capture_problems(tmp_path)) == 2
+    (tmp_path / "capture.jpg").write_bytes(b"still")
+    (tmp_path / "capture.mp4").write_bytes(b"....mdat....moov")
+    assert capture_problems(tmp_path) == ["capture.mp4 is not +faststart"]
+
+
 def test_readme_and_card_prose_quote_no_test_number() -> None:
     # Design call 9 and the review focus: numbers live in blocks and slots.
     block = re.compile(r"<!-- card:begin .*?<!-- card:end [a-z_0-9]+ -->", re.S)
