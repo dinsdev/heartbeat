@@ -65,7 +65,7 @@ Deploys (Din only; F5 denies wrangler's deploy and versions commands to Claude):
 | --- | --- |
 | Create the Worker once, logged in with `wrangler login`, before the first preview (a versions upload fails on a Worker that does not exist) | `pnpm -C web run build && pnpm -C web exec wrangler deploy` |
 | Worker Preview on every pull request from this repo, after CI's python and web jobs pass; the URLs land in the job summary (needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets) | `.github/workflows/deploy.yml`, called by `ci.yml` |
-| Production deploy from `main`, started by hand (Phase 8, TASKS 8.5) | `gh workflow run deploy.yml --ref main` |
+| Production deploy from `main`, started by hand (Phase 8, TASKS 8.5); its first step, `scripts/require_ci_passed.sh`, refuses a commit with no successful `ci.yml` push run on `main` | `gh workflow run deploy.yml --ref main` |
 
 Python tools: ruff, mypy, pytest with hypothesis. Web tools: ESLint, Prettier, svelte-check, Vitest, Playwright (Chromium and WebKit). CI (`.github/workflows/ci.yml`) runs all of them on every push and pull request, in a `python` job (which caches and downloads the MIT-BIH files first), a `web` job (which builds the demo data from the same cache, DS2 since the sealed run, then the gated build, the wording lint on `web/dist` and Playwright), and on pull requests from this repo a `preview` job that calls `deploy.yml` once both pass; `scripts/check.sh` skips the real-data tests, the build and Playwright.
 
