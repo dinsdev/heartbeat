@@ -3007,3 +3007,61 @@ Written from settlings 1 to 14 into PLAN.md section 8 ("Phase 8: Content and lau
 **Facts in the cards, checked against the page:** 48 recordings from 47 subjects; 25 men aged 32 to 89 and 22 women aged 23 to 89; about 4,000 source recordings, about 60% inpatients and 40% outpatients; 23 excerpts at random and 25 chosen; 360 samples per second, 11-bit, 10 mV; 1975 to 1979. All hold.
 
 **Copy changed, the one the Goal B frontend entry set aside for this recheck:** `web/src/components/About.svelte` said "cardiologists annotated every beat". The page says initial labels were automatic and two cardiologists then reviewed each recording independently, correcting them, with disagreements settled by consensus. It now reads "two cardiologists reviewed each recording's beat labels". Din's call to reword at the preview review. No test pins the sentence.
+
+## 2026-11-06: The fresh-clone rebuild (TASKS 8.6, Goal A task A1, settling 12)
+
+**Result:** the rebuild finished from a fresh clone of `d3abab0`, on one Mac, and matched. It took three passes, not the two the plan expected. Verified, by the checks named below. No frozen path was touched, and the reproduction entry stayed in the clone.
+
+**Pass 1:** started 2026-11-05 20:18:05, ended 22:19:01, `real 7256.54`, `user 6066.34`, `sys 640.48`, exit 1. My tests and checks shared the Mac, so its times are noisy and above the 104 to 114 minutes in the plan. Stopped at `reproduce-test` with:
+
+`heartbeat rebuild: stage reproduce-test failed: the tree is dirty: ['results/cv_baseline.json', 'results/cv_cnn.json', 'results/cv_cnn_curves.json', 'results/data_summary.json', 'results/exhibit.json', 'results/export.json', 'results/selection.json', 'results/train_final.json']; commit or stash first`
+
+Only those eight files were dirty, so `models/heartbeat-v1/` and `fixtures/parity/` came out byte-identical to the commit. Committed in the clone only (`3917071`).
+
+**Pass 2:** started 22:19:30, ended 2026-11-06 00:06:50, `real 6439.31`, `user 4298.36`, `sys 440.06`, exit 1. Same stop, same message, same eight files. Committed in the clone only (`8467b4b`).
+
+**Pass 3:** started 00:07:33, ended 00:07:46, `real 13.17`, `user 12.19`, `sys 0.43`, exit 0. Every training stage skipped. Ran `check-folds`, `reproduce-test`, `cards` (both cards unchanged) and `build-demo-data` (21 records, default 200).
+
+**Stage times** (run folder birth and modified times; pass 1's download from the prepared files' time):
+
+| Stage                   | Pass 1      | Pass 2                     |
+| ----------------------- | ----------- | -------------------------- |
+| download                | about 65 s  | about 5 s (checksums only) |
+| prepare                 | under 1 s   | under 1 s                  |
+| cross-validate          | 5 s         | 4 s                        |
+| cross-validate-cnn, MPS | 75 min 11 s | 73 min 54 s                |
+| select                  | under 1 s   | under 1 s                  |
+| exhibit, MPS            | 19 min 5 s  | 18 min 24 s                |
+| train-final, CPU        | 24 min 17 s | 13 min 32 s                |
+| describe-data           | under 1 s   | under 1 s                  |
+| export, CPU             | 67 s        | 77 s                       |
+
+Pass 1's `train-final` shared the CPU with my checks; the three seeds took 9:02, 9:04 and 6:10, against 4:37, 4:39 and 4:15 in pass 2.
+
+**Comparisons, `uv run python -m heartbeat.checks.reproduction` (results apart from `VOLATILE_KEYS`; model files, fixtures and cards byte for byte):**
+
+| `--root` | `--other` | Printed |
+| --- | --- | --- |
+| second clone | pass 1 output | `reproduction: 21 files compared, 0 differ` |
+| pass 2 output | pass 1 output | `reproduction: 21 files compared, 0 differ` |
+| second clone | pass 2 output | `reproduction: 21 files compared, 0 differ` |
+| second clone | first clone after pass 3 | `reproduction: 21 files compared, 0 differ` |
+
+The last row is the plan's check, and the only one taken after `cards` ran. Each exited 0. The second clone is a fresh clone of `d3abab0`, so it holds the committed outputs.
+
+**Reproduction entry, clone's log only (`results/test_runs.jsonl`, id 3):** `{"commit":"8467b4b89b683900906b7391d0a7cfc733245228","date":"2026-11-06","freeze_sha256":"1359082b641d3dc00d5952f4100562a2c18d7aecbcda68023a8f846149298d82","id":3,"report":"results/test_runs/3-reproduction.json","report_sha256":"dd006663a8bd646a8cdb1feb7cd397b3bec60d105db6bf60361a5337804b26fb","type":"reproduction"}`
+
+A throwaway script walked every leaf of the reports. Against `1-sealed.json`, three differ: `commit`, `entry_type`, `run`. Against `2-reproduction.json`, two differ: `commit`, `run`. Every metric is equal. `uv run heartbeat verify` in the first clone: `heartbeat verify: 6 of 6 checks passed`. This repo's log still ends at id 2, and the entry went with the clone: one reproduction per frozen state applies to each checkout's own state folder, and `results/` is written only by `rebuild`.
+
+**Finding, in frozen code, for Din:** a fresh clone retrains twice. `run_pipeline` computes a stage's fingerprint before running it, and the download stage's inputs include the raw files, hashed as "missing" when absent. So the fingerprint saved on the first pass never matches once the files exist, and every later stage's fingerprint follows from it. Pass 2 logged `running download (fingerprint changed)`. A throwaway probe of the fingerprint printed: empty cache `be22391f5e6c970b`, the same again (stable), `face0370d5b881a5` once the files were there (changed).
+
+- **Effect:** about 2 hours lost and no output changed, so stop condition 2 did not trigger. Pass 2 is even a useful extra check: it retrained under another commit and matched.
+- **Inferred, not run end to end:** `uv run heartbeat download` before the first `rebuild` should avoid the second retraining, since the first fingerprint would already see the files. The clean-tree stop would remain, so that is two passes.
+- **Recommendation:** leave it and keep it documented. The fix belongs in `src/heartbeat/stages.py`, under a frozen path, so the reproduction gate would refuse it without a new freeze. It costs a stranger time, not trust. Din's call.
+- **Rejected:** editing `data/stages/` in the clone to skip pass 2. It would not have tested what a stranger gets.
+
+**What this does not show:** one Mac, one evening. Nothing here says another machine gets the same bytes; cross-validation and the exhibit ran on MPS and the final models on CPU, both on this Mac. Section 11 and the README say so.
+
+**Deviation:** a third pass, beyond the plan's "run it again". The plan's expected stop was the clean-tree one, and the extra pass comes from the fingerprint above. Also, pass 1 ran from the plan's commit with `uv sync --frozen`; the second clone had no `uv sync` or data because it is only read, and the comparisons ran with this checkout's environment.
+
+**Docs:** README's rebuild paragraph, the `AGENTS.md` rebuild row and long-jobs line, and the case study's "How to check it" now say this. That section also said `verify` takes minutes; it takes seconds once the data is there (about 2 s in `AGENTS.md`, and the README agrees), so that changed too. Both clones, the snapshot of pass 1 and the throwaway scripts are deleted.

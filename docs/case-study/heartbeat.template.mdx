@@ -97,7 +97,7 @@ The pre-registered plan, the freeze record, the append-only test log, the leakag
 uv run heartbeat verify
 ```
 
-That takes minutes with the data downloaded. `uv run heartbeat rebuild` reruns every stage from the raw files, retraining the models; what its last run from a fresh clone showed is written up in `docs/WORK_LEDGER.md`.
+That takes seconds once the data is downloaded. `uv run heartbeat rebuild` reruns every stage from the raw files, retraining the models. I ran it from a fresh clone on the same Mac that trained the model. It retrained twice and stopped twice before it reached the reproduction, because that step needs a clean tree: I committed the rewritten result files each time and ran it again. The results matched a second fresh clone apart from run names, commits, paths and wall times, the model files, fixtures and cards matched byte for byte, and the reproduction matched the sealed report. I have not tried it on another machine. The times and the exact messages are in `docs/WORK_LEDGER.md`.
 
 ## Credits
 

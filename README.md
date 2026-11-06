@@ -40,6 +40,8 @@ uv run pytest                            # every Python test, the real-data ones
 
 To go further, `uv run heartbeat rebuild` reruns every stage from the raw files, retraining the models, and rewrites `results/`, `models/heartbeat-v1/` and the card blocks. It took about 104 minutes when measured on 2026-10-30, on a Mac with MPS for cross-validation.
 
+From a fresh clone it takes longer, because the rebuild retrains twice and stops twice. On 2026-11-05 and 2026-11-06, on one Mac, the first pass took 121 minutes with other work running and stopped at `reproduce-test`, because that stage needs a clean tree and the pass had rewritten `results/`. After a commit, the second pass retrained everything (107 minutes) and stopped the same way, because the download stage's fingerprint changes once the raw files exist. After another commit, the third pass skipped training and ran the reproduction in 13 seconds. The results matched a second fresh clone apart from run names, commits, paths and wall times, the model files, fixtures and cards matched byte for byte, and the reproduction matched the sealed report. This has not been tried on another machine. The details are in `docs/WORK_LEDGER.md`.
+
 ## Running it
 
 ```sh
