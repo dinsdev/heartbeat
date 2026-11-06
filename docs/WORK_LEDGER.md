@@ -2987,3 +2987,7 @@ Din settled these in a grilling session on 2026-11-05 ("Yes to all 8", "Yes to a
 Written from settlings 1 to 14 into PLAN.md section 8 ("Phase 8: Content and launch (task plan, 2026-11-05)"), with nine design calls, Goal A tasks A1 to A8, Din's runbook, Goal B tasks B1 to B3, seven stop conditions and six review-focus items. TASKS 8.1 to 8.5 reworded, 8.6 to 8.8 added. PRD: OPS-06 amended, criterion 3's two steps noted, Q4 and Q6 closed. Two `/goal` prompts drafted in the planning session. Nothing built.
 
 **For Din's eye, design call 1:** every earlier phase bumped `current-phase`, but it lives in `pyproject.toml`, a frozen path, so a bump would make `reproduce-test` refuse. It stays 7, and R48, the only Phase 8 row, is manual and recorded by Goal B.
+
+## 2026-11-05: Phase 8 task plan and goal prompts approved
+
+**Approved (Din, 2026-11-05):** the Phase 8 task plan as committed in `327cfc5` (PLAN.md section 8), with its nine design calls, and two `/goal` prompts from the planning session: Goal A (everything before Din's steps, 3,987 characters) and Goal B (after production is live, 3,764 characters), both under the 4,000-character limit and clean under the wording lint. Each is meant for a fresh Opus 5.5 session at high effort. Goal A runs on `phase-8-content` and ends ready for a pull request; Goal B starts only once `https://heartbeat.dins.dev/` answers 200 and Din has given the VoiceOver and phone results, on a new branch `phase-8-launch`.
