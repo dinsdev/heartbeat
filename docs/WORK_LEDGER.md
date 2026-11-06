@@ -3146,3 +3146,17 @@ The framed `?embed=page` check through `web/e2e/host.ts` ran inside the 217, in 
 **Effect on the preview's token:** the caller's block is a ceiling, and the preview job has no `permissions` of its own, so `deploy.yml`'s top-level `contents: read` should still set it. That is from my reading of how GitHub applies these, and it is unconfirmed until a run's "Set up job" log shows the token's permissions.
 
 **Verified:** `uv run pytest tests/unit/test_deploy_gate.py`, the new `test_ci_lets_the_called_workflow_ask_for_what_the_gate_reads` seen failing before the fix, then 15 passed. `uv run python -m heartbeat.checks.repo_config` exit 0. `scripts/check.sh` passed. **Not verified:** that GitHub now accepts the file, and GitHub may report only its first error, so another could surface. Din's next push is the test.
+
+## 2026-11-06: Phase 8 Goal A accepted, green in CI on `7836d45` (TASKS 8.1 to 8.4, 8.6)
+
+**Decided (Din, 2026-11-06, "CI is green! Mark as accepted. Good to merge?"):** Goal A's work is accepted: TASKS 8.1, 8.2, 8.3, the recheck in 8.4, and 8.6.
+
+**Not covered, because Din did not say so:** the runbook's steps 2 and 3. The G2 row's approval of the clip, the G3 drafts' `approved_on`, the VoiceOver and real-phone passes (R48) and Din's rewrite of the case study prose all stay open. Phase 8 stays open too: 8.5, 8.7 and 8.8 have not run.
+
+**CI on `7836d45`:** both runs green. Push run 42169449595 (9m42s) and pull request run 42169457495 (8m45s). In each: python 1214 passed, `heartbeat verify` 6 of 6, web 217 then 4 passed. R38 in chromium, worst gap 13.9 ms on the push run and 10.7 ms on the pull request run, against the 50 ms limit. `preview / preview` passed, and `preview / production` was skipped, as its `if:` requires.
+
+**Checked from the last entry's open points:** GitHub accepted the workflow. The preview job's "Set up job" log shows `GITHUB_TOKEN Permissions`: `Contents: read`, `Metadata: read`, and no `actions`, so the caller's allowance did not widen it.
+
+**Preview:** `https://pr-11-heartbeat.dineshddawo.workers.dev` and `https://e627c6f0-heartbeat.dineshddawo.workers.dev`. `curl` on the first: `HTTP/2 200` with a `content-security-policy` header, `?embed=page` answers 200, and `data/manifest.json` reads DS2, default record 200. That is the server side only; no one has been recorded as looking at the page there.
+
+**Still untested:** the gate against real GitHub (runbook step 5) and the token on a real deploy.
