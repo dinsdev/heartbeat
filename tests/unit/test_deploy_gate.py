@@ -11,6 +11,7 @@ from heartbeat.paths import REPO_ROOT
 
 GATE = REPO_ROOT / "scripts" / "require_ci_passed.sh"
 DEPLOY = REPO_ROOT / ".github" / "workflows" / "deploy.yml"
+CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 WRANGLER = REPO_ROOT / "web" / "wrangler.jsonc"
 SHA = "0123456789abcdef0123456789abcdef01234567"
 EXPECTED_ARGS = (
@@ -91,6 +92,36 @@ def test_the_job_can_read_actions_and_nothing_more() -> None:
     assert match is not None
     assert match.group(1).split() == ["contents:", "read", "actions:", "read"]
     assert "GH_TOKEN: ${{ github.token }}" in job
+
+
+def job_block(path: Path, name: str) -> str:
+    text = path.read_text(encoding="utf-8")
+    match = re.search(rf"^  {name}:\n((?:(?:    .*)?\n)+)", text, re.M)
+    assert match is not None, name
+    return match.group(1)
+
+
+def permissions_of(job: str) -> list[str]:
+    match = re.search(r"^    permissions:\n((?:      .*\n)+)", job, re.M)
+    return match.group(1).split() if match else []
+
+
+def test_ci_lets_the_called_workflow_ask_for_what_the_gate_reads() -> None:
+    # GitHub refuses the whole of ci.yml at startup when a job in a called
+    # workflow asks for more than the calling job allows, even a job that would
+    # not run: "The nested job 'production' is requesting 'actions: read', but is
+    # only allowed 'actions: none'" (run 42168632691, 2026-11-06).
+    production = permissions_of(production_job())
+    caller = permissions_of(job_block(CI, "preview"))
+    assert caller == production
+
+
+def test_the_preview_job_itself_stays_read_only_on_contents() -> None:
+    # The caller's allowance is a ceiling, not a grant: deploy.yml's top-level
+    # block still sets the preview job's token, since the job sets none itself.
+    assert permissions_of(job_block(DEPLOY, "preview")) == []
+    top = DEPLOY.read_text(encoding="utf-8")
+    assert re.search(r"^permissions:\n  contents: read\n\n", top, re.M)
 
 
 def test_the_gate_is_executable() -> None:

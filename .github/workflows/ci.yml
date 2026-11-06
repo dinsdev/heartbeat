@@ -99,6 +99,12 @@ jobs:
   preview:
     needs: [python, web]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # A ceiling for the called workflow, which GitHub checks at startup for every
+    # job in it. Production's gate reads CI's runs; the preview job's own token
+    # stays contents: read, from deploy.yml's top level.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/deploy.yml
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

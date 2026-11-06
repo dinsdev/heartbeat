@@ -3134,3 +3134,15 @@ The framed `?embed=page` check through `web/e2e/host.ts` ran inside the 217, in 
 - `web/src/components/About.svelte` now says "two cardiologists reviewed each recording's beat labels" (A3); that is visible copy for Din's review.
 - The case study says "the same Mac that trained the model". That is from the ledger's history and is Din's to confirm in the rewrite.
 - Settling 14's carried items stay as they are, and R48 is still open for Goal B.
+
+## 2026-11-06: CI did not start on the Phase 8 push, from my gate's permission (TASKS 8.6)
+
+**What happened:** Din pushed `57e5b3e` and opened PR dinsdev/heartbeat#11. CI's push run 42168632691 and pull request run 42168642002 both ended `startup_failure` in 1 s with no jobs. GitHub's annotation on the run page: "The nested job 'production' is requesting 'actions: read', but is only allowed 'actions: none'."
+
+**Cause, my bug from `9e5c76f`:** CI calls `deploy.yml` for previews, and GitHub checks every job in a called workflow against what the calling job allows at startup, even a job whose `if:` would never run. The production job asks for `actions: read` so the gate can read CI's runs, and `ci.yml` allowed only `contents: read`. No local check could see it: `repo_config` and the tests read the files as text and GitHub's validation is not available here, so everything passed locally. My A8 entry's "gate" check tested the gate, not this.
+
+**Decided:** give the calling job in `ci.yml` the same `contents: read` and `actions: read`. It is one small block, it changes no trigger, and `deploy.yml` stays as `repo_config` and the runbook expect. Moving production to its own workflow file would avoid the allowance but touches the checks, `AGENTS.md`, the gate's tests and the runbook, for little. No gate rule, test or tolerance was loosened.
+
+**Effect on the preview's token:** the caller's block is a ceiling, and the preview job has no `permissions` of its own, so `deploy.yml`'s top-level `contents: read` should still set it. That is from my reading of how GitHub applies these, and it is unconfirmed until a run's "Set up job" log shows the token's permissions.
+
+**Verified:** `uv run pytest tests/unit/test_deploy_gate.py`, the new `test_ci_lets_the_called_workflow_ask_for_what_the_gate_reads` seen failing before the fix, then 15 passed. `uv run python -m heartbeat.checks.repo_config` exit 0. `scripts/check.sh` passed. **Not verified:** that GitHub now accepts the file, and GitHub may report only its first error, so another could surface. Din's next push is the test.
