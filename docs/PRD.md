@@ -243,7 +243,7 @@ Edge cases: a bug found after the sealed run is fixed and rerun; both runs stay 
 - **OPS-03 (P0, E4).** After the sealed run, `rebuild` retrains and checks against the freeze record (default mode: results exact on this Mac apart from a fixed list of volatile keys, checkpoints and exported files equal by SHA256; `--exact`: everything on CPU, model checksum bit for bit; Phase 5 settling 4, 2026-10-30), evaluates DS2 with the committed frozen model, and requires results equal to the logged ones. This is logged as a reproduction, a separate entry type. Mismatches fail loudly.
 - **OPS-04 (P0, E4).** `heartbeat verify` checks manifests and checksums, frozen-model parity on the fixtures, and consistency of result files with the test log, in minutes, without training.
 - **OPS-05 (P0, E6).** One GitHub Actions workflow runs on every push and pull request: ruff, mypy, Python unit and real-data tests, a smoke training run, the Python parity half, ESLint, Prettier, svelte-check, Vitest, the web build with size gates, Playwright in Chromium and WebKit, and the wording lint.
-- **OPS-06 (P0, E6).** Deploys run from GitHub Actions with wrangler: production on `main` after checks pass, Worker Previews on pull requests, served on `workers.dev` only. Deploys never train; demo data is built from the committed frozen model.
+- **OPS-06 (P0, E6).** Deploys run from GitHub Actions with wrangler: production from `main`, started by hand and refused unless `ci.yml` passed on that commit (amended by Din, 2026-11-05, Phase 8 settling 4), Worker Previews on pull requests, served on `workers.dev` only. Deploys never train; demo data is built from the committed frozen model.
 - **OPS-07 (P0, E6).** The repo `dinsdev/heartbeat` is public and pushed at the end of Phase 0, before the sealed run. The freeze record is pushed before `evaluate-test` runs and the test log right after.
 - **OPS-08 (P1, E6).** `scripts/check.sh` runs lint and unit tests locally in under 2 minutes.
 - **OPS-09 (P1, E6).** Renovate with a 14-day minimum release age for PyPI, npm and GitHub Actions, a monthly schedule, monthly lock file maintenance, pull requests only, no automerge.
@@ -336,6 +336,8 @@ Heartbeat is publishable (and stretch may start) when all of these hold (C8, din
 7. The stage video exists, recorded from patient 200 with the research-demo line.
 8. Din has reviewed it in a preview deploy.
 
+Criterion 3's case study iframe is met in two steps (Din, 2026-11-05, Phase 8 settling 1): the embed tests and a framed preview before the first production deploy, then the real iframe on the dins.dev site's preview once that site exists.
+
 ## 13. Risks
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -422,9 +424,7 @@ Detailed phases belong to `docs/PLAN.md` (F2). The order the requirements impose
 | # | Question | Why it matters | Owner | Resolve by |
 | --- | --- | --- | --- | --- |
 | Q3 | Does the free plan cover the `heartbeat.dins.dev` custom domain? | Hosting (AS4). | Claude, at first deploy | First production deploy |
-| Q4 | Should the demo or case study measure usage in any way, given "nothing here uses your data"? | Decides whether reader outcome can be measured at all. Current reading: no analytics. | Din | G1 |
 | Q5 | Is Firefox worth adding to the Playwright matrix? | Firefox users are untested today. | Din | F2 |
-| Q6 | What are the exact stage line and summary wording? | The 10-second read (G1). | Din | G1 and G2 |
 | Q7 | Which dins.dev preview hostnames go in `frame-ancestors`? | The case study iframe in site previews. | Claude | Build time |
 | Q8 | Do the INCART resampling, lead and annotation-offset choices hold up? | Stretch 1 only. | Claude drafts, Din locks | INCART design note |
 

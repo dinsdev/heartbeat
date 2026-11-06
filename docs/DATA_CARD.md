@@ -2,7 +2,7 @@
 
 |  |  |
 | --- | --- |
-| **Status** | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists. |
+| **Status** | Filled. The layout was locked by Din on 2026-10-27 (F6) and pushed before any result existed. |
 | **Covers** | The beat dataset Heartbeat derives from the MIT-BIH Arrhythmia Database 1.0.0: which records, how they are split, how beats are cut and labeled, and what ships to the browser. |
 | **Requirements** | PUB-04 (this card), DATA-01 to DATA-11, EVAL-01 to EVAL-03, DEMO-07, DEMO-08, DEMO-16, PUB-07 |
 | **Related** | `docs/MODEL_CARD.md`, `manifests/`, `DATA_LICENSE.md`, `docs/WORK_LEDGER.md` (B1 to B5, C1, D4) |
@@ -11,7 +11,7 @@ The layout follows Gebru et al., "Datasheets for Datasets" (arXiv 1803.09010, v8
 
 ## How the numbers get here
 
-Every count in this card sits in a generated block between `<!-- card:begin NAME -->` and `<!-- card:end NAME -->`, rendered by `heartbeat cards` from committed `results/` files and checked by `heartbeat verify` (R50). The prose holds definitions only: record lists, exclusions and processing steps, all decided before any data was processed. A block that reads "Pending" has no run behind it yet.
+Every count in this card sits in a generated block between `<!-- card:begin NAME -->` and `<!-- card:end NAME -->`, rendered by `heartbeat cards` from committed `results/` files and checked by `heartbeat verify` (R50). The prose holds definitions only: record lists, exclusions and processing steps, all decided before any data was processed.
 
 ## 1. Motivation
 
@@ -161,13 +161,14 @@ Run by the `prepare` stage of `heartbeat rebuild` (DATA-04 to DATA-10):
 
 - **Used for:** training and evaluating heartbeat-v1 and its logistic-regression baseline (`docs/MODEL_CARD.md`); the leakage exhibit (DS1 only); the browser demo.
 - **Development folds:** five patient-grouped folds over DS1, written once by `heartbeat make-folds` to `config/folds.json` and only checked afterwards.
-- **Should not be used for:** any health decision; claims about people outside this database; evaluation with beats from one person on both sides of a split (random beat-level splits, which the leakage exhibit shows inflate results); tuning or selecting anything on DS2.
+- **Should not be used for:** any health decision; claims about people outside this database; evaluation with beats from one person on both sides of a split (random beat-level splits, which the leakage exhibit shows inflate results); tuning or selecting anything on DS2; estimating how common arrhythmias are, because 25 of the recordings were chosen to include uncommon ones, so PhysioNet's page warns that pooled results are not prevalence estimates.
 
 ## 6. Distribution
 
 - **License:** the MIT-BIH Arrhythmia Database is under the Open Data Commons Attribution License 1.0 (`DATA_LICENSE.md`). This repo's MIT license covers the code only.
 - **What ships:** the browser demo serves derived data for the 21 DS2 patients after the sealed run (DS1 recordings before it): per patient, the filtered int16 trace (`NNN.trace.i16`) and a beats file with positions, expert labels and the frozen model's labels and probabilities (`NNN.beats.json`), plus a `manifest.json` with class counts, file hashes, the model version and the attribution note.
 - **Attribution:** an attribution note ships beside the demo data, the demo shows the dataset credit, and the case study has a credits block.
+- **Shipped sizes and hashes:** the block below was meant to render them, and its renderer was never built. It stays pending because the card code is frozen with the model. The figures are in the demo's `/data/manifest.json`, written by `heartbeat build-demo-data`, which lists every shipped file with its size in bytes and its hash.
 
 <!-- card:begin shipped_data -->
 
@@ -177,13 +178,13 @@ _Pending: shipped file sizes and hashes, rendered from the demo data manifest (P
 
 **Citations:**
 
-- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Engineering in Medicine and Biology 20(3):45-50 (2001).
-- Moody G, Mark R. MIT-BIH Arrhythmia Database (version 1.0.0). PhysioNet (2005). https://doi.org/10.13026/C2F305
-- Pollard T, et al. PhysioNet as a global platform for biomedical research. Nature Health (2026). https://doi.org/10.1038/s44360-026-00096-z
+- Moody, G., & Mark, R. (2005). MIT-BIH Arrhythmia Database (version 1.0.0). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/C2F305
+- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng in Med and Biol 20(3):45-50 (May-June 2001). PMID: 11446209.
+- Pollard, T., Moody, B. E., Lehman, L., Gow, B., Fernandes, C., Xie, C., Johnson, A., Mark, R. G., & Heldt, T. (2026). PhysioNet as a global platform for biomedical research. Nature Health. https://doi.org/10.1038/s44360-026-00096-z. Available from: https://pmc.ncbi.nlm.nih.gov/articles/PMC13641116/
 - de Chazal P, O'Dwyer M, Reilly RB. Automatic classification of heartbeats using ECG morphology and heartbeat interval features. IEEE Transactions on Biomedical Engineering 51(7):1196-1206 (2004).
 - AAMI EC57, testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms.
 
-PhysioNet's requested citation is rechecked before publishing (PUB-07).
+The first three are the citations PhysioNet's MIT-BIH page asks for, rechecked against that page on 2026-11-05 (PUB-07).
 
 ## 7. Maintenance
 
@@ -193,4 +194,4 @@ PhysioNet's requested citation is rechecked before publishing (PUB-07).
 
 ## Change log
 
-Changes after the sealed run are listed here with their date and reason. None so far.
+Changes after the sealed run are listed here with their date and reason. 2026-11-05: the status line updated, a note added on why the shipped data block is still pending, the citations put in the form PhysioNet's page asks for, and a line added on prevalence from that page's usage notes.

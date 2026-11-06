@@ -1,10 +1,10 @@
 # G4 handoff: the Heartbeat demo on dins.dev
 
-For the dins.dev repo (PUB-08, Heartbeat Phase 6 task B7). Din carries this note to that repo; nothing here is applied from the Heartbeat side. It describes what Heartbeat ships and what the site needs so the Heartbeat case study can show the live demo in an iframe. File names on the site side follow the site plans as of dins.dev `d75677f` (`docs/site/plans/M1-pages.md`, `README.md`); the site code does not exist yet, so treat them as pointers.
+For the dins.dev repo (PUB-08; written in Heartbeat Phase 6, refreshed in Phase 8 on 2026-11-05). Din carries this note to that repo; nothing here is applied from the Heartbeat side. It describes what Heartbeat ships and what the site needs so the Heartbeat case study can show the live demo in an iframe. File names on the site side follow the site plans as of dins.dev `d75677f` (`docs/site/plans/M1-pages.md`, `README.md`); the site code does not exist yet, so treat them as pointers.
 
 ## What Heartbeat ships
 
-- The full demo at `https://heartbeat.dins.dev/` (Phase 8 adds the custom domain; until then it runs on Worker Preview URLs only, see the last section).
+- The full demo at `https://heartbeat.dins.dev/`. Din attaches the domain to the Worker in the Cloudflare dashboard, so Heartbeat's `web/wrangler.jsonc` keeps no `routes` and its CI token needs no zone access (Heartbeat Phase 8 settling 9). Until Din has done that, the demo runs on Worker Preview URLs only (section 5).
 - The embed at `https://heartbeat.dins.dev/?embed=page`: no header, footer, recording picker, position slider, 10-second summary or beat table. It keeps the trace, Play or Pause (plus Previous and Next under reduced motion), Speed, Next irregular beat, Next disagreement, the record and time, the line comparing the browser's labels with the Python results, the legend, the disclaimer line, and "Open the full demo", which opens the full page in a new tab (`target="_blank" rel="noopener"`), so the case study stays open.
 - The embed fills whatever box it is given (container queries) and fetches nothing (manifest, trace, ONNX Runtime, model) until it scrolls into view (design call 12). Then it plays, unless the visitor has reduced motion set, where it waits on Play and moves 10 seconds at a time. It has no sound.
 - Every response carries this CSP (`web/public/_headers`, checked by `web/e2e/headers.spec.ts`):
@@ -82,7 +82,7 @@ The site plans use Astro's `security.csp`. Add the origin to `frame-src` (and ke
 "frame-src 'self' https://heartbeat.dins.dev",
 ```
 
-If M3's Turnstile entry already sets `frame-src https://challenges.cloudflare.com`, merge the two into one directive. To try the case study against a Heartbeat preview before Phase 8, a site preview build can add `https://*.dineshddawo.workers.dev` to `frame-src`; production should list only `https://heartbeat.dins.dev`.
+If M3's Turnstile entry already sets `frame-src https://challenges.cloudflare.com`, merge the two into one directive. To try the case study against a Heartbeat preview, a site preview build can add `https://*.dineshddawo.workers.dev` to `frame-src`; production should list only `https://heartbeat.dins.dev`.
 
 ## 4. Post the theme to the iframe
 
@@ -122,6 +122,24 @@ A site preview, or the site's production before launch, runs on `*.dineshddawo.w
 ## 5. Preview origins
 
 Heartbeat's `frame-ancestors` allows `https://*.dineshddawo.workers.dev`, the account's workers.dev subdomain (checked on Heartbeat's first preview, 2026-11-02): Heartbeat's own Version Preview URLs (`<version>-heartbeat.dineshddawo.workers.dev`, `pr-<number>-heartbeat.dineshddawo.workers.dev`), the site's previews (`<branch>-dins-site.dineshddawo.workers.dev`) and `dins-site.dineshddawo.workers.dev` before launch. A CSP wildcard covers whole labels only, so it cannot be narrowed to `dins-site` previews; every Worker on the subdomain is Din's. If the subdomain is ever renamed in the Cloudflare dashboard, or the site's previews run somewhere else (Pages, another account), tell Din: the pattern lives in `web/public/_headers` and its test, and changing it is a Heartbeat commit.
+
+## The case study package
+
+Heartbeat's files for the site, all in `docs/case-study/` in the Heartbeat repo. Din carries them over; nothing here is pushed from the Heartbeat side, and dins.dev's own process publishes them.
+
+| File in Heartbeat | Where it goes on the site | Notes |
+| --- | --- | --- |
+| `heartbeat.mdx` | `site/src/content/projects/heartbeat.mdx` | Rendered from `heartbeat.template.mdx` by `scripts/render_case_study.py`. Edit the template and render again, so every number stays tied to a committed result. `status: "draft"` until Din publishes. `featured` is left out, for Din to set. |
+| `capture.jpg` | Next to the page, as `./capture.jpg` | The 16:10 still for `capture`, 1600 by 1000. |
+| `capture.mp4` | The home stage's video, wherever the site keeps media | 16:10, 1600 by 1000, no audio, from record 200 with the research-demo line in the picture. |
+| `ottie/*.md` | `site/src/content/library/` | Drafts with `project: heartbeat` and `approved_on: null`. Only Din sets `approved_on`, in a pull request Din reviews. They hold no test numbers, so the page stays the single source. |
+
+## What waits for the site
+
+- Sections 1 to 4 above. The site does not exist yet, so none of them has been run against it; the schema field names were read from the site plans at `d75677f`.
+- `demo.src` holds the Heartbeat origin, so `heartbeat.mdx` fails the site's schema until section 1 lands.
+- The real iframe check (the list below) is the later step of Heartbeat's launch split (Phase 8 settling 1, TASKS 8.8). Until then the embed is covered by Heartbeat's own embed tests and a framed preview.
+- The site must render the live demo above the summary block, as the outline's page order says. The page's body starts at "The question".
 
 ## How to check it on the site
 

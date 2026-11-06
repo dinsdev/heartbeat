@@ -10,10 +10,10 @@
   <p>
     Each recording is about 30 minutes of ECG from the MIT-BIH Arrhythmia
     Database. The demo shows one lead, filtered in Python from 0.5 to 40 Hz, and
-    cardiologists annotated every beat. For each beat your browser cuts a window
-    of 256 samples around it, measures the gaps to the beats before and after,
-    and passes both to a small convolutional network running in ONNX Runtime in
-    a Web Worker.
+    two cardiologists reviewed each recording's beat labels. For each beat your
+    browser cuts a window of 256 samples around it, measures the gaps to the
+    beats before and after, and passes both to a small convolutional network
+    running in ONNX Runtime in a Web Worker.
   </p>
   <p>
     The counter checks every label against the one Python computed for the same

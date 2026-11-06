@@ -3,7 +3,8 @@ name: Deploy
 # OPS-06, Phase 6 design call 19. CI calls this workflow once its python and
 # web jobs pass on a pull request from this repo (never a fork), so the preview
 # is built from code that passed every check. The production job runs only when
-# Din starts it on main, until Phase 8 switches it on (TASKS 8.5).
+# Din starts it on main (OPS-06, Phase 8 settling 4): a docs-only merge never
+# redeploys the frozen demo. It refuses a commit whose CI did not pass.
 # `repo_config` checks the triggers, guards and permissions.
 
 on:
@@ -36,7 +37,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The DS1 demo data and the build, as in CI's web job.
+      # The demo data and the build, as in CI's web job (DS2 since the sealed run).
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.0"
@@ -81,10 +82,19 @@ jobs:
     concurrency:
       group: deploy-production
       cancel-in-progress: false
+    # Read-only, so the gate below can read CI's runs for this commit.
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Refuse a commit whose CI did not pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: scripts/require_ci_passed.sh
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.0"

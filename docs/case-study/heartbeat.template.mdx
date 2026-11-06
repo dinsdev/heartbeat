@@ -1,0 +1,108 @@
+---
+# Rendered from heartbeat.template.mdx by scripts/render_case_study.py. Edit the template.
+title: "Heartbeat"
+kind: "ml"
+summary: "A small neural network that labels heartbeats from one ECG lead, tested once on patients it never saw, beside a simple baseline and the leak a random beat split hides."
+role: "Everything, alone: the question, the pre-registered plan, the data pipeline, both models, the evaluation, the browser demo and this write-up."
+stack: ["Python", "PyTorch", "scikit-learn", "ONNX Runtime (Python and browser)", "WFDB", "Svelte", "Cloudflare Workers"]
+results:
+  - {"value": "{{sealed: headline.intervals.cnn.macro_f1_nsv}}", "label": "Macro F1 over N, S and V on {{sealed: patients.length}} patients it never saw (DS2 test, CPU)."}
+  - {"value": "{{exhibit: rows[side=beat, model=cnn].metrics.macro_f1_nsv.point}} against {{exhibit: rows[side=patient, model=cnn].metrics.macro_f1_nsv.point}}", "label": "The same model inside DS1, beats split at random against patients kept apart (DS1 out-of-fold, MPS)."}
+  - {"value": "{{sealed: comparison.metrics.macro_f1_nsv}}", "label": "The CNN minus the baseline on the same draws, in the words of the headline sentence below (DS2 test, CPU)."}
+demo: {"type": "live", "src": "https://heartbeat.dins.dev/"}
+capture: "./capture.jpg"
+captureAlt: "An ECG trace of record 200 scrolling, each beat marked with the model's letter, irregular beats in color"
+repo: "https://github.com/dinsdev/heartbeat"
+status: "draft"
+---
+
+## The question
+
+A model that labels heartbeats is only useful on people it has not seen. So I kept patients apart, wrote down what I would report before looking, and ran the test once.
+
+The model is a small 1D CNN reading one ECG lead from the MIT-BIH Arrhythmia Database, next to a logistic-regression baseline that gets the same data. It trained on DS1, which is {{data: sets.DS1.patients}} patients. Its width ({{selection: width.whole}}) and epoch count ({{selection: epoch}}) came from cross-validation inside that set, with patients kept apart (DS1 out-of-fold, MPS). DS2 stayed sealed until the end.
+
+## The trap, shown
+
+Split heartbeats at random and the same person ends up on both sides of the split. The model can then score well by recognizing the person. Here is the same CNN on the same {{exhibit: patients.length}} patients, split both ways. Both rows are DS1 out-of-fold, MPS, and neither touches DS2.
+
+| Split | Macro F1 over N, S and V |
+| --- | --- |
+| Beats at random | {{exhibit: rows[side=beat, model=cnn].metrics.macro_f1_nsv}} |
+| Patients kept apart | {{exhibit: rows[side=patient, model=cnn].metrics.macro_f1_nsv}} |
+
+Accuracy on the random split was {{exhibit: rows[side=beat, model=cnn].accuracy}} (DS1 out-of-fold, MPS). That is the number papers often lead with, and it appears here and nowhere else on this page.
+
+I did not find this first. de Chazal and colleagues (2004) showed it: their Table VI sets a beat-level random split against a split by record, inside DS1. I do not compare my numbers with theirs on this page. Theirs come from a two-lead classifier tested on all 22 DS2 records, and mine from one lead on the {{data: sets.DS2.patients}} patients left after the leak fix below.
+
+## The test
+
+I fixed the model at commit `{{freeze: commit}}` on {{freeze: date}}, and the test ran once, on {{log: date}}. Later entries in the same log rerun the frozen model only to check that the numbers reproduce. These are DS2 test numbers, run on CPU, over {{sealed: beats.scored}} scored beats from {{sealed: patients.length}} patients. The headline model is seed 0, named before the test. Each interval is a patient bootstrap with {{sealed: bootstrap.draws}} draws and percentiles {{sealed: bootstrap.percentiles}}.
+
+| Metric | CNN, seed 0 | Logistic-regression baseline |
+| --- | --- | --- |
+| Macro F1 over N, S and V | {{sealed: headline.intervals.cnn.macro_f1_nsv}} | {{sealed: headline.intervals.baseline.macro_f1_nsv}} |
+| S recall | {{sealed: headline.intervals.cnn.S_recall}} | {{sealed: headline.intervals.baseline.S_recall}} |
+| S precision | {{sealed: headline.intervals.cnn.S_precision}} | {{sealed: headline.intervals.baseline.S_precision}} |
+| V recall | {{sealed: headline.intervals.cnn.V_recall}} | {{sealed: headline.intervals.baseline.V_recall}} |
+| V precision | {{sealed: headline.intervals.cnn.V_precision}} | {{sealed: headline.intervals.baseline.V_precision}} |
+
+Two more final models trained the same way with other seeds. Their range of point numbers is below (DS2 test, CPU). It shows how much of a result can come from the seed alone. The headline stays seed 0, as the plan said.
+
+| Metric | The other two models, lowest to highest |
+| --- | --- |
+| Macro F1 over N, S and V | {{sealed: seed_range.range.macro_f1_nsv}} |
+| S recall | {{sealed: seed_range.range.S_recall}} |
+| S precision | {{sealed: seed_range.range.S_precision}} |
+| V recall | {{sealed: seed_range.range.V_recall}} |
+| V precision | {{sealed: seed_range.range.V_precision}} |
+
+## The CNN against the baseline
+
+{{headline}}
+
+Those are DS2 test numbers on CPU, and both models are scored on the same bootstrap draws of patients.
+
+## Patient by patient
+
+Pooled numbers hide who drove them. Each row below is one DS2 patient, named after their record, and each cell counts beats (DS2 test, CPU).
+
+{{sealed: per_patient}}
+
+Record 232 holds {{sealed: per_patient.cnn-seed-0[patient=s232].S.recall.denominator}} of the {{sealed: beats.by_class.S}} S beats, so it drives the S result (DS2 test, CPU). Without it, over {{sealed: s_without_excluded.patients.length}} patients, the CNN's S recall is {{sealed: s_without_excluded.intervals.cnn.S_recall}} and its S precision {{sealed: s_without_excluded.intervals.cnn.S_precision}}. The baseline's are {{sealed: s_without_excluded.intervals.baseline.S_recall}} and {{sealed: s_without_excluded.intervals.baseline.S_precision}}.
+
+{{sealed: n_and_f.caveat}}. For the record, the CNN's F recall is {{sealed: n_and_f.cnn.F_recall}} and its F precision {{sealed: n_and_f.cnn.F_precision}}; the baseline's are {{sealed: n_and_f.baseline.F_recall}} and {{sealed: n_and_f.baseline.F_precision}} (DS2 test, CPU).
+
+## The 201 and 202 leak
+
+Records 201 and 202 come from the same person, and the standard split puts one on each side. Left alone, that hands the test a patient the model trained on. So record 202 is left out everywhere and the patient sits only in DS1.
+
+## Limits
+
+- Beat locations come from the expert annotations, so these numbers assume every beat has already been found. The demo does not find beats on its own.
+- F is one patient on each side, so its numbers describe two people.
+- Record 232 drives the S result. Without it, the CNN's S recall is {{sealed: s_without_excluded.intervals.cnn.S_recall}} (DS2 test, CPU).
+- Calibrated probabilities are fragile across patients, because calibration depends on how common each class is and that varies widely from person to person. The CNN's pooled calibration error is {{sealed: calibration.cnn-seed-0.ece.S}} for S and {{sealed: calibration.cnn-seed-0.ece.V}} for V (DS2 test, CPU), and a pooled figure says nothing about any one patient.
+- A label shows one beat late, because the model reads the gap to the next beat.
+- The model reads one lead and was tested on {{sealed: patients.length}} patients (DS2 test, CPU).
+- Q beats are not scored; DS2 has {{sealed: beats.q_not_scored}} of them (DS2 test, CPU).
+- These numbers say nothing about how common arrhythmias are. PhysioNet notes that 25 of the recordings were chosen to include uncommon ones, so the database's prevalence is not a population's.
+- This is a research demo, not medical advice. Don't use it for a health decision.
+
+## How to check it
+
+The pre-registered plan, the freeze record, the append-only test log, the leakage tests in CI and the parity tests are all in the repo. To check them:
+
+```bash
+uv run heartbeat verify
+```
+
+That takes seconds once the data is downloaded. `uv run heartbeat rebuild` reruns every stage from the raw files, retraining the models. I ran it from a fresh clone on the same Mac that trained the model. It retrained twice and stopped twice before it reached the reproduction, because that step needs a clean tree: I committed the rewritten result files each time and ran it again. The results matched a second fresh clone apart from run names, commits, paths and wall times, the model files, fixtures and cards matched byte for byte, and the reproduction matched the sealed report. I have not tried it on another machine. The times and the exact messages are in `docs/WORK_LEDGER.md`.
+
+## Credits
+
+- The MIT-BIH Arrhythmia Database, through PhysioNet. Moody, G., and Mark, R. (2005). MIT-BIH Arrhythmia Database (version 1.0.0). RRID:SCR_007345. https://doi.org/10.13026/C2F305
+- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng in Med and Biol 20(3):45-50 (2001). PMID: 11446209.
+- Pollard, T., Moody, B. E., Lehman, L., Gow, B., Fernandes, C., Xie, C., Johnson, A., Mark, R. G., and Heldt, T. (2026). PhysioNet as a global platform for biomedical research. Nature Health. https://doi.org/10.1038/s44360-026-00096-z
+- de Chazal P, O'Dwyer M, Reilly RB, for the DS1 and DS2 split and Table VI. Automatic classification of heartbeats using ECG morphology and heartbeat interval features. IEEE Transactions on Biomedical Engineering 51(7):1196-1206 (2004).
+- AAMI EC57, for the classes used here.

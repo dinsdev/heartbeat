@@ -10,7 +10,9 @@
   "assets": {
     "directory": "./dist",
   },
-  // Production is not served on workers.dev (Phase 8 adds heartbeat.dins.dev).
+  // Production is not served on workers.dev. heartbeat.dins.dev is attached in
+  // the Cloudflare dashboard, so this file keeps no `routes` and CI's token needs
+  // no zone access (Phase 8 settling 9).
   // Version preview URLs stay on for pull requests, set here rather than left
   // to follow `workers_dev`.
   "workers_dev": false,

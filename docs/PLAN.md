@@ -136,6 +136,8 @@ Estimates are Claude's guesses in focused working days, not measurements, except
 
 **Exit:** every launch criterion holds; the case study is published by the dins.dev repo's own process.
 
+**Split (Din, 2026-11-05, Phase 8 settling 1):** the dins.dev site does not exist yet, so this exit is met in two steps. Now: `heartbeat.dins.dev` live and the case study package handed over, with criterion 3's iframe covered by the embed tests and a framed preview. Later, under that repo's milestones: the case study published and the iframe checked on the site (TASKS 8.8).
+
 ### Phase 9: Stretch (only with Din's go per item)
 
 INCART, then saliency, then our own QRS detector (C8). Each starts with a committed design note, ships whole or not at all, and gets its own task-level plan.
@@ -1063,3 +1065,108 @@ Never change a tolerance, a size gate, a test's expected value, a seed or a gate
 3. The DS2 demo build reading a cached or stale sealed report instead of the one the log's last sealed entry names.
 4. A Playwright spec quietly passing on DS2 because it found no record matching a hard-coded DS1 assumption.
 5. The DEMO-09 line or the training-patient note shown for the wrong split, in either mode.
+
+### Phase 8: Content and launch (task plan, 2026-11-05)
+
+**Goal:** `heartbeat.dins.dev` serves the DS2 demo from `main`, deployed through a gate that refuses a commit whose CI did not pass; the cards and README are finished; a complete case study package waits for the dins.dev site; every public claim, the rebuild claim included, says what a run showed.
+
+**Approach:** two goal runs around Din's steps (settling 5). Goal A runs on `phase-8-content`, writes everything, and ends with the branch ready for a pull request and `docs/RUNBOOK_PHASE8.md` holding every command Din runs. Din pushes, reviews the preview, does the VoiceOver and real-phone passes, merges, starts production and attaches the domain. Goal B, in a fresh session on `phase-8-launch`, checks production read only and writes the hand-off. Test first for all code.
+
+**Settled for this phase (ledger, 2026-11-05, "Phase 8 settling" 1 to 14):** launch and publishing split; no frozen-path change; the agent drafts the prose and Din owns the voice; production stays manual behind a CI gate; two goals around Din's steps; VoiceOver and real phones are Din's; the stage video burns in only the research-demo line; dins.dev stays read only and G3 entries are drafts; the domain is attached in the dashboard; this planning format; the case study renders from a template; one fresh-clone rebuild; Din's prose rewrite does not hold up production; the carried items stay as they are.
+
+**Launch criteria (PRD section 12), and who closes each:**
+
+| # | Criterion | Closed by |
+| --- | --- | --- |
+| 1 | Sealed run logged | Done, Phase 7 |
+| 2 | Cards filled | A2 |
+| 3 | Demo in every mode | Playwright and axe in CI; R48 and the real phone by Din (A7's script, B1 records them). The embed tests and a framed preview now; the real case study iframe at settling 1's later step |
+| 4 | Case study drafted and lint-clean | A4 |
+| 5 | `rebuild` reproduces; CI green | A1; CI on Din's push |
+| 6 | Licenses and PhysioNet citation | A3 |
+| 7 | Stage video | A5, approved by Din at review |
+| 8 | Din's preview review | Din, from the runbook |
+
+**Design calls for Din's review (made by Claude while planning):**
+
+1. `current-phase` stays 7. Every earlier phase bumped it in `pyproject.toml`, but that file is frozen, so a bump makes `reproduce-test` refuse (settling 2). R48 is the only Phase 8 row and is manual: its ledger entry is B1. The coverage check keeps listing it as a later row, and the hand-off says why.
+2. Case study files live in `docs/case-study/`: `heartbeat.template.mdx` (the source; Din's rewrite happens here), `heartbeat.mdx` (rendered and committed, what dins.dev receives), `capture.mp4`, `capture.jpg`. `docs/CASE_STUDY_OUTLINE.md` stays as committed: it is the record written before the result, and only its "Din writes the prose" line is overridden, by settling 3.
+3. `scripts/render_case_study.py [--check]` fills G1's `{{source: key}}` slots from the sources in the outline's Slots table, and picks the headline sentence by the sealed verdict, reading it from the outline. It imports `num`, `interval` and `table` from `heartbeat.cards.blocks`, so the page shows the cards' rounding; rounding stays Din's call, through one constant. An unresolved slot is an error. mypy's `files` list is frozen and leaves out `scripts/`, so `scripts/check.sh` and CI's python job gain `uv run --locked mypy scripts/render_case_study.py`.
+4. `tests/unit/test_case_study.py` runs the script with `--check` and checks: every slot resolves; no digit in the template outside a slot, apart from an allowlist that gives a reason per entry (record names such as 200, years in citations, 16:10); the verdict's sentence appears word for word with its slots filled; frontmatter fits the outline's field table, with `status: draft`; D7's list and the dash rules pass, by calling `check_published` and `check_dashes` with a published `.md` path, with a comment saying why (`PUBLISHED_PATHS` is frozen); no `{`, `}` or `<` in the rendered body outside code, because MDX reads them as syntax; PUB-02's limits and PUB-03's Table VI credit are present. Each check is seen failing once on a planted bad draft.
+5. The stage video is recorded by a committed script under `web/scripts/` from the built demo with DS2 data, at `?embed=page` in light theme on record 200, at 800 by 500 CSS pixels with device scale 2. The embed always shows D7's line (DEMO-15), so the line is in the pixels with no second copy, and the 2x scale keeps it readable when the stage shows the video near 800 pixels wide. Output: `capture.mp4` at 1600 by 1000, about 15 seconds (a guess), H.264, `yuv420p`, no audio, `+faststart`, and `capture.jpg` from the same recording. If Playwright's recorder looks soft in extracted frames, use frame capture instead; no new dependency either way, and `ffmpeg` and `ffprobe` are local tools the script names when missing. The script checks the result with `ffprobe`. The video is not under `web/public/`, so R39's gates do not see it. The demo's code does not change for it.
+6. G3 is three to five entries in `docs/case-study/ottie/`, with the fields from the dins.dev site PRD section 2 and M3, `project` set and `approved_on` blank. They hold no test numbers, so the case study stays the single source: the published project page already joins Ottie's corpus. The test in design call 4 also lints them and refuses digits outside the allowlist.
+7. The gate is `scripts/require_ci_passed.sh`, the production job's first step after checkout: `gh run list --workflow ci.yml --branch main --event push --commit "$GITHUB_SHA" --status success --json databaseId --jq length` must be above zero, and any `gh` failure refuses. The job gets `GH_TOKEN: ${{ github.token }}` and job-level `permissions` of `contents: read` and `actions: read`. `tests/unit/test_deploy_gate.py` runs the script against a fake `gh` on `PATH` (no run refused, a success passes, a `gh` error refused) and checks that the step comes before `wrangler deploy` in that job and that `web/wrangler.jsonc` has no `route` or `routes` key (settling 9). `repo_config` still passes unchanged.
+8. The fresh-clone check runs in the session scratchpad from Goal A's first commit, first, in the background, because everything else can share the Mac except Playwright and the recording (settling 12). The comparison root is a second fresh clone of the same commit, because Goal A's card prose changes the working checkout's cards, which the comparison reads byte for byte. The clone's log entry never comes back to this repo.
+9. The README states the status, links the cards and quotes no test number by hand. Numbers stay in generated card blocks and the case study's slots.
+
+**Preconditions:** TASKS 8.0 accepted and merged (`cfc9974`); `main` fast-forwarded to `origin/main`; these settlings and this plan committed on `phase-8-content`; the MIT-BIH cache downloaded; `~/Develop/dins.dev` checked out (read only).
+
+**Global constraints:** section 2 and the earlier phases' constraints. Nothing changes under `src/`, `config/`, `manifests/`, `models/heartbeat-v1/`, `pyproject.toml` or `uv.lock`. No new dependency or pin change, no edit to `.claude/` and no write to `~/Develop/dins.dev`. Nothing trains, tunes, selects or calibrates on DS2. Tests, tolerances, size gates and seeds stay as written. No push, pull request, deploy, secret, `export --freeze`, `evaluate-test` or `rebuild --exact` by Claude. No stretch item, no analytics. Every number names its source and label (DS1 out-of-fold, DS2 test, MPS or CPU). Only Din sets accepted.
+
+#### Goal A: everything before Din's steps (TASKS 8.1 to 8.4, 8.6)
+
+**Task A1: The fresh-clone rebuild (TASKS 8.6, settling 12).** Start it before anything else, from the commit this goal starts on. `git clone --branch phase-8-content` into the scratchpad, `uv sync --frozen`, then `caffeinate -ims uv run heartbeat rebuild` in the background (104 to 114 minutes, measured 2026-10-30, with the download). No Playwright or recording while it runs: the load could skew R38. Keep the output. If it stops at `reproduce-test` as the ledger expects, commit in that clone only what `rebuild` wrote and run it again. Then make a second fresh clone of the same commit and run `uv run python -m heartbeat.checks.reproduction --root <second clone> --other <first clone>`, plus `uv run heartbeat verify` in the first clone. Record each stage's time, where it stopped, the exact message, the reproduction entry and the comparison in the ledger, then delete both clones. Do the card, README and case study work while it runs; finish section 11's wording from what happened (A2 and A4).
+
+**Task A2: Cards and README (TASKS 8.1; PUB-04, PUB-07).** Read both cards against PUB-02, PUB-04 and F6 and finish any prose outside the generated blocks; `uv run heartbeat cards` and `uv run heartbeat verify` stay clean. Rewrite the README per design call 9, including how to check the work, using A1's result. Update stale comments: the production job and the preview's "DS1 demo data" in `deploy.yml`, the Phase 8 line in `wrangler.jsonc`. Commit `docs: finish the cards and the README (TASKS 8.1)`.
+
+**Task A3: Citation and licenses (TASKS 8.4; PUB-07, launch criterion 6).** Read PhysioNet's current MIT-BIH page and its requested citation; check `docs/DATA_CARD.md`, `DATA_LICENSE.md`, `LICENSE` and `models/heartbeat-v1/NOTICE` against it. Record what was read and when, replace the "rechecked before publishing" lines with the dated result. A change the frozen `NOTICE` would need is a stop. Commit `docs: PhysioNet citation and licenses rechecked (TASKS 8.4)`.
+
+**Task A4: The case study (TASKS 8.2; PUB-01 to PUB-03, PUB-05).** Test first, then the script (design calls 3 and 4). Draft the template in Din's voice from the outline's twelve sections and fields, with the outline's sentences where it has them. Section 11 says what A1 showed, plainly. F's and record 232's figures come through slots like every other number. The seed range is the range: seed 0 is the pre-registered headline, and no other seed is singled out. Commit `feat(docs): the case study from a template with checked numbers (TASKS 8.2)`.
+
+**Task A5: The stage video (TASKS 8.3; PUB-06, settling 7).** Only after A1 finishes. `uv run heartbeat build-demo-data`, `pnpm -C web run build`, then the script (design call 5). Extract frames and look at them: record 200, labels landing, the line readable. Record `ffprobe`'s output and the file sizes. `captureAlt` goes in the template. Commit `feat(docs): the stage video from record 200 (G2, TASKS 8.3)`.
+
+**Task A6: The handover and the gate (TASKS 8.3, 8.6; PUB-08, PUB-09, OPS-06).** G3 drafts (design call 6). Refresh `docs/G4_HANDOFF.md`: the domain as settling 9 has it, the package's paths, what waits for the site. The gate, test first (design call 7). Update the production row in `AGENTS.md` Commands. Commits `docs: G3 drafts and the G4 refresh`, `feat(ci): production refuses a commit whose CI did not pass (OPS-06)`.
+
+**Task A7: The runbook (TASKS 8.4, 8.5).** `docs/RUNBOOK_PHASE8.md`, for Din, each step with exact commands, expected output and what to do if it differs:
+
+1. Push and open the pull request; find the preview URL in the job summary.
+2. Preview review: a short checklist in full page and `?embed=page`, light and dark, plus approving the clip and the capture.
+3. VoiceOver (macOS Safari, then iOS Safari on the preview), with steps and the expected announcements taken from the page's real labels and live regions; then the real-phone pass. Din records the results for Goal B.
+4. Merge; wait for CI on the merge commit (`gh run list --branch main --workflow ci.yml --limit 1`).
+5. `gh workflow run deploy.yml --ref main`, then `gh run watch`. If the gate refuses, CI has not passed on that commit: wait or fix, never bypass.
+6. Attach the domain: Workers & Pages, `heartbeat`, Domains, Add, Custom Domain, `heartbeat.dins.dev`. Then `curl -sI https://heartbeat.dins.dev/`, allowing for the certificate. A refusal here is PRD Q3's answer: stop and bring it back.
+7. Failure cases: a deploy that fails on permissions (the token is Worker Editor with no zone access and has only run `versions upload`; Cloudflare's docs say Editor covers a deploy that leaves the domain alone; never widen it without a decision), and rollback (`pnpm -C web exec wrangler rollback`, Din only).
+8. What to send Goal B: the VoiceOver and phone results.
+
+Commit `docs: Phase 8 runbook`.
+
+**Task A8: Verification and hand-off.** `scripts/check.sh`, `CI=1 uv run pytest`, `uv run heartbeat verify`, `uv run heartbeat check-folds`, `uv run python -m heartbeat.checks.repo_config`, `uv run python -m heartbeat.checks.wording`, `pnpm -C web run build`, `pnpm -C web run e2e`, and a framed check of `?embed=page` through `web/e2e/host.ts`'s specs. `git diff --name-only 382f1c6 HEAD` shows no frozen path beyond the record. `uv run heartbeat rebuild` in this checkout skips or passes without a new reproduction entry; if it writes one, that is a logged result to report. TASKS 8.1 to 8.4 and 8.6 and the G rows updated with commands; a ledger entry with commits, deviations, timings and the review focus. Give Din the push and `gh pr create` commands and stop. After the push, read CI with `gh run list` and `gh run view`, record the preview URL and fix anything red in a new commit.
+
+#### Din: review and production (TASKS 8.4, 8.5)
+
+Follow `docs/RUNBOOK_PHASE8.md`. Din's rewrite of the case study prose does not hold up the deploy (settling 13).
+
+#### Goal B: after production is live (TASKS 8.5, 8.7)
+
+Start only when `https://heartbeat.dins.dev/` answers 200 and Din has given the VoiceOver and phone results. Create `phase-8-launch` from `main`.
+
+**Task B1: R48 and the phone pass.** A ledger entry with Din's results in Din's words (R48, launch criterion 3). A failure goes to Din before anything else.
+
+**Task B2: Production smoke checks.** Read only, by `curl` and the built-in browser. `/` and `/?embed=page` answer 200 with the same CSP as `web/public/_headers`; the `frame-ancestors` value is exact; hashed assets and data are immutable and `manifest.json` is not; `.wasm` is `application/wasm` with Brotli (measure it); `manifest.json` says DS2, default record 200, sealed entry 1; the deployed version matches the merge commit (`gh run view`); the Worker has no production `workers.dev` route. In the browser: the page and the embed load, the demo plays record 200, the console holds no error, the line comparing browser labels to the Python results shows agreement.
+
+**Task B3: Close out.** PRD Q3 and AS4 closed from Din's attach; TASKS 8.5 and 8.7; PLAN's Phase 8 exit checked for the part that holds; `AGENTS.md` Commands (Phase 8, the domain). A hand-off ledger entry per the global agreements, with what is left for dins.dev (8.8) and settling 14's carried items. Give Din the push and `gh pr create` commands for this docs-only pull request; no redeploy follows it. After the push, read CI and fix anything red.
+
+#### Later: on the dins.dev site (TASKS 8.8)
+
+Din carries the package when the site can take it: G4's changes, `heartbeat.mdx` with Din's prose, the capture, approved G3 entries. The real iframe is then checked on the site's preview and on production, by that repo's process. Phase 8's exit finishes there.
+
+#### Stop and ask Din
+
+Never change a tolerance, a size gate, a test's expected value, a seed or a gate rule to get past one of these:
+
+1. A step needs a change under a frozen path, a new dependency, a secret or an edit to `.claude/`.
+2. The fresh-clone check differs anywhere except `VOLATILE_KEYS`, a model file or fixture differs, the reproduction differs from the sealed report, or anything suggests a scoring bug (A3 applies).
+3. A number the case study needs is in no committed file, or two committed files disagree on it.
+4. R38 fails again (the ledger's 2026-11-05 entries: what is left is a test change under rule 3, Din's call) or any test cannot pass without loosening what it checks.
+5. PhysioNet's citation or terms changed in a way that reaches the frozen `NOTICE` or the licenses' meaning.
+6. The video would need a change to the demo's code, or the site's schema cannot hold a field the outline names.
+7. Goal B: any production check fails. Report it with the rollback command; change nothing.
+
+#### Review focus
+
+1. A number typed by hand in the template, the README, the Ottie drafts or the card prose, or spelled out in words so the digit check misses it.
+2. A number on the page without its label (test or out-of-fold, DS2 or DS1, CPU or MPS), or seed 2's result used to flatter the seed 0 headline.
+3. The gate passing on the wrong run: another workflow, a pull request's run, a failed attempt, or a `gh` failure read as success.
+4. A `routes` key reaching `wrangler.jsonc`, which would make the next CI deploy try to change the domain with a token that cannot.
+5. Section 11 or the README claiming more than the fresh-clone run showed.
+6. The video showing anything but record 200 from the DS2 build, or D7's line cut off.
