@@ -3077,3 +3077,60 @@ A throwaway script walked every leaf of the reports. Against `1-sealed.json`, th
 **Looked at (verified by eye, by Claude; Din's approval is G2):** frames at 0.5 s, 10 s and 14.5 s and the still. All show "Record 200", position 0:11 to 0:25 of 30:05, light theme, V and N letters over the beats with the pending mark on the newest one, and D7's line in full and readable at 1600 pixels: "Research demo, not medical advice. Recordings come from a public research database." The "Labels match" line reads 31 of 31, 45 of 45 and 51 of 51 beats in those frames, and shows no "differ". That is the page's own count, from the DS2 build; no number was typed. No disagreement falls in the clip, so it shows none. Not looked at: every frame, or the clip played at speed; Din's review step opens it.
 
 **Test:** `tests/unit/test_case_study.py` gained `capture_problems`, which checks both files are there and the clip is `+faststart`, and a test that plants missing files and an `mdat`-first clip, seen failing on each. It cannot check the pixels: the eye check above and the script's checks do that.
+
+## 2026-11-06: Phase 8 Goal A verified, ready for the pull request (Goal A task A8)
+
+**State:** implemented and verified locally on `phase-8-content`; not pushed, so CI has not seen it. Nothing here is accepted; that is Din's.
+
+**Commits, oldest first, on `d3abab0`:** `2bb4500` cards and README (A2), `5070bf7` citation and licenses (A3), `416ea9e` case study (A4), `dbe842e` G3 drafts and G4 refresh (A6), `9e5c76f` production gate (A6), `76cf2a2` runbook (A7), `4a5fd0f` fresh-clone result (A1), `dcbaac9` stage video (A5), and the commit holding this entry.
+
+**Checks, run in this order at `dcbaac9`, with nothing else running on the Mac:**
+
+| Command | Result | Time |
+| --- | --- | --- |
+| `scripts/check.sh` | exit 0 | 65 s |
+| `CI=1 uv run pytest` | `1212 passed` | 99 s |
+| `uv run heartbeat verify` | `6 of 6 checks passed` | 1 s |
+| `uv run heartbeat check-folds` | ok, 22 subjects in 5 folds, matches its pin | 1 s |
+| `uv run python -m heartbeat.checks.repo_config` | exit 0 | under 1 s |
+| `uv run python -m heartbeat.checks.wording` | exit 0 | under 1 s |
+| `uv run python -m heartbeat.checks.rule_coverage` | exit 0 | 1 s |
+| `pnpm -C web run build` | `size gates passed` | 1 s |
+| `pnpm -C web run e2e` | `217 passed`, then `4 passed` | 203 s |
+| `uv run heartbeat rebuild` | exit 0; every stage skipped but `check-folds` and `cards`, which always run; both cards unchanged; log still 2 entries; tree clean | 1 s |
+
+The framed `?embed=page` check through `web/e2e/host.ts` ran inside the 217, in `embed.spec.ts`, `headers.spec.ts` and `theme.spec.ts`. That is a test host, not the dins.dev site (TASKS 8.8).
+
+**R38, its own pass, one worker, DS2 data:** no main-thread task over 50 ms in all four projects. Longest task: chromium 16 ms, webkit 18 ms, pixel-7 10 ms, iphone-15 16 ms.
+
+**Frozen paths:** `git diff --name-only 382f1c6 HEAD` lists nothing under `src/`, `config/`, `manifests/`, `models/heartbeat-v1/`, `pyproject.toml` or `uv.lock`. It does not list the record either, since `382f1c6` is the commit that added it. `current-phase` stays 7 (design call 1).
+
+**After this entry:** only `docs/TASKS.md` and this file changed, and `scripts/check.sh` passed again before the commit. The heavier checks above did not rerun.
+
+**Review focus, how each was checked:**
+
+1. **Hand-typed numbers.** `tests/unit/test_case_study.py` fails on any digit outside a slot or `ALLOWED_DIGITS` in the template and the Ottie drafts, and `test_readme_and_card_prose_quote_no_test_number` covers README and card prose against the sealed report's numbers. For numbers spelled out, a grep of the template and drafts for number words (one to thirteen, twenty to fifty, hundred, thousand, half, percent, dozen) found "one lead", "two-lead", "one patient on each side", "two people", "one beat late", "two more final models" and the like: facts about the design, no metric. The README's new 121 and 107 minutes and 13 s are timings from this ledger, not test numbers.
+2. **Labels.** Read the whole rendered `docs/case-study/heartbeat.mdx`. Every metric paragraph, table and limit carries DS2 test or DS1 out-of-fold, and CPU or MPS. Seeds 1 and 2 appear only as "the other two models", a range of point numbers, with "the headline stays seed 0". Their macro F1 range tops out above seed 0 and the page says that shows how much can come from the seed alone.
+3. **The gate on the wrong run.** `scripts/require_ci_passed.sh` asks only for `--workflow ci.yml --branch main --event push --commit "$GITHUB_SHA" --status success`, and `tests/unit/test_deploy_gate.py` pins those arguments and plants zero runs, empty output, a non-number and a `gh` failure, each refusing. Not checked against real GitHub yet: Din's first deploy is its first real run.
+4. **`routes`.** `test_wrangler_keeps_no_route` and a grep: the word appears in `web/wrangler.jsonc` only in the comment saying the file keeps none.
+5. **Section 11 and the README.** Reread both against the A1 entry. Both say three things only: it retrained twice and stopped twice, the comparison matched apart from the volatile keys, and the reproduction matched. Both say it has not been tried on another machine. The README's "first pass" time says other work was running.
+6. **The video.** The script refuses a non-DS2 build, another default record or a cut-off D7 line. I looked at frames at 0.5, 10 and 14.5 s and the still: record 200 throughout, D7's line whole and readable. Din has not seen it, and G2 is Din's.
+
+**Deviations from the plan:**
+
+- A third rebuild pass in the clone, from the fingerprint finding in the A1 entry.
+- A6 and A7 committed before A5 and the A1 write-up, since A5 had to wait for A1.
+- `render_case_study.py` has its own `DECIMALS`, `number` and `span`, pinned to `heartbeat.cards.blocks` by a test instead of importing them at runtime, and imports the private `_cell`. Slots gained `.length` and `.whole`.
+- `GH_TOKEN` is set on the gate's step, not the job, which is tighter, and `GH_REPO` was added.
+- Frame capture rather than the recorder, which design call 5 allows.
+- `approved_on: null` stands for the brief's "blank", matching the site's fixture.
+- `check.sh` and CI's python job gained a `mypy` call for the render script, because mypy's `files` setting is in `pyproject.toml`, which is frozen.
+
+**For Din, not fixed:**
+
+- The fresh-clone fingerprint quirk in frozen code (A1 entry).
+- `docs/DATA_CARD.md`'s `shipped_data` block is still pending and carries stale "Phases 6 and 7" text, because its renderer is frozen.
+- The dates on the log, freeze record and page read 2026-11-03, UTC; Din ran them on the evening of 2026-11-02 local. The page says 2026-11-03.
+- `web/src/components/About.svelte` now says "two cardiologists reviewed each recording's beat labels" (A3); that is visible copy for Din's review.
+- The case study says "the same Mac that trained the model". That is from the ledger's history and is Din's to confirm in the rewrite.
+- The settling's 14 carried items stay as they are, and R48 is still open for Goal B.
