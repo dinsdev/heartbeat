@@ -2,7 +2,7 @@
 
 |  |  |
 | --- | --- |
-| **Status** | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists, so the layout of every table below is part of the pre-registered plan. |
+| **Status** | Filled from the sealed run. The layout was locked by Din on 2026-10-27 (F6) and pushed before any result existed, so every table below is part of the pre-registered plan. |
 | **Model** | `models/heartbeat-v1/` (written only by `heartbeat export`) |
 | **Requirements** | PUB-04 (this card), EVAL-08 to EVAL-12, EXHIBIT-01 to EXHIBIT-03, PUB-02, PUB-03 |
 | **Related** | `docs/DATA_CARD.md` (the data), `docs/PRD.md`, `docs/WORK_LEDGER.md` |
@@ -13,7 +13,7 @@ The layout follows Mitchell et al., "Model Cards for Model Reporting" (FAT\* 201
 
 Every count and metric in this card sits in a generated block between `<!-- card:begin NAME -->` and `<!-- card:end NAME -->`. `heartbeat cards` renders each block from committed `results/` files, and `heartbeat verify` fails if any block differs from what the current results would render (R50). Each rendered block names its source file and says whether its numbers are out-of-fold (DS1) or test (DS2), and MPS or CPU. The prose around the blocks is written by hand and holds definitions only, never a result.
 
-A block that reads "Pending" has no run behind it yet. DS1 blocks fill in during development; DS2 blocks stay pending until the sealed run is logged (Phase 7). Any section or table added after the sealed run is listed in the change log at the end, so a reader can tell the pre-registered report from later additions.
+DS1 blocks filled in during development. DS2 blocks stayed pending until the sealed run was logged, and they render from that run's report, which `results/test_runs.jsonl` names. Any section or table added after the sealed run is listed in the change log at the end, so a reader can tell the pre-registered report from later additions.
 
 ## 1. Model details
 
@@ -99,7 +99,7 @@ Pre-registered in A3, B4 and C4 before any test result existed.
 ## 5. Evaluation data
 
 - **Test set (DS2):** 21 records from 21 patients: 100, 103, 105, 111, 113, 117, 121, 123, 200, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234. This is de Chazal et al.'s (2004) test set without record 202, which comes from the same patient as training record 201. Source of truth: `manifests/splits.toml`.
-- **How it was used:** sealed during development. Read once, by `heartbeat evaluate-test`, after a freeze record (commit, config, model checksum) was committed and pushed; every run is in `results/test_runs.jsonl`.
+- **How it was used:** sealed during development. Scored once for the test report, by `heartbeat evaluate-test`, after a freeze record (commit, config, model checksum) was committed and pushed. Since then it has also been scored by `heartbeat reproduce-test`, which repeats the same evaluation to check it, and the demo shows these patients with the frozen model's labels. Nothing trains, tunes, selects or calibrates on it. Every run is in `results/test_runs.jsonl`.
 - **Development evaluation:** DS1 out-of-fold predictions over five patient-grouped folds (`config/folds.json`).
 - **Preprocessing:** identical to training. See `docs/DATA_CARD.md`.
 
@@ -450,4 +450,4 @@ Not reported. See section 3.
 
 ## Change log
 
-Sections, tables or figures added after the sealed run are listed here with their date and reason. None so far.
+Sections, tables or figures added after the sealed run are listed here with their date and reason. None so far. The prose around the blocks was brought up to date on 2026-11-05 (status, how the test set was used), which adds no section, table or figure.

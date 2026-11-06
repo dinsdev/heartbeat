@@ -2,7 +2,7 @@
 
 |  |  |
 | --- | --- |
-| **Status** | Template (F6, locked by Din 2026-10-27). Committed and pushed before any result exists. |
+| **Status** | Filled. The layout was locked by Din on 2026-10-27 (F6) and pushed before any result existed. |
 | **Covers** | The beat dataset Heartbeat derives from the MIT-BIH Arrhythmia Database 1.0.0: which records, how they are split, how beats are cut and labeled, and what ships to the browser. |
 | **Requirements** | PUB-04 (this card), DATA-01 to DATA-11, EVAL-01 to EVAL-03, DEMO-07, DEMO-08, DEMO-16, PUB-07 |
 | **Related** | `docs/MODEL_CARD.md`, `manifests/`, `DATA_LICENSE.md`, `docs/WORK_LEDGER.md` (B1 to B5, C1, D4) |
@@ -11,7 +11,7 @@ The layout follows Gebru et al., "Datasheets for Datasets" (arXiv 1803.09010, v8
 
 ## How the numbers get here
 
-Every count in this card sits in a generated block between `<!-- card:begin NAME -->` and `<!-- card:end NAME -->`, rendered by `heartbeat cards` from committed `results/` files and checked by `heartbeat verify` (R50). The prose holds definitions only: record lists, exclusions and processing steps, all decided before any data was processed. A block that reads "Pending" has no run behind it yet.
+Every count in this card sits in a generated block between `<!-- card:begin NAME -->` and `<!-- card:end NAME -->`, rendered by `heartbeat cards` from committed `results/` files and checked by `heartbeat verify` (R50). The prose holds definitions only: record lists, exclusions and processing steps, all decided before any data was processed.
 
 ## 1. Motivation
 
@@ -168,6 +168,7 @@ Run by the `prepare` stage of `heartbeat rebuild` (DATA-04 to DATA-10):
 - **License:** the MIT-BIH Arrhythmia Database is under the Open Data Commons Attribution License 1.0 (`DATA_LICENSE.md`). This repo's MIT license covers the code only.
 - **What ships:** the browser demo serves derived data for the 21 DS2 patients after the sealed run (DS1 recordings before it): per patient, the filtered int16 trace (`NNN.trace.i16`) and a beats file with positions, expert labels and the frozen model's labels and probabilities (`NNN.beats.json`), plus a `manifest.json` with class counts, file hashes, the model version and the attribution note.
 - **Attribution:** an attribution note ships beside the demo data, the demo shows the dataset credit, and the case study has a credits block.
+- **Shipped sizes and hashes:** the block below was meant to render them, and its renderer was never built. It stays pending because the card code is frozen with the model. The figures are in the demo's `/data/manifest.json`, written by `heartbeat build-demo-data`, which lists every shipped file with its size in bytes and its hash.
 
 <!-- card:begin shipped_data -->
 
@@ -193,4 +194,4 @@ PhysioNet's requested citation is rechecked before publishing (PUB-07).
 
 ## Change log
 
-Changes after the sealed run are listed here with their date and reason. None so far.
+Changes after the sealed run are listed here with their date and reason. 2026-11-05: the status line updated, and a note added on why the shipped data block is still pending.
