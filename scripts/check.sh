@@ -9,6 +9,8 @@ cd "$(dirname "$0")/.."
 uv run --locked ruff check
 uv run --locked ruff format --check
 uv run --locked mypy
+# mypy's `files` list is frozen and leaves out scripts/ (Phase 8, design call 3).
+uv run --locked mypy scripts/render_case_study.py
 # Includes the guard hook tests, the wording lint, rule coverage, R45 and R46.
 uv run --locked pytest -q -m "not realdata"
 

@@ -1,0 +1,130 @@
+---
+# Rendered from heartbeat.template.mdx by scripts/render_case_study.py. Edit the template.
+title: "Heartbeat"
+kind: "ml"
+summary: "A small neural network that labels heartbeats from one ECG lead, tested once on patients it never saw, beside a simple baseline and the leak a random beat split hides."
+role: "Everything, alone: the question, the pre-registered plan, the data pipeline, both models, the evaluation, the browser demo and this write-up."
+stack: ["Python", "PyTorch", "scikit-learn", "ONNX Runtime (Python and browser)", "WFDB", "Svelte", "Cloudflare Workers"]
+results:
+  - {"value": "0.6325 (0.5177 to 0.6984)", "label": "Macro F1 over N, S and V on 21 patients it never saw (DS2 test, CPU)."}
+  - {"value": "0.8176 against 0.6583", "label": "The same model inside DS1, beats split at random against patients kept apart (DS1 out-of-fold, MPS)."}
+  - {"value": "-0.0307 (-0.1313 to 0.1202)", "label": "The CNN minus the baseline on the same draws, in the words of the headline sentence below (DS2 test, CPU)."}
+demo: {"type": "live", "src": "https://heartbeat.dins.dev/"}
+capture: "./capture.jpg"
+captureAlt: "An ECG trace of record 200 scrolling, each beat marked with the model's letter, irregular beats in color"
+repo: "https://github.com/dinsdev/heartbeat"
+status: "draft"
+---
+
+## The question
+
+A model that labels heartbeats is only useful on people it has not seen. So I kept patients apart, wrote down what I would report before looking, and ran the test once.
+
+The model is a small 1D CNN reading one ECG lead from the MIT-BIH Arrhythmia Database, next to a logistic-regression baseline that gets the same data. It trained on DS1, which is 22 patients. Its width (1) and epoch count (10) came from cross-validation inside that set, with patients kept apart (DS1 out-of-fold, MPS). DS2 stayed sealed until the end.
+
+## The trap, shown
+
+Split heartbeats at random and the same person ends up on both sides of the split. The model can then score well by recognizing the person. Here is the same CNN on the same 22 patients, split both ways. Both rows are DS1 out-of-fold, MPS, and neither touches DS2.
+
+| Split | Macro F1 over N, S and V |
+| --- | --- |
+| Beats at random | 0.8176 (0.7478 to 0.8573) |
+| Patients kept apart | 0.6583 (0.5680 to 0.7782) |
+
+Accuracy on the random split was 0.9512 (0.9279 to 0.9727) (DS1 out-of-fold, MPS). That is the number papers often lead with, and it appears here and nowhere else on this page.
+
+I did not find this first. de Chazal and colleagues (2004) showed it: their Table VI sets a beat-level random split against a split by record, inside DS1. I do not compare my numbers with theirs on this page. Theirs come from a two-lead classifier tested on all 22 DS2 records, and mine from one lead on the 21 patients left after the leak fix below.
+
+## The test
+
+I fixed the model at commit `c1d21eeef72fa955ba8a3a7cc6f141ec98e5baf3` on 2026-11-03, and the test ran once, on 2026-11-03. Later entries in the same log rerun the frozen model only to check that the numbers reproduce. These are DS2 test numbers, run on CPU, over 47527 scored beats from 21 patients. The headline model is seed 0, named before the test. Each interval is a patient bootstrap with 10000 draws and percentiles 2.5 and 97.5.
+
+| Metric | CNN, seed 0 | Logistic-regression baseline |
+| --- | --- | --- |
+| Macro F1 over N, S and V | 0.6325 (0.5177 to 0.6984) | 0.6632 (0.5035 to 0.7423) |
+| S recall | 0.4475 (0.2412 to 0.8062) | 0.4829 (0.1187 to 0.5530) |
+| S precision | 0.2328 (0.0179 to 0.5823) | 0.3874 (0.0181 to 0.7440) |
+| V recall | 0.9641 (0.9084 to 0.9873) | 0.8403 (0.7051 to 0.9202) |
+| V precision | 0.5604 (0.2711 to 0.8087) | 0.5805 (0.2936 to 0.8146) |
+
+Two more final models trained the same way with other seeds. Their range of point numbers is below (DS2 test, CPU). It shows how much of a result can come from the seed alone. The headline stays seed 0, as the plan said.
+
+| Metric | The other two models, lowest to highest |
+| --- | --- |
+| Macro F1 over N, S and V | 0.5491 to 0.7378 |
+| S recall | 0.2201 to 0.6075 |
+| S precision | 0.1084 to 0.4019 |
+| V recall | 0.8825 to 0.8994 |
+| V precision | 0.5858 to 0.7970 |
+
+## The CNN against the baseline
+
+On 21 patients it never saw, the CNN and the logistic-regression baseline show no clear difference: the CNN's macro F1 over N, S and V minus the baseline's is -0.0307, with an interval from -0.1313 to 0.1202 that includes zero. The CNN still ships, as the plan said before the test.
+
+Those are DS2 test numbers on CPU, and both models are scored on the same bootstrap draws of patients.
+
+## Patient by patient
+
+Pooled numbers hide who drove them. Each row below is one DS2 patient, named after their record, and each cell counts beats (DS2 test, CPU).
+
+| Patient | CNN S recall | CNN S precision | Baseline S recall | Baseline S precision | CNN V recall | CNN V precision | Baseline V recall | Baseline V precision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| s100 | 32 of 33, 97.0% | 32 of 35, 91.4% | 0 of 33, 0.0% | 0 of 1 | 1 of 1 | 1 of 1 | 1 of 1 | 1 of 35, 2.9% |
+| s103 | 1 of 2 | 1 of 13, 7.7% | 0 of 2 | 0 of 12, 0.0% | none present | none flagged | none present | 0 of 1 |
+| s105 | none present | 0 of 4 | none present | 0 of 4 | 39 of 41, 95.1% | 39 of 164, 23.8% | 41 of 41, 100.0% | 41 of 49, 83.7% |
+| s111 | none present | 0 of 52, 0.0% | none present | none flagged | 1 of 1 | 1 of 580, 0.2% | 1 of 1 | 1 of 4 |
+| s113 | 6 of 6 | 6 of 981, 0.6% | 1 of 6 | 1 of 38, 2.6% | none present | 0 of 90, 0.0% | none present | 0 of 43, 0.0% |
+| s117 | 1 of 1 | 1 of 3 | 1 of 1 | 1 of 2 | none present | 0 of 90, 0.0% | none present | none flagged |
+| s121 | 1 of 1 | 1 of 1 | 0 of 1 | none flagged | 1 of 1 | 1 of 11, 9.1% | 1 of 1 | 1 of 2 |
+| s123 | none present | 0 of 154, 0.0% | none present | 0 of 8 | 3 of 3 | 3 of 3 | 0 of 3 | 0 of 2 |
+| s200 | 19 of 30, 63.3% | 19 of 130, 14.6% | 2 of 30, 6.7% | 2 of 124, 1.6% | 810 of 825, 98.2% | 810 of 899, 90.1% | 683 of 825, 82.8% | 683 of 734, 93.1% |
+| s210 | 2 of 22, 9.1% | 2 of 8 | 6 of 22, 27.3% | 6 of 142, 4.2% | 174 of 195, 89.2% | 174 of 227, 76.7% | 134 of 195, 68.7% | 134 of 408, 32.8% |
+| s212 | none present | 0 of 49, 0.0% | none present | 0 of 7 | none present | 0 of 94, 0.0% | none present | 0 of 3 |
+| s213 | 0 of 28, 0.0% | 0 of 1 | 4 of 28, 14.3% | 4 of 15, 26.7% | 170 of 220, 77.3% | 170 of 265, 64.2% | 71 of 220, 32.3% | 71 of 103, 68.9% |
+| s214 | none present | 0 of 10, 0.0% | none present | 0 of 32, 0.0% | 245 of 256, 95.7% | 245 of 474, 51.7% | 240 of 256, 93.8% | 240 of 248, 96.8% |
+| s219 | 3 of 7 | 3 of 411, 0.7% | 0 of 7 | 0 of 236, 0.0% | 62 of 64, 96.9% | 62 of 74, 83.8% | 41 of 64, 64.1% | 41 of 404, 10.1% |
+| s221 | none present | 0 of 100, 0.0% | none present | 0 of 163, 0.0% | 395 of 396, 99.7% | 395 of 403, 98.0% | 376 of 396, 94.9% | 376 of 619, 60.7% |
+| s222 | 185 of 209, 88.5% | 185 of 798, 23.2% | 37 of 209, 17.7% | 37 of 442, 8.4% | none present | 0 of 28, 0.0% | none present | 0 of 313, 0.0% |
+| s228 | 1 of 3 | 1 of 7 | 0 of 3 | 0 of 5 | 355 of 362, 98.1% | 355 of 399, 89.0% | 357 of 362, 98.6% | 357 of 376, 94.9% |
+| s231 | 0 of 1 | 0 of 120, 0.0% | 0 of 1 | 0 of 149, 0.0% | 1 of 2 | 1 of 10, 10.0% | 1 of 2 | 1 of 21, 4.8% |
+| s232 | 541 of 1381, 39.2% | 541 of 541, 100.0% | 783 of 1381, 56.7% | 783 of 783, 100.0% | none present | 0 of 828, 0.0% | none present | 0 of 517, 0.0% |
+| s233 | 2 of 7 | 2 of 2 | 1 of 7 | 1 of 32, 3.1% | 825 of 830, 99.4% | 825 of 861, 95.8% | 739 of 830, 89.0% | 739 of 745, 99.2% |
+| s234 | 3 of 50, 6.0% | 3 of 3 | 25 of 50, 50.0% | 25 of 25, 100.0% | 3 of 3 | 3 of 4 | 3 of 3 | 3 of 5 |
+
+Record 232 holds 1381 of the 1781 S beats, so it drives the S result (DS2 test, CPU). Without it, over 20 patients, the CNN's S recall is 0.6400 (0.1683 to 0.8395) and its S precision 0.0888 (0.0121 to 0.1974). The baseline's are 0.1925 (0.0748 to 0.3243) and 0.0536 (0.0098 to 0.1123).
+
+F beats come almost entirely from one patient on each side, so the F numbers describe two people, not a class. For the record, the CNN's F recall is 0.0491 (0.0331 to 0.3636) and its F precision 0.0042 (0.0003 to 0.0186); the baseline's are 0.9432 (0.0870 to 0.9798) and 0.0476 (0.0003 to 0.0905) (DS2 test, CPU).
+
+## The 201 and 202 leak
+
+Records 201 and 202 come from the same person, and the standard split puts one on each side. Left alone, that hands the test a patient the model trained on. So record 202 is left out everywhere and the patient sits only in DS1.
+
+## Limits
+
+- Beat locations come from the expert annotations, so these numbers assume every beat has already been found. The demo does not find beats on its own.
+- F is one patient on each side, so its numbers describe two people.
+- Record 232 drives the S result. Without it, the CNN's S recall is 0.6400 (0.1683 to 0.8395) (DS2 test, CPU).
+- Calibrated probabilities are fragile across patients, because calibration depends on how common each class is and that varies widely from person to person. The CNN's pooled calibration error is 0.0054 for S and 0.0525 for V (DS2 test, CPU), and a pooled figure says nothing about any one patient.
+- A label shows one beat late, because the model reads the gap to the next beat.
+- The model reads one lead and was tested on 21 patients (DS2 test, CPU).
+- Q beats are not scored; DS2 has 7 of them (DS2 test, CPU).
+- These numbers say nothing about how common arrhythmias are. PhysioNet notes that 25 of the recordings were chosen to include uncommon ones, so the database's prevalence is not a population's.
+- This is a research demo, not medical advice. Don't use it for a health decision.
+
+## How to check it
+
+The pre-registered plan, the freeze record, the append-only test log, the leakage tests in CI and the parity tests are all in the repo. To check them:
+
+```bash
+uv run heartbeat verify
+```
+
+That takes minutes with the data downloaded. `uv run heartbeat rebuild` reruns every stage from the raw files, retraining the models; what its last run from a fresh clone showed is written up in `docs/WORK_LEDGER.md`.
+
+## Credits
+
+- The MIT-BIH Arrhythmia Database, through PhysioNet. Moody, G., and Mark, R. (2005). MIT-BIH Arrhythmia Database (version 1.0.0). RRID:SCR_007345. https://doi.org/10.13026/C2F305
+- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng in Med and Biol 20(3):45-50 (2001). PMID: 11446209.
+- Pollard, T., Moody, B. E., Lehman, L., Gow, B., Fernandes, C., Xie, C., Johnson, A., Mark, R. G., and Heldt, T. (2026). PhysioNet as a global platform for biomedical research. Nature Health. https://doi.org/10.1038/s44360-026-00096-z
+- de Chazal P, O'Dwyer M, Reilly RB, for the DS1 and DS2 split and Table VI. Automatic classification of heartbeats using ECG morphology and heartbeat interval features. IEEE Transactions on Biomedical Engineering 51(7):1196-1206 (2004).
+- AAMI EC57, for the classes used here.
