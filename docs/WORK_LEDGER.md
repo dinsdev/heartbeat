@@ -2945,3 +2945,45 @@ iPhone 15, runs over 50 ms / counted by R38: branch 5/2, `main` 0/0, `no-shadow`
 **Checked for the merge:** against `main` at `00aefdb`, the branch's base, the diff touches `web/src`, `web/index.html` (theme colour), `.claude/launch.json` (dev server preview) and these docs. Nothing under `web/e2e`, `web/playwright.config.ts`, `.github`, `scripts`, `manifests`, `config`, `results`, `models` or `fixtures` changed, so no test, gate or frozen path moved.
 
 **State:** accepted. Merging dinsdev/heartbeat#10 is Din's.
+
+## 2026-11-05: Phase 8 settlings 1 to 14
+
+Din settled these in a grilling session on 2026-11-05 ("Yes to all 8", "Yes to all six", then confirmed the summary). Facts checked in that session are marked.
+
+**Settling 1, launch and publishing split.** PLAN's Phase 8 exit requires the case study published through the dins.dev repo and criterion 3 requires the case study iframe, but `~/Develop/dins.dev` at `d75677f` holds only the holding page and plans, no `site/`. Phase 8 now ends in two steps: `heartbeat.dins.dev` live and a package handed over, then publishing and the real iframe check later under that repo's milestones (TASKS 8.8). Until then criterion 3's iframe rests on the embed tests and a framed preview. Reason: the demo can go live on its own and no rigor rule needs it to wait.
+
+**Settling 2, no frozen-path change.** `src/`, `config/`, `manifests/`, `models/heartbeat-v1/`, `pyproject.toml` and `uv.lock` stay untouched, and needing a change is a stop. New checks go under `tests/`. Cost accepted: the card source line's repeated "DS2 test, CPU" stays, and the fresh-clone gap is documented, not fixed. Reason: cosmetics are not worth losing the reproduction gate before launch.
+
+**Settling 3, the agent drafts, Din owns the voice.** Overrides the outline's "Din writes the prose": the agent drafts the case study in Din's voice, the pre-written headline sentence unchanged, and finishes the cards and README. Din rewrites at review. Accepted stays Din's.
+
+**Settling 4, production stays manual behind a CI gate (OPS-06 amended).** OPS-06 said production runs on `main` after checks pass; what is built is `workflow_dispatch` with no check of CI. It stays manual, with a new step refusing a commit whose `ci.yml` did not pass. Reason: docs-only merges should not redeploy a frozen demo, and today's job could ship a commit that failed CI.
+
+**Settling 5, two goals around Din's steps.** Goal A through a branch ready for a pull request, Din's steps from `docs/RUNBOOK_PHASE8.md`, Goal B read-only production checks and the hand-off.
+
+**Settling 6, VoiceOver and real phones are Din's.** From a script the agent writes, with expected announcements; results recorded in the ledger. The PhysioNet recheck stays with the agent. Reason: an agent cannot hear VoiceOver, so an automated pass would not honestly meet criterion 3.
+
+**Settling 7, the stage video carries only the research-demo line.** About 15 seconds (a guess), 1600 by 1000, record 200, light theme, from a committed script, with a poster still and `captureAlt`. The G1 line, "Labels each heartbeat of a real ECG. Tested on patients it never saw.", is the site's one-liner, not video text, and the outline's summary draft stands. This closes PRD Q6. Reason: PUB-06 asks only for the research-demo line and the site's stage renders its own caption.
+
+**Settling 8, dins.dev stays read only; G3 entries are drafts.** A refreshed `docs/G4_HANDOFF.md` and a few G3 drafts in this repo, `approved_on` blank. Reason: that repo's PRD says entries arrive only through a pull request Din reviews and only Din sets `approved_on`; PUB-09 is P1, and the published project page already joins Ottie's corpus.
+
+**Settling 9, the domain is attached in the dashboard (E6 changed).** E6 (ledger, "`heartbeat.dins.dev` set as a custom domain in wrangler's config") changes: `web/wrangler.jsonc` keeps no `routes` and Din attaches the domain once in the dashboard, after the first production deploy so the first visitor never gets the Phase 6 build. Checked in Cloudflare's docs on 2026-11-05: adding a Custom Domain needs Editor on the Worker plus zone-level Workers Routes Write, and Custom Domains do not support per-Worker roles; a later deploy needs only Editor if it does not change the connection; a config with no `route` or `routes` and `workers_dev = false` leaves dashboard routes managed from the dashboard. `dig` found no CNAME or A record for `heartbeat.dins.dev`. Reason: the CI token stays Worker Editor with no zone access (the 2026-11-02 entry; Din removed all-zones Workers Routes Write on purpose). Cost: the domain is not recorded in git, so the runbook and ledger record it. PRD Q3 closes at the attach.
+
+**Settling 10, the established planning format.** A task plan in PLAN section 8 and two `/goal` prompts under 4,000 characters each, lint-clean, for fresh Opus 5.5 sessions at high effort, kept in chat with the ledger recording approval and length.
+
+**Settling 11, the case study renders from a template.** G1's `{{source: key}}` slots in a template, a small script under `scripts/`, and a test under `tests/` that every slot resolves, the rendered file is current, no number sits outside a slot apart from an allowlist, and the published wording tier passes. `PUBLISHED_PATHS` is frozen, so the test passes the text in under a published path with a comment saying why. Reason: Din can rewrite every sentence without being able to mistype a result, and rule 2 becomes a test.
+
+**Settling 12, one fresh-clone rebuild.** The page's section 11 says `rebuild` reproduces the rest, but the ledger only reasons from the code that a fresh clone stops at `reproduce-test`. The agent runs it once in a scratchpad clone (104 to 114 minutes, measured 2026-10-30), commits in that clone and reruns, compares with `checks.reproduction`, and makes section 11 and the README say what happened. A frozen file that differs is a stop. No Playwright during it (R38 load). Reason: it is a public claim on a project whose point is honest evaluation.
+
+**Settling 13, Din's prose rewrite does not hold up production.** Production depends on the demo, the cards and the checks passing Din's preview review. The rewrite may land later in a docs-only pull request, which redeploys nothing. Reason: nobody can read the case study until the site exists.
+
+**Settling 14, carried items stay as they are.** `tests/data/test_demo_real.py` stays (it covers the pre-seal path; rule 3 leans against deleting tests). R37 stays limited to `https://dins.dev`, so site previews do not sync the theme. The PRD's "about 2.4 MB" `.wasm` figure stays as written; the measured figure is 3,274,094 bytes with Brotli (ledger, 2026-11-02, the first Worker Preview), and public text uses a measured figure. Each is named in the hand-off.
+
+**Also settled:** no analytics in the demo or case study (Din, closes PRD Q4; the model card already says none) and no stretch items in this phase.
+
+**Read for the plan:** the sealed verdict is "no clear difference": CNN seed 0 minus baseline, macro F1 over N, S and V, -0.0307 with an interval from -0.1313 to 0.1202 (DS2 test, CPU; `results/test_runs/1-sealed.json`, `comparison.metrics.macro_f1_nsv`). The page uses that pre-written sentence.
+
+## 2026-11-05: Phase 8 task plan drafted, for Din's review
+
+Written from settlings 1 to 14 into PLAN.md section 8 ("Phase 8: Content and launch (task plan, 2026-11-05)"), with nine design calls, Goal A tasks A1 to A8, Din's runbook, Goal B tasks B1 to B3, seven stop conditions and six review-focus items. TASKS 8.1 to 8.5 reworded, 8.6 to 8.8 added. PRD: OPS-06 amended, criterion 3's two steps noted, Q4 and Q6 closed. Two `/goal` prompts drafted in the planning session. Nothing built.
+
+**For Din's eye, design call 1:** every earlier phase bumped `current-phase`, but it lives in `pyproject.toml`, a frozen path, so a bump would make `reproduce-test` refuse. It stays 7, and R48, the only Phase 8 row, is manual and recorded by Goal B.
