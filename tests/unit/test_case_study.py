@@ -26,6 +26,7 @@ SCRIPT = REPO_ROOT / "scripts" / "render_case_study.py"
 FOLDER = REPO_ROOT / "docs" / "case-study"
 TEMPLATE = FOLDER / "heartbeat.template.mdx"
 RENDERED = FOLDER / "heartbeat.mdx"
+OTTIE = FOLDER / "ottie"
 OUTLINE = REPO_ROOT / "docs" / "CASE_STUDY_OUTLINE.md"
 SEALED = REPO_ROOT / "results" / "test_runs" / "1-sealed.json"
 
@@ -34,13 +35,14 @@ SEALED = REPO_ROOT / "results" / "test_runs" / "1-sealed.json"
 # under a path that is published and ends in .md, which turns on every rule.
 LINT_AS = Path("docs/MODEL_CARD.md")
 
-# Every digit allowed in the template outside a slot, with why.
+# Every digit allowed in the template or an Ottie draft outside a slot, with why.
 # Longest first when applied, so a citation is removed before a shorter match.
 ALLOWED_DIGITS = {
     "record 200": "a record's name, not a result",
     "record 202": "a record's name, not a result",
     "Records 201 and 202": "records' names, not results",
     "Record 232": "a record's name, not a result",
+    "record 232": "a record's name, not a result",
     "201 and 202": "records' names, not results",
     "seed 0": "the pre-registered headline model's name (EVAL-08)",
     "DS1": "the training set's name",
@@ -647,3 +649,33 @@ def test_readme_and_card_prose_quote_no_test_number() -> None:
         text = block.sub("", (REPO_ROOT / path).read_text(encoding="utf-8"))
         assert not re.findall(r"\b0\.\d{3,}\b", text), path
         assert not [v for v in values if v in text], path
+
+
+def ottie_files() -> list[Path]:
+    return sorted(OTTIE.glob("*.md"))
+
+
+def test_there_are_three_to_five_ottie_drafts() -> None:
+    assert 3 <= len(ottie_files()) <= 5
+
+
+@pytest.mark.parametrize("path", ottie_files(), ids=lambda p: p.name)
+def test_each_ottie_draft_is_an_unapproved_clean_entry(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    front, body = split_front_matter(text)
+    # Design call 6, from dins.dev's library schema (read only).
+    lines = dict(line.split(": ", 1) for line in front.splitlines() if ": " in line)
+    assert lines["project"] == "heartbeat"
+    assert lines["language"] == "en"
+    assert lines["approved_on"] == "null"
+    assert lines["topic"]
+    audience = lines["audience"].strip("[]").split(", ")
+    assert audience
+    assert set(audience) <= {"admissions", "recruiters", "visitors"}
+    assert 'sources: [{label: "' in front
+    assert body.strip()
+    assert digit_problems(text) == []
+    assert number_word_problems(text) == []
+    assert other_seed_problems(text) == []
+    assert wording_problems(text) == []
+    assert mdx_problems(text) == []
